@@ -338,10 +338,60 @@ Numbered sequence of deployment steps the deployment-validation agent must follo
 
 ## 10. Validation Checklist
 Checkbox list of smoke tests the deployment-validation agent must run to confirm a successful migration.
+
+## 11. CI/CD Pipeline Architecture
+Complete specification for the `pipeline-builder-agent` to implement GitHub Actions workflows. This section must be detailed enough to produce working YAML without additional context.
+
+### 11.1 Pipeline Overview
+Table listing every pipeline workflow file to be created:
+
+| Workflow File | Trigger | Purpose | Target Azure Service |
+|---|---|---|---|
+| `.github/workflows/deploy-infra.yml` | Push to main / manual | Deploy Bicep IaC | Subscription-level deployment |
+| `.github/workflows/deploy-functions.yml` | Push to main / manual | Build & deploy Function App | Azure Functions |
+| `.github/workflows/deploy-static-web.yml` | Push to main / manual | Deploy static frontend | Azure Static Web Apps |
+
+### 11.2 Authentication Strategy
+- **Method:** OIDC / Workload Identity Federation (no long-lived credentials)
+- **GitHub Secrets required:**
+
+| Secret Name | Value Source | Used By |
+|---|---|---|
+| `AZURE_CLIENT_ID` | Federated credential app registration | All workflows |
+| `AZURE_TENANT_ID` | Azure AD tenant | All workflows |
+| `AZURE_SUBSCRIPTION_ID` | Target subscription | All workflows |
+| `STATIC_WEB_APP_TOKEN` | SWA deployment token | deploy-static-web.yml |
+
+- **Federated credential subject filter** to configure on the app registration (e.g. `repo:<org>/<repo>:ref:refs/heads/main`).
+- **RBAC role assignments** the service principal needs for each deployment target.
+
+### 11.3 Per-Workflow Specification
+For **each** workflow in Section 11.1:
+
+#### 11.3.x `<workflow-file-name>`
+- **Trigger conditions:** branches, paths, manual dispatch inputs
+- **Environment protection rules:** which GitHub environment (dev / staging / prod) gating is required
+- **Jobs and steps (in order):**
+  1. Step name — action or shell command, key inputs/outputs
+  2. …
+- **Bicep / CLI commands** with exact flags (template file, parameter file, deployment scope)
+- **Secrets and environment variables** referenced in the workflow
+- **Artifact handling:** what is built, packaged, and uploaded between jobs
+- **Rollback strategy:** how failed deployments are detected and reverted
+
+### 11.4 Multi-Environment Strategy
+How the same workflow promotes across dev → staging → prod:
+- Branch / tag strategy
+- Environment secrets separation
+- Approval gates and required reviewers per environment
+
+### 11.5 Pipeline Dependency Order
+Numbered sequence showing which workflow must succeed before the next can start (e.g. infra must deploy before function app).
 ```
 
 ### Rules for Populating the Document
 - Pull every fact from `outputs/aws-migration-artifacts/` — do **not** invent values.
+- For Section 11 (CI/CD Pipeline Architecture), also inspect any existing workflow files under `.github/workflows/` and the deployed resource names/IDs from previous Bicep outputs so that workflow commands reference real resource names.
 - For each section referencing code or IaC changes, be explicit enough that a downstream agent can act without additional context.
 - Use fenced code blocks with language identifiers for all code samples.
 - Do not omit sections; use "N/A — not applicable" with a reason if a section truly does not apply.
@@ -408,13 +458,14 @@ Detailed mapping document showing:
 ## Success Criteria
 
 Architecture design is complete when:
-1. ✅ `outputs/azure-architecture-output/design-document.md` exists and all 10 sections are populated
+1. ✅ `outputs/azure-architecture-output/design-document.md` exists and all 11 sections are populated
 2. ✅ All AWS services mapped to Azure equivalents in design-document.md Section 3
 3. ✅ All Bicep modules fully specified in design-document.md Section 5
 4. ✅ All Lambda-to-Function rewrites fully specified in design-document.md Section 6
-5. ✅ All Bicep templates generate without errors
-6. ✅ All parameters are configurable
-7. ✅ Cost comparison is detailed and justified
-8. ✅ Well-Architected Framework principles applied
-9. ✅ Security best practices implemented
-10. ✅ Templates tested with what-if validation
+5. ✅ CI/CD pipeline architecture fully specified in design-document.md Section 11 (all workflows, secrets, OIDC config, multi-env strategy, dependency order)
+6. ✅ All Bicep templates generate without errors
+7. ✅ All parameters are configurable
+8. ✅ Cost comparison is detailed and justified
+9. ✅ Well-Architected Framework principles applied
+10. ✅ Security best practices implemented
+11. ✅ Templates tested with what-if validation

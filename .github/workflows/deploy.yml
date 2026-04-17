@@ -120,7 +120,7 @@ jobs:
   deploy-functions:
     name: "2 · Azure Functions — Python 3.11"
     runs-on: ubuntu-latest
-    environment: dev
+    environment: main
     needs: deploy-infra           # Wait for IaC to finish first
 
     steps:
