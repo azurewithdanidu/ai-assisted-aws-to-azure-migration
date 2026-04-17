@@ -1,0 +1,10 @@
+# Azure Functions runtime (replaces boto3/botocore)
+azure-functions
+
+# Azure Blob Storage SDK (replaces boto3 S3 client)
+# Used for: BlobServiceClient, generate_blob_sas, BlobSasPermissions
+azure-storage-blob>=12.15.0
+
+# Azure Identity (replaces AWS IAM role / access keys)
+# Used for: DefaultAzureCredential → Managed Identity in Azure, CLI in local dev
+azure-identity>=1.13.0

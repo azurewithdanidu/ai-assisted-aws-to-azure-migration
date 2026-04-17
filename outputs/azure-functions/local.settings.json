@@ -1,0 +1,16 @@
+{
+    "IsEncrypted": false,
+    "Values": {
+        "AzureWebJobsStorage": "UseDevelopmentStorage=true",
+        "FUNCTIONS_WORKER_RUNTIME": "python",
+
+        "STORAGE_ACCOUNT_NAME": "<your-storage-account-name>",
+        "BLOB_CONTAINER_NAME": "images",
+        "URL_EXPIRATION_SECONDS": "3600"
+    },
+    "Host": {
+        "LocalHttpPort": 7071,
+        "CORS": "*",
+        "CORSCredentials": false
+    }
+}
