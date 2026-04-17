@@ -1,7 +1,7 @@
 # Technical Deep Dive: AI-Assisted Migration Architecture
 
-**Document Version:** 1.0  
-**Date:** December 2024  
+**Document Version:** 2.0  
+**Date:** April 2026  
 **Audience:** Technical Architects and Engineering Leads
 
 ---
@@ -110,55 +110,55 @@ You are a [role description]...
 │   (Manages multiple MCP connections)    │
 └─────────────────┬───────────────────────┘
                   │
-        ┌─────────┼─────────┬─────────┐
-        │         │         │         │
-┌───────▼─┐ ┌────▼────┐ ┌──▼──────┐ ┌▼────────┐
-│ AWS     │ │Microsoft│ │ GitHub  │ │Buildkite│
-│ CCAPI   │ │ Learn   │ │  MCP    │ │  MCP    │
-│ MCP     │ │  MCP    │ │         │ │         │
-└─────────┘ └─────────┘ └─────────┘ └─────────┘
+        ┌─────────┼──────────┬────────────┬─────────┐
+        │         │          │            │         │
+┌───────▼─┐ ┌────▼────┐ ┌───▼─────┐ ┌───▼───┐ ┌───▼──────┐
+│ AWS     │ │ AWS     │ │Microsoft│ │ Azure │ │ Mermaid  │
+│ CCAPI   │ │Knowledge│ │ Learn   │ │  MCP  │ │  Chart   │
+│ MCP     │ │  MCP    │ │  MCP    │ │       │ │  MCP     │
+└─────────┘ └─────────┘ └─────────┘ └───────┘ └──────────┘
 ```
 
 ### MCP Server Configuration
 
-**Location:** `.github/mcp-config.json`
+**Location:** VS Code `mcp.json` (workspace settings — this project)
 
 ```json
 {
   "mcpServers": {
     "aws-ccapi": {
-      "command": "npx",
-      "args": ["-y", "@aws/mcp-server-ccapi"],
+      "command": "uvx",
+      "args": ["awslabs.cdk-mcp-server@latest"],
       "env": {
-        "AWS_REGION": "us-east-1",
-        "AWS_PROFILE": "default"
+        "AWS_REGION": "ap-southeast-2",
+        "AWS_PROFILE": "default",
+        "FASTMCP_LOG_LEVEL": "ERROR"
+      }
+    },
+    "aws-knowledge-mcp": {
+      "command": "uvx",
+      "args": ["awslabs.aws-documentation-mcp-server@latest"],
+      "env": {
+        "FASTMCP_LOG_LEVEL": "ERROR"
       }
     },
     "microsoft-learn": {
       "command": "npx",
       "args": ["-y", "@microsoft/mcp-server-learn"]
     },
-    "github-mcp": {
-      "command": "npx",
-      "args": ["-y", "@github/mcp-server"],
-      "env": {
-        "GITHUB_TOKEN": "${GITHUB_TOKEN}"
-      }
-    },
     "azure-mcp": {
       "command": "npx",
-      "args": ["-y", "@azure/mcp-server"],
+      "args": ["-y", "@azure/mcp@latest"],
       "env": {
         "AZURE_SUBSCRIPTION_ID": "${AZURE_SUBSCRIPTION_ID}",
         "AZURE_TENANT_ID": "${AZURE_TENANT_ID}"
       }
     },
-    "buildkite-mcp": {
+    "mermaidchart": {
       "command": "npx",
-      "args": ["-y", "@buildkite/mcp-server"],
+      "args": ["-y", "@mermaidchart/mcp-server"],
       "env": {
-        "BUILDKITE_TOKEN": "${BUILDKITE_TOKEN}",
-        "BUILDKITE_ORG": "my-org"
+        "MERMAID_CHART_API_KEY": "${MERMAID_CHART_API_KEY}"
       }
     }
   }
@@ -209,24 +209,17 @@ Agent: Process and generate output
 - `list_related` - Find related documentation
 - `get_code_samples` - Get code examples
 
-**GitHub MCP:**
-- `list_repositories` - List repositories
-- `get_file` - Read file content
-- `create_pull_request` - Create PR
-- `list_issues` - List issues
-- `create_issue` - Create issue
+**AWS Knowledge MCP:**
+- `aws___search_documentation` - Search AWS docs
+- `aws___read_documentation` - Retrieve full documentation page
+- `aws___list_regions` - List enabled regions
+- `aws___get_regional_availability` - Check service availability
 
 **Azure MCP:**
-- `list_resources` - List Azure resources
-- `get_resource` - Get resource details
-- `create_deployment` - Deploy Bicep template
-- `what_if` - Preview deployment changes
+- `azure-mcp/search` - Search Azure resources and documentation
 
-**Buildkite MCP:**
-- `list_pipelines` - List pipelines
-- `get_pipeline` - Get pipeline configuration
-- `update_pipeline` - Update pipeline YAML
-- `trigger_build` - Start a build
+**Mermaid Chart MCP:**
+- `mermaidchart.validateMermaidDefinition` - Validate Mermaid diagram syntax
 
 ---
 
@@ -387,8 +380,6 @@ migration-project/
 │   ├── migration-assessment.md
 │   ├── cost-comparison.md
 │   └── service-mapping.md
-├── .buildkite/
-│   └── pipeline.yml
 ├── .env.example
 └── README.md
 ```
@@ -398,27 +389,17 @@ migration-project/
 **.env.example:**
 
 ```bash
-# AWS Configuration
-AWS_REGION=us-east-1
+# AWS Configuration (Discovery phase)
+AWS_REGION=ap-southeast-2
 AWS_PROFILE=default
-AWS_ACCOUNT_ID=123456789012
+AWS_ACCOUNT_ID=535002891143
 
 # Azure Configuration
 AZURE_SUBSCRIPTION_ID=your-subscription-id
 AZURE_TENANT_ID=your-tenant-id
-AZURE_RESOURCE_GROUP=rg-migration
 
-# GitHub Configuration
-GITHUB_TOKEN=your-github-token
-GITHUB_REPO=your-org/migration-project
-
-# Buildkite Configuration
-BUILDKITE_TOKEN=your-buildkite-token
-BUILDKITE_ORG=your-org
-
-# MCP Server Configuration
-MCP_SERVER_PORT=8080
-MCP_SERVER_HOST=localhost
+# Mermaid Chart (optional — for diagram validation)
+MERMAID_CHART_API_KEY=your-api-key
 ```
 
 ---
@@ -483,8 +464,8 @@ GitHub API
 - Reference in MCP configuration
 
 **CI/CD:**
-- Store in Buildkite secrets
-- Inject as environment variables
+- Store in Azure DevOps pipeline variables or GitHub Actions secrets
+- Inject as environment variables at deployment time
 - Use Azure Key Vault references in Bicep
 
 **Production:**

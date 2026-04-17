@@ -134,74 +134,54 @@ npx @microsoft/mcp-server-learn
 
 ---
 
-### 3. GitHub MCP Server
+### 3. AWS Knowledge MCP Server
 
-**Purpose:** Repository operations, PR creation, code analysis
+**Purpose:** AWS documentation search and service guidance during discovery
 
-**Installation:**
-```bash
-npm install -g @github/mcp-server
-```
+**Used by:** AWS Discovery Agent — to look up service documentation and best practices
 
-**Configuration:**
+**Configuration (VS Code `mcp.json`):**
 ```json
 {
   "mcpServers": {
-    "github-mcp": {
-      "command": "npx",
-      "args": ["-y", "@github/mcp-server"],
+    "aws-knowledge-mcp": {
+      "command": "uvx",
+      "args": ["awslabs.aws-documentation-mcp-server@latest"],
       "env": {
-        "GITHUB_TOKEN": "${GITHUB_TOKEN}"
+        "FASTMCP_LOG_LEVEL": "ERROR"
       }
     }
   }
 }
 ```
 
-**Available Tools:**
-- `list_repositories` - List accessible repositories
-- `get_file` - Read file content from repository
-- `search_code` - Search code across repositories
-- `create_pull_request` - Create PR with changes
-- `list_issues` - List repository issues
-- `create_issue` - Create new issue
+**Available Tools (used in this migration):**
+- `aws___search_documentation` - Search AWS documentation articles
+- `aws___read_documentation` - Retrieve full documentation page
+- `aws___list_regions` - Enumerate enabled AWS regions
+- `aws___get_regional_availability` - Check service availability per region
 
-**Prerequisites:**
-- GitHub personal access token
-- Permissions: `repo`, `workflow`, `write:packages`
+**Key use in this migration:**
+- AWS Discovery Agent: confirm resource type schemas for Cloud Control API
+- Validate which `AWS::` CloudFormation resource types mapped to which AWS services
 
-**Creating GitHub Token:**
-1. Go to https://github.com/settings/tokens
-2. Click "Generate new token (classic)"
-3. Select scopes: `repo`, `workflow`
-4. Copy token and save to environment variable
-
-**Testing:**
-```bash
-export GITHUB_TOKEN="your-token-here"
-npx @github/mcp-server
-```
-
-**Documentation:** https://github.com/github/github-mcp-server
+**Documentation:** https://awslabs.github.io/mcp/servers/aws-documentation-mcp-server/
 
 ---
 
 ### 4. Azure MCP Server
 
-**Purpose:** Azure resource deployment and management
+**Purpose:** Azure resource querying and search during architecture design
 
-**Installation:**
-```bash
-npm install -g @azure/mcp-server
-```
+**Used by:** Azure Architect Agent — to search existing Azure resources and validate service availability
 
-**Configuration:**
+**Configuration (VS Code `mcp.json`):**
 ```json
 {
   "mcpServers": {
     "azure-mcp": {
       "command": "npx",
-      "args": ["-y", "@azure/mcp-server"],
+      "args": ["-y", "@azure/mcp@latest"],
       "env": {
         "AZURE_SUBSCRIPTION_ID": "${AZURE_SUBSCRIPTION_ID}",
         "AZURE_TENANT_ID": "${AZURE_TENANT_ID}"
@@ -211,123 +191,93 @@ npm install -g @azure/mcp-server
 }
 ```
 
-**Available Tools:**
-- `list_resources` - List Azure resources
-- `get_resource` - Get resource details
-- `create_deployment` - Deploy Bicep/ARM template
-- `what_if` - Preview deployment changes
-- `list_locations` - Get available Azure regions
-- `get_pricing` - Get resource pricing information
+**Available Tools (used in this migration):**
+- `azure-mcp/search` - Search Azure resources and documentation
 
 **Prerequisites:**
-- Azure CLI installed and configured
-- Valid Azure credentials: `az login`
-- Subscription access (Contributor role)
+- Azure CLI installed and logged in: `az login`
+- Valid subscription with Contributor role
 
-**Testing:**
-```bash
-az account show
-npx @azure/mcp-server
-```
+**Key use in this migration:**
+- Azure Architect Agent: validate available Azure services in `australiaeast` region
+- Deployment Validation Agent: query deployed resource status
 
 **Documentation:** https://learn.microsoft.com/en-us/azure/developer/azure-mcp-server/overview
 
 ---
 
-### 5. Buildkite MCP Server
+### 5. Mermaid Chart MCP Server
 
-**Purpose:** CI/CD pipeline management
+**Purpose:** Architecture diagram validation and rendering
 
-**Installation:**
-```bash
-npm install -g @buildkite/mcp-server
-```
+**Used by:** Azure Architect Agent — to validate Mermaid diagram syntax before saving
 
-**Configuration:**
+**Configuration (VS Code `mcp.json`):**
 ```json
 {
   "mcpServers": {
-    "buildkite-mcp": {
+    "mermaidchart": {
       "command": "npx",
-      "args": ["-y", "@buildkite/mcp-server"],
+      "args": ["-y", "@mermaidchart/mcp-server"],
       "env": {
-        "BUILDKITE_TOKEN": "${BUILDKITE_TOKEN}",
-        "BUILDKITE_ORG": "your-org-slug"
+        "MERMAID_CHART_API_KEY": "${MERMAID_CHART_API_KEY}"
       }
     }
   }
 }
 ```
 
-**Available Tools:**
-- `list_pipelines` - List all pipelines
-- `get_pipeline` - Get pipeline configuration
-- `update_pipeline` - Update pipeline YAML
-- `trigger_build` - Start a build
-- `get_build` - Get build status
-- `list_agents` - List available agents
+**Available Tools (used in this migration):**
+- `mermaidchart.validateMermaidDefinition` - Validates Mermaid diagram syntax
 
-**Prerequisites:**
-- Buildkite API token
-- Organization access
+**Key use in this migration:**
+- Azure Architect Agent: validates `architecture-diagram-azure.mmd` graph syntax before writing to outputs
 
-**Creating Buildkite Token:**
-1. Go to Buildkite → Settings → API Access Tokens
-2. Create new token with scopes: `read_pipelines`, `write_pipelines`, `read_builds`, `write_builds`
-3. Copy token and save to environment variable
-
-**Testing:**
-```bash
-export BUILDKITE_TOKEN="your-token-here"
-export BUILDKITE_ORG="your-org"
-npx @buildkite/mcp-server
-```
-
-**Documentation:** https://buildkite.com/docs/apis/mcp-server
+**Documentation:** https://www.mermaidchart.com/mcp
 
 ---
 
 ## MCP Configuration File
 
-**Location:** `.github/mcp-config.json`
+**Location:** VS Code `mcp.json` (workspace or user settings)
 
-**Complete Configuration:**
+**Complete configuration used for this migration:**
 ```json
 {
   "mcpServers": {
     "aws-ccapi": {
-      "command": "npx",
-      "args": ["-y", "@aws/mcp-server-ccapi"],
+      "command": "uvx",
+      "args": ["awslabs.cdk-mcp-server@latest"],
       "env": {
-        "AWS_REGION": "us-east-1",
-        "AWS_PROFILE": "default"
+        "AWS_REGION": "ap-southeast-2",
+        "AWS_PROFILE": "default",
+        "FASTMCP_LOG_LEVEL": "ERROR"
+      }
+    },
+    "aws-knowledge-mcp": {
+      "command": "uvx",
+      "args": ["awslabs.aws-documentation-mcp-server@latest"],
+      "env": {
+        "FASTMCP_LOG_LEVEL": "ERROR"
       }
     },
     "microsoft-learn": {
       "command": "npx",
       "args": ["-y", "@microsoft/mcp-server-learn"]
     },
-    "github-mcp": {
-      "command": "npx",
-      "args": ["-y", "@github/mcp-server"],
-      "env": {
-        "GITHUB_TOKEN": "${GITHUB_TOKEN}"
-      }
-    },
     "azure-mcp": {
       "command": "npx",
-      "args": ["-y", "@azure/mcp-server"],
+      "args": ["-y", "@azure/mcp@latest"],
       "env": {
         "AZURE_SUBSCRIPTION_ID": "${AZURE_SUBSCRIPTION_ID}",
         "AZURE_TENANT_ID": "${AZURE_TENANT_ID}"
       }
     },
-    "buildkite-mcp": {
+    "mermaidchart": {
       "command": "npx",
-      "args": ["-y", "@buildkite/mcp-server"],
+      "args": ["-y", "@mermaidchart/mcp-server"],
       "env": {
-        "BUILDKITE_TOKEN": "${BUILDKITE_TOKEN}",
-        "BUILDKITE_ORG": "your-org"
+        "MERMAID_CHART_API_KEY": "${MERMAID_CHART_API_KEY}"
       }
     }
   }
@@ -338,117 +288,56 @@ npx @buildkite/mcp-server
 
 ## Environment Variables
 
-**Create `.env` file:**
+**Required for this migration project:**
 ```bash
-# AWS Configuration
-AWS_REGION=us-east-1
+# AWS Configuration (Discovery Agent)
+AWS_REGION=ap-southeast-2
 AWS_PROFILE=default
-AWS_ACCOUNT_ID=123456789012
+AWS_ACCOUNT_ID=535002891143
 
 # Azure Configuration
 AZURE_SUBSCRIPTION_ID=your-subscription-id
 AZURE_TENANT_ID=your-tenant-id
 
-# GitHub Configuration
-GITHUB_TOKEN=ghp_your_token_here
-
-# Buildkite Configuration
-BUILDKITE_TOKEN=your-buildkite-token
-BUILDKITE_ORG=your-org-slug
-
-# MCP Server Configuration
-MCP_SERVER_HOST=localhost
-MCP_SERVER_PORT=8080
-```
-
-**Load Environment Variables:**
-```bash
-# Option 1: Source .env file
-source .env
-
-# Option 2: Use direnv
-echo "export $(cat .env | xargs)" > .envrc
-direnv allow
-
-# Option 3: Load in shell profile
-echo 'export $(cat ~/migration-project/.env | xargs)' >> ~/.bashrc
+# Mermaid Chart (optional — for diagram validation)
+MERMAID_CHART_API_KEY=your-api-key
 ```
 
 ---
 
 ## Testing MCP Servers
 
-### Test AWS Cloud Control API
+### Verify AWS Cloud Control API
 
 ```bash
-# Set up
-export AWS_REGION=us-east-1
-export AWS_PROFILE=default
+# Check AWS credentials
+aws sts get-caller-identity
+# Expected: Account 535002891143, ap-southeast-2
 
-# Start MCP server
-npx @aws/mcp-server-ccapi &
-
-# Test with curl
-curl -X POST http://localhost:8080 \
-  -H "Content-Type: application/json" \
-  -d '{
-    "jsonrpc": "2.0",
-    "method": "tools/call",
-    "params": {
-      "name": "list_resource_types"
-    },
-    "id": 1
-  }'
-
-# Expected: List of AWS resource types
+# Verify MCP server resolves (via VS Code MCP panel)
+# Or test uvx availability:
+uvx --version
 ```
 
-### Test Microsoft Learn MCP
+### Verify Microsoft Learn MCP
 
 ```bash
-# Start MCP server
-npx @microsoft/mcp-server-learn &
+# Check npx availability
+npx --version
 
-# Search for Azure Functions documentation
-curl -X POST http://localhost:8080 \
-  -H "Content-Type: application/json" \
-  -d '{
-    "jsonrpc": "2.0",
-    "method": "tools/call",
-    "params": {
-      "name": "search_documentation",
-      "arguments": {
-        "query": "Azure Functions migrate from AWS Lambda"
-      }
-    },
-    "id": 1
-  }'
-
-# Expected: Relevant documentation articles
+# The server is invoked automatically by VS Code when an agent that
+# references microsoftdocs/mcp/* tools is active
 ```
 
-### Test GitHub MCP
+### Verify Azure MCP
 
 ```bash
-# Set up
-export GITHUB_TOKEN=your_token
+# Check Azure CLI login
+az account show
+# Expected: your-subscription-id, australiaeast
 
-# Start MCP server
-npx @github/mcp-server &
-
-# List repositories
-curl -X POST http://localhost:8080 \
-  -H "Content-Type: application/json" \
-  -d '{
-    "jsonrpc": "2.0",
-    "method": "tools/call",
-    "params": {
-      "name": "list_repositories"
-    },
-    "id": 1
-  }'
-
-# Expected: List of accessible repositories
+# Check npx resolves the package
+npx -y @azure/mcp@latest --help
 ```
 
 ---
@@ -457,57 +346,32 @@ curl -X POST http://localhost:8080 \
 
 ### MCP Server Won't Start
 
-**Issue:** Server fails to start
+1. Check `uv` / `uvx` is installed: `uvx --version`  
+2. Check `npx` is available: `npx --version` (Node 18+ required)  
+3. Restart VS Code — MCP servers are restarted with each session  
+4. Check VS Code Output panel → "GitHub Copilot Chat" for MCP error logs
 
-**Solutions:**
-1. Check Node.js version: `node --version` (requires v16+)
-2. Clear npm cache: `npm cache clean --force`
-3. Reinstall: `npm uninstall -g @aws/mcp-server-ccapi && npm install -g @aws/mcp-server-ccapi`
-4. Check logs: `npx @aws/mcp-server-ccapi --verbose`
+### Authentication Errors — AWS
 
-### Authentication Errors
-
-**Issue:** MCP server can't authenticate to AWS/Azure/GitHub
-
-**Solutions:**
-
-**For AWS:**
 ```bash
 aws sts get-caller-identity  # Should return account info
-aws configure list  # Check configuration
+aws configure list            # Check configured region and profile
+aws configure --profile default  # Reconfigure if needed
 ```
 
-**For Azure:**
+### Authentication Errors — Azure
+
 ```bash
 az account show  # Should return subscription info
-az login  # Re-authenticate if needed
+az login         # Re-authenticate if needed
+az account set --subscription "your-subscription-id"
 ```
 
-**For GitHub:**
-```bash
-gh auth status  # Check token validity
-# Create new token if expired
-```
+### Agent Can't Access MCP Tools
 
-### Agent Can't Connect to MCP Server
-
-**Issue:** Agent reports "MCP server unavailable"
-
-**Solutions:**
-1. Verify MCP config: `cat .github/mcp-config.json`
-2. Check environment variables: `env | grep AWS`
-3. Restart VS Code / GitHub Copilot
-4. Test MCP server manually (see testing section above)
-
-### Slow Response Times
-
-**Issue:** MCP server responds slowly
-
-**Solutions:**
-1. Run MCP servers locally instead of remotely
-2. Cache frequently accessed data
-3. Use parallel requests when possible
-4. Increase timeout values in MCP config
+1. Confirm the tool name in the agent `tools:` frontmatter matches the MCP server's tool namespace  
+2. Check VS Code MCP panel (Command Palette → "MCP: List Servers") to see server status  
+3. Verify `mcp.json` is in the workspace root or user settings  
 
 ---
 
@@ -516,131 +380,42 @@ gh auth status  # Check token validity
 ### Credentials Management
 
 **Do:**
-- Store tokens in environment variables
-- Use `.env` file (add to `.gitignore`)
-- Rotate tokens regularly
-- Use minimum required permissions
+- Store AWS credentials in `~/.aws/credentials` (AWS profile)  
+- Store Azure credentials via `az login` (no tokens in files)  
+- Add `.env` to `.gitignore` if used  
+- Use ReadOnlyAccess for AWS discovery — never write permissions  
 
 **Don't:**
-- Hardcode tokens in configuration
-- Commit tokens to Git
-- Share tokens in chat/email
-- Use root/admin accounts
+- Hardcode credentials in agent files or `mcp.json`  
+- Commit AWS keys or Azure secrets to Git  
+- Use admin/root accounts for MCP discovery  
 
-### Access Control
+### AWS MCP Permissions
 
-**AWS:**
-- Create dedicated IAM user for MCP
-- Attach ReadOnlyAccess policy
-- Enable MFA for IAM user
-
-**Azure:**
-- Create service principal for MCP
-- Assign Reader role
-- Limit to specific subscriptions
-
-**GitHub:**
-- Create fine-grained personal access token
-- Limit to specific repositories
-- Set expiration date (90 days max)
-
-### Network Security
-
-**Production:**
-- Run MCP servers behind firewall
-- Use HTTPS/WSS for communication
-- Implement rate limiting
-- Log all MCP requests
-
----
-
-## Advanced Configuration
-
-### Custom MCP Server
-
-**Create organization-specific MCP server:**
-
-```typescript
-// custom-mcp-server.ts
-import { Server } from '@modelcontextprotocol/sdk/server/index.js';
-import { StdioServerTransport } from '@modelcontextprotocol/sdk/server/stdio.js';
-
-const server = new Server({
-  name: 'company-internal-mcp',
-  version: '1.0.0',
-}, {
-  capabilities: {
-    tools: {},
-  },
-});
-
-// Define custom tool
-server.setRequestHandler('tools/list', async () => {
-  return {
-    tools: [{
-      name: 'get_deployment_history',
-      description: 'Get deployment history from internal database',
-      inputSchema: {
-        type: 'object',
-        properties: {
-          service: { type: 'string' }
-        }
-      }
-    }]
-  };
-});
-
-server.setRequestHandler('tools/call', async (request) => {
-  if (request.params.name === 'get_deployment_history') {
-    // Query internal database
-    const history = await db.query(
-      'SELECT * FROM deployments WHERE service = ?',
-      [request.params.arguments.service]
-    );
-    return { content: [{ type: 'text', text: JSON.stringify(history) }] };
-  }
-});
-
-// Start server
-const transport = new StdioServerTransport();
-await server.connect(transport);
-```
-
-**Register in mcp-config.json:**
-```json
-{
-  "mcpServers": {
-    "company-internal": {
-      "command": "node",
-      "args": ["./mcp-servers/custom-mcp-server.js"],
-      "env": {
-        "DATABASE_URL": "${INTERNAL_DB_URL}"
-      }
-    }
-  }
-}
-```
+The AWS Cloud Control API MCP server requires only **ReadOnlyAccess** (or equivalent):
+- `cloudformation:Describe*`, `cloudformation:List*`
+- `s3:GetBucket*`, `s3:ListBucket*`
+- `lambda:GetFunction`, `lambda:List*`
+- `apigateway:GET`
+- `iam:List*`, `iam:Get*`
+- `cloudwatch:Describe*`, `cloudwatch:List*`
 
 ---
 
 ## Summary
 
-MCP servers enable AI agents to access external systems securely and efficiently. Proper setup and configuration is essential for successful AI-assisted migration.
+| MCP Server | Used By | Purpose |
+|---|---|---|
+| AWS Cloud Control API | `@aws-discovery` | Enumerate AWS resources read-only |
+| AWS Knowledge | `@aws-discovery` | AWS documentation lookups |
+| Microsoft Learn | `@azure-architect`, `@iac-transformation` | Azure service docs + AVM module examples |
+| Azure MCP | `@azure-architect`, `@deployment-validation` | Azure resource search + validation |
+| Mermaid Chart | `@azure-architect` | Diagram syntax validation |
 
-**Key Points:**
-- 5 MCP servers cover all migration phases
-- Each server requires specific credentials
-- Configuration stored in `.github/mcp-config.json`
-- Environment variables for sensitive data
-- Test each server before demo/production use
-
-**Next Steps:**
-1. Install all MCP servers
-2. Configure credentials
-3. Test each server
-4. Update `.github/mcp-config.json`
-5. Run agents to verify integration
+**Design Principle:** No CLI or PowerShell commands inside any agent — all external data access goes through MCP server tools only.
 
 **See Also:**
-- 02-TECHNICAL-DEEP-DIVE.md for architecture
-- 03-CUSTOM-AGENT-SPECIFICATIONS.md for agent usage
+- [03-CUSTOM-AGENT-SPECIFICATIONS.md](03-CUSTOM-AGENT-SPECIFICATIONS.md) — full agent tool bindings
+- [outputs/azure-functions/](../outputs/azure-functions/) — refactored Python Azure Functions
+- [outputs/bicep-templates/](../outputs/bicep-templates/) — deployed Bicep infrastructure
+

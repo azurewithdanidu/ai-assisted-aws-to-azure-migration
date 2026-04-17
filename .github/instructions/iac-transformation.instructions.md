@@ -186,22 +186,65 @@ AVM modules introduce breaking parameter changes between releases. Always read C
 
 | Module | Version | Change |
 |---|---|---|
-| `avm/res/web/serverfarm` | `0.7.0` | Removed `skuTier`, `reserved`, `kind` params — `skuName: 'Y1'` is sufficient for Consumption Linux |
+| `avm/res/web/serverfarm` | `0.7.0` | Only `skuTier` was removed. `kind` and `reserved` are **still required** for Linux plans. Always set `kind: 'linux'` and `reserved: true` — omitting them silently creates a **Windows** App Service Plan. |
 | `avm/res/storage/storage-account` | `0.32.0` | `blobServices.deleteRetentionPolicy.{enabled,days}` flattened to top-level `blobServices.deleteRetentionPolicyEnabled` and `blobServices.deleteRetentionPolicyDays` (same pattern for `containerDeleteRetentionPolicy*`) |
 
-### Function App linuxFxVersion on Consumption Plan
+### App Service Plan OS — Always Derive from Reference Documents
 
-For Azure Functions on a **Consumption plan (Y1)**, `siteConfig.linuxFxVersion` must be set to an **empty string** — the `Python|3.11` format is valid for App Service but is rejected by the Functions runtime on Consumption:
+**Before writing any App Service Plan or Function App Bicep**, check the architecture reference documents to determine the target OS:
+- `outputs/azure-architecture-output/azure-architecture-summary.md`
+- `outputs/azure-architecture-output/service-mapping.md`
+
+Then apply the correct parameters for `avm/res/web/serverfarm`:
+
+| Target OS | Required params | Function App `kind` |
+|---|---|---|
+| **Linux** | `kind: 'linux'`, `reserved: true` | `'functionapp,linux'` |
+| **Windows** | `kind: 'app'` (or omit — default) | `'functionapp'` |
+
+> **Why this matters:** Omitting `kind`/`reserved` silently defaults to **Windows**, even when the Function App or runtime (e.g. Python, Node on Linux) requires Linux. Azure will not error at plan creation — it fails later when the site is deployed.
 
 ```bicep
-// ❌ BAD — rejected with "The parameter LinuxFxVersion has an invalid value" on Consumption plan
-siteConfig: {
-  linuxFxVersion: 'Python|3.11'
+// ✅ Linux Consumption plan (Python / Node on Linux)
+module plan 'br/public:avm/res/web/serverfarm:0.7.0' = {
+  params: {
+    name: 'my-plan'
+    skuName: 'Y1'
+    kind: 'linux'
+    reserved: true
+  }
 }
 
-// ✅ GOOD — leave empty; runtime is set via FUNCTIONS_WORKER_RUNTIME app setting
+// ✅ Windows Consumption plan (.NET / PowerShell)
+module plan 'br/public:avm/res/web/serverfarm:0.7.0' = {
+  params: {
+    name: 'my-plan'
+    skuName: 'Y1'
+    kind: 'app'
+    // reserved defaults to false — Windows
+  }
+}
+```
+
+This applies to all SKUs (Y1 Consumption, EP1/EP2/EP3 Premium, B1/P1v3 dedicated).
+
+### Function App linuxFxVersion — Always Set Explicitly
+
+**Always** set `siteConfig.linuxFxVersion` to the runtime version required by the application code. Leaving it as an empty string causes Azure to default to the **oldest registered runtime** (e.g. `PYTHON|3.6`), not the latest.
+
+- Format: `LANGUAGE|version` in **uppercase** (e.g. `PYTHON|3.11`, `NODE|20`, `DOTNET|8`)
+- Check the application code and `requirements.txt` / `package.json` to determine the correct version
+- Azure Functions v4 supports Python **3.9, 3.10, 3.11 only** — use `PYTHON|3.11` unless the reference docs specify otherwise
+
+```bicep
+// ❌ BAD — Azure defaults to Python 3.6 (oldest registered runtime)
 siteConfig: {
   linuxFxVersion: ''
+}
+
+// ✅ GOOD — explicitly pin to the version required by the application code
+siteConfig: {
+  linuxFxVersion: 'PYTHON|3.11'
   appSettings: [
     { name: 'FUNCTIONS_WORKER_RUNTIME', value: 'python' }
   ]

@@ -228,24 +228,6 @@
 - "Infrastructure deployed successfully on first attempt — Bicep validated before apply"
 - "Deployment validation confirmed functional parity with the AWS original"
 - "Everything secured with Managed Identity — no access keys anywhere"
-   - Show updated `.buildkite/pipeline.yml`:
-     ```yaml
-     steps:
-       - label: "Validate Bicep"
-         command: az bicep build --file main.bicep
-       
-       - label: "Preview Changes"
-         command: az deployment group what-if
-       
-       - label: "Deploy to Azure"
-         command: az deployment group create
-       
-       - label: "Run Tests"
-         command: npm test --env=azure
-     ```
-   - "Now deploys to Azure instead of AWS"
-   - "Added validation step"
-   - "Rollback procedure included"
 
 5. **Invoke Validation Agent** (30 seconds)
    ```
@@ -384,25 +366,25 @@
 
 ### Opening (Minute 0)
 
-"Good morning/afternoon everyone. Today I'm going to show you something that will change how you think about cloud migrations. We're going to migrate a complex, production-like AWS environment to Azure - completely - in the next 30 minutes. And I'm not going to write a single line of code or configuration. Instead, I'm going to use five AI agents that we've created to do all the work."
+"Good morning/afternoon everyone. Today I'm going to show you something that will change how you think about cloud migrations. We're going to migrate a real AWS serverless application to Azure — completely — in the next 30 minutes. And I'm not going to write a single line of code or configuration. Instead, I'm going to use five AI agents that we've created to do all the work."
 
 [Show AWS Console]
 
-"Here's what we're starting with: A production-grade environment with an EKS cluster running three microservices, three Lambda functions, a Multi-AZ RDS PostgreSQL database, S3 buckets, and EventBridge for event-driven communication. Traditionally, this would take about 20 weeks to migrate. Let's see how fast we can do it with AI."
+"Here's what we're starting with: A real image upload service running in AWS. Four Lambda functions handling upload, listing, viewing, and deletion of images. API Gateway fronting those functions. Two S3 buckets. This is a real AWS account — account 535002891143, Sydney region. Traditionally, migrating something like this takes 3–4 weeks. Let's see how fast we can do it with AI."
 
 ### Discovery (Minute 5)
 
 [Open VS Code]
 
-"I'm going to invoke our first agent - the AWS Discovery Agent. Watch what happens."
+"I'm going to invoke our first agent — the AWS Discovery Agent. Watch what happens."
 
 [Type command]
 
-"The agent is now using the AWS Cloud Control API to scan our entire environment. It's discovering Lambda functions, analyzing the EKS cluster, mapping dependencies - everything. And here are the results..."
+"The agent is now using the AWS Cloud Control API MCP Server to scan the entire environment. It's discovering Lambda functions, analyzing S3 buckets, mapping IAM dependencies — everything. And here are the results..."
 
-[Open files]
+[Open files in `outputs/aws-migration-artifacts/`]
 
-"Complete inventory with every resource, a dependency matrix showing how services interact, an architecture diagram the agent generated, and a migration assessment with complexity ratings. This discovery process that normally takes three weeks just took two minutes."
+"Complete JSON inventory with every resource, a dependency matrix showing how services interact, a Mermaid architecture diagram, and a migration assessment. Complexity: LOW. Recommended effort: 2–3 weeks. This discovery process normally takes days — just took two minutes."
 
 ### Design (Minute 10)
 
@@ -410,47 +392,43 @@
 
 [Type command]
 
-"The agent is accessing Microsoft Learn documentation to find the correct Azure equivalents. Lambda maps to Azure Functions, EKS to AKS, RDS to Azure Database for PostgreSQL. It's generating production-ready Bicep templates following Azure best practices."
+"The agent is accessing Microsoft Learn documentation to find the correct Azure equivalents. Lambda maps to Azure Functions, S3 maps to Azure Blob Storage, API Gateway is replaced by Azure Functions' built-in HTTP triggers. It's generating production-ready Bicep templates following Azure best practices and Azure Verified Modules."
 
-[Open Bicep files]
+[Open `outputs/azure-architecture-output/`]
 
-"Here's the generated infrastructure code. Notice it's modular, uses private endpoints, implements Managed Identity. And look at this cost comparison..."
-
-[Open cost file]
-
-"Azure will cost us $620 per month versus $850 on AWS. That's $230 monthly savings, or $2,760 per year, calculated automatically by the agent. Architecture design that takes five weeks just took three minutes."
+"Here's the generated service mapping and cost comparison. Azure will cost $0.54 per month versus $2.92 on AWS at demo scale — 81% reduction. Architecture design done in minutes, not weeks."
 
 ### Refactor (Minute 18)
 
-[Show original code]
+[Show `app-code/lambda-functions/`]
 
-"Here's our Lambda function using AWS SDKs. Let's refactor it for Azure."
+"Here are our Lambda handlers using boto3, the AWS Python SDK. Let's refactor them for Azure."
 
 [Type command]
 
-"The agent is replacing AWS SDKs with Azure equivalents, updating authentication from IAM to Managed Identity, running all the tests to ensure nothing breaks."
+"The agent is replacing boto3 with azure-storage-blob and azure-identity, converting the Lambda handler signatures to Azure Functions Python v2 `@app.route()` decorators, and implementing SAS token generation using the Managed Identity delegation pattern."
 
-[Show refactored code]
+[Show `outputs/azure-functions/function_app.py`]
 
-"Here's the result. Azure Blob Storage instead of S3, Event Grid instead of EventBridge, Managed Identity instead of IAM credentials. All tests pass. Ready for production. Two minutes versus two weeks."
+"Here's the result. A single Azure Functions file with all 4 endpoints. DefaultAzureCredential instead of IAM credentials. Two minutes versus two weeks."
 
 ### Deploy (Minute 23)
 
-"Finally, let's update our CI/CD pipeline and validate everything."
+"Let's validate and deploy the Bicep infrastructure."
 
-[Type commands]
+[Show `outputs/bicep-templates/`]
 
-"The agent is converting our CloudFormation to Bicep, updating the Buildkite pipeline to deploy to Azure, and running security validation."
+"The IaC Transformation agent generated this modular Bicep structure — one file per Azure resource, subscription-scoped deployment, parameters per environment. The Deployment Validation agent already ran syntax checks and security validation."
 
-[Show validation report]
+[Show deployed resources in Azure Portal]
 
-"Everything passes. Bicep syntax valid, security compliant, costs within budget. Ready to deploy."
+"And here's the running environment — resource group `img-upload-dev-rg` in australiaeast. Storage account, Function App, Static Web App, Key Vault, Application Insights. All deployed via a single `az deployment sub create` command. Zero manual steps."
 
 ### Closing (Minute 27)
 
-[Show summary slide]
+[Show results panel]
 
-"So in the last 30 minutes, we've done what traditionally takes 20 weeks. Five AI agents automated discovery, design, code refactoring, infrastructure transformation, and validation. 60% time savings, 78% cost savings, and all the knowledge stays with your team in these reusable agents."
+"In the last 30 minutes, we've completed what traditionally takes 3–4 weeks: discovery, architecture, code refactoring, infrastructure deployment, validation. Five AI agents automated every phase. 81% cost reduction. Zero hardcoded credentials. Knowledge lives in these reusable agent files — not in someone's head."
 
 "Questions?"
 

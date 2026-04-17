@@ -1,7 +1,7 @@
 # Demo Execution Guide
 
-**Document Version:** 1.0  
-**Date:** December 2024  
+**Document Version:** 2.0  
+**Date:** April 2026  
 **Purpose:** Step-by-step live demonstration execution
 
 ---
@@ -19,26 +19,25 @@
 ### Terminal Commands
 
 ```bash
-# Show AWS resources
-aws cloudformation list-stacks --stack-status-filter CREATE_COMPLETE
-
-# Show EKS cluster
-aws eks list-clusters
-kubectl get nodes
+# Show AWS resources (actual account)
+aws sts get-caller-identity
+# Expected: Account 535002891143, ap-southeast-2
 
 # Show Lambda functions
-aws lambda list-functions --query 'Functions[].FunctionName'
+aws lambda list-functions --region ap-southeast-2 --query 'Functions[].FunctionName'
+# Expected: upload_handler, list_handler, view_handler, delete_handler
 
-# Show RDS
-aws rds describe-db-instances --query 'DBInstances[].DBInstanceIdentifier'
-
-# Show S3
+# Show S3 buckets
 aws s3 ls
+# Expected: img-upload buckets
+
+# Show CloudFormation stack
+aws cloudformation list-stacks --stack-status-filter CREATE_COMPLETE --region ap-southeast-2
 ```
 
 ### What to Say
 
-"This is our production-like AWS environment with EKS, Lambda, RDS, S3, and EventBridge. Traditionally, migrating this takes 4-5 weeks. Let's do it in 30 minutes with AI agents."
+"This is a real AWS environment — account 535002891143, Sydney region. An image upload service: four Lambda functions, API Gateway, two S3 buckets, IAM roles. A simple but real serverless app. Let's migrate it to Azure entirely with AI agents."
 
 ---
 
@@ -52,14 +51,14 @@ aws s3 ls
 
 ### Files to Review
 
-1. `migration-artifacts/aws-inventory.json` - Show resource count
-2. `migration-artifacts/dependency-matrix.csv` - Show relationships
-3. `migration-artifacts/architecture-diagram.mmd` - Render diagram
-4. `migration-artifacts/migration-assessment.md` - Show complexity ratings
+1. `outputs/aws-migration-artifacts/aws-inventory.json` - Show resource count (18 active resources)
+2. `outputs/aws-migration-artifacts/dependency-matrix.csv` - Show service relationships
+3. `outputs/aws-migration-artifacts/architecture-diagram.mmd` - Render Mermaid diagram
+4. `outputs/aws-migration-artifacts/migration-assessment.md` - Show complexity: LOW, effort: 2–3 weeks
 
 ### What to Say
 
-"Complete discovery in 2 minutes. Every resource inventoried, dependencies mapped, complexity assessed. This normally takes 3 weeks of manual work."
+"Complete discovery in 2 minutes. 18 active resources inventoried, dependencies mapped, complexity assessed as LOW. This normally takes days of manual work."
 
 ---
 
@@ -73,14 +72,14 @@ aws s3 ls
 
 ### Files to Review
 
-1. `azure-infrastructure/main.bicep` - Show modular structure
-2. `azure-infrastructure/modules/database.bicep` - Show PostgreSQL configuration
-3. `migration-artifacts/cost-comparison.md` - Highlight $230/month savings
-4. `migration-artifacts/architecture-diagram-azure.mmd` - Show Azure design
+1. `outputs/bicep-templates/main.bicep` - Show modular structure, `targetScope = 'subscription'`
+2. `outputs/bicep-templates/modules/storage.bicep` - Show AVM storage module
+3. `outputs/azure-architecture-output/cost-comparison.md` - Highlight 81% cost reduction ($2.92 → $0.54/month)
+4. `outputs/azure-architecture-output/architecture-diagram-azure.mmd` - Show Azure design
 
 ### What to Say
 
-"Azure architecture designed in 3 minutes. Production-ready Bicep templates, best practices applied automatically, 27% cost savings. Normally takes 5 weeks."
+"Azure architecture designed in minutes. Production-ready Bicep templates using Azure Verified Modules, Managed Identity, Key Vault. 81% cost reduction at this scale."
 
 ---
 
@@ -89,25 +88,25 @@ aws s3 ls
 ### Show Original Code First
 
 ```bash
-# Open in VS Code
-code lambda-functions/order-validator/index.js
+# Open Lambda handlers in VS Code
+code app-code/lambda-functions/upload/upload_handler.py
 ```
 
 ### Agent Invocation
 
 ```
-@code-refactor Refactor the order-validator Lambda function to use Azure Functions and Azure SDKs
+@code-refactor Refactor all Lambda handlers to Azure Functions Python v2 model with Azure Blob Storage
 ```
 
 ### Files to Review
 
-1. Updated `index.js` - Show Azure SDK replacements
-2. Updated `package.json` - Show new dependencies
-3. GitHub Pull Request - Show automated PR
+1. `outputs/azure-functions/function_app.py` - Show all 4 endpoints, `@app.route()` decorators
+2. `outputs/azure-functions/requirements.txt` - Show `azure-storage-blob`, `azure-identity`
+3. `outputs/static-web-app/app.html` - Show updated frontend calling Azure Function URLs
 
 ### What to Say
 
-"Code refactored in 2 minutes. AWS SDKs replaced with Azure, authentication updated to Managed Identity, all tests passing. Normally takes 2 weeks per service."
+"All four Lambda handlers refactored to a single Azure Functions Python v2 file. boto3 replaced with azure-storage-blob. DefaultAzureCredential replacing IAM keys. SAS token generation adapted for Managed Identity. Two minutes vs two weeks."
 
 ---
 
@@ -116,22 +115,22 @@ code lambda-functions/order-validator/index.js
 ### Agent Invocations
 
 ```
-@iac-transformation Convert all CloudFormation templates to Bicep and update the Buildkite pipeline for Azure deployment
+@iac-transformation Convert the CloudFormation template to Bicep using Azure Verified Modules and deploy with az deployment sub create
 ```
 
 ```
-@deployment-validation Validate the Bicep templates and run security compliance checks
+@deployment-validation Validate the Azure deployment — check all resources, run smoke tests, and confirm the static web app is accessible
 ```
 
 ### Files to Review
 
-1. Updated `.buildkite/pipeline.yml` - Show Azure deployment steps
-2. Validation report - Show all checks passing
-3. Cost estimate - Confirm $620/month
+1. `outputs/bicep-templates/main.bicep` - Show subscription-scoped Bicep
+2. `outputs/azure-functions/local.settings.json` - Show `BLOB_CONTAINER_NAME` (not reserved `CONTAINER_NAME`)
+3. Show Azure Portal: resource group `img-upload-dev-rg`, all resources green
 
 ### What to Say
 
-"Infrastructure transformed in 2 minutes. CloudFormation to Bicep, pipeline updated, security validated. Normally takes 2 weeks. Everything ready for production deployment."
+"Infrastructure deployed on first attempt. Bicep validated before apply, Managed Identity configured, Key Vault provisioned. Zero manual credential management. Deployed in australiaeast in under 8 minutes."
 
 ---
 

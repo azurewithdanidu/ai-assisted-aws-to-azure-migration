@@ -129,7 +129,7 @@ PHASE 2: DESIGN
 
 
 PHASE 3: REFACTOR
-[GitHub MCP Server]
+[ms-python.python/* tools]
           |
           v
 [GitHub Copilot Agent: Code Refactor]
@@ -140,11 +140,11 @@ PHASE 3: REFACTOR
           +---> Maintains test coverage
           |
           v
-[Output: Refactored code + pull requests]
+[Output: Refactored code — outputs/azure-functions/]
 
 
 PHASE 4: DEPLOY
-[Azure MCP Server + Buildkite MCP Server]
+[Azure MCP Server]
           |
           v
 [GitHub Copilot Agents: IaC Transform + Validation]
@@ -226,78 +226,77 @@ Custom agents are repository-specific AI assistants that:
 - Benefits: Up-to-date service mappings and best practices
 - Documentation: https://learn.microsoft.com/en-us/training/support/mcp
 
-**GitHub MCP Server**
-- Purpose: Refactor phase
-- Capabilities: Analyze repositories, create PRs, manage issues
-- Benefits: Automated code changes with proper review workflows
-- Documentation: https://github.com/github/github-mcp-server
+**AWS Knowledge MCP Server**
+- Purpose: Discovery phase
+- Capabilities: Search AWS documentation, retrieve service schemas
+- Benefits: Confirms resource type mappings for Cloud Control API
+- Documentation: https://awslabs.github.io/mcp/servers/aws-documentation-mcp-server/
 
 **Azure MCP Server**
-- Purpose: Deploy phase
-- Capabilities: Deploy resources, query ARM, manage subscriptions
-- Benefits: Automated infrastructure provisioning
+- Purpose: Architecture design + validation
+- Capabilities: Query Azure resources, validate region availability
+- Benefits: Confirms deployed resource status during validation
 - Documentation: https://learn.microsoft.com/en-us/azure/developer/azure-mcp-server/overview
 
-**Buildkite MCP Server**
-- Purpose: CI/CD updates
-- Capabilities: Update pipelines, trigger builds, query status
-- Benefits: Automated pipeline reconfiguration
-- Documentation: https://buildkite.com/docs/apis/mcp-server
+**Mermaid Chart MCP Server**
+- Purpose: Diagram validation
+- Capabilities: Validate Mermaid diagram syntax
+- Benefits: Ensures generated architecture diagrams render correctly
+- Documentation: https://www.mermaidchart.com/mcp
 
 ### Agent Workflow Example
 
-**Scenario:** Migrate Lambda function to Azure Functions
+**Scenario:** Migrate Lambda handlers to Azure Functions (actual migration)
 
 ```
 1. Engineer invokes agent:
-   "@code-refactor Update order-processor function to use Azure"
+   "@code-refactor Refactor all Lambda handlers to Azure Functions Python v2 model"
 
 2. Agent workflow:
-   a. Scans order-processor/ directory for AWS SDK usage
-   b. Identifies: aws-sdk/client-s3, aws-sdk/client-eventbridge
-   c. Replaces with: @azure/storage-blob, @azure/eventgrid
-   d. Updates authentication: IAM → DefaultAzureCredential
-   e. Updates environment variables
-   f. Runs tests to verify functionality
-   g. Creates pull request with detailed changes
+   a. Reads app-code/lambda-functions/ — upload, list, view, delete handlers
+   b. Identifies: boto3.client('s3'), s3.generate_presigned_url()
+   c. Replaces with: BlobServiceClient, generate_blob_sas() + get_user_delegation_key()
+   d. Updates authentication: IAM execution role → DefaultAzureCredential()
+   e. Rewrites handlers to Azure Functions Python v2 @app.route() decorators
+   f. Updates requirements.txt: boto3 → azure-storage-blob, azure-identity
+   g. Updates local.settings.json with BLOB_CONTAINER_NAME (avoiding reserved CONTAINER_NAME)
 
 3. Output:
-   - Pull request with refactored code
-   - Updated package.json
-   - Test results showing 100% pass rate
-   - Documentation of changes made
+   - outputs/azure-functions/function_app.py — all 4 endpoints in single file
+   - outputs/azure-functions/requirements.txt — Azure SDK dependencies
+   - outputs/static-web-app/app.html — frontend updated to call Azure Function URLs
 ```
 
 ### Service Migration Mappings
 
+**Mappings used in this migration:**
+
 **Compute:**
-- AWS Lambda → Azure Functions (Premium plan for VNet integration)
-- AWS EKS → Azure Kubernetes Service (AKS)
-- AWS EC2 → Azure Virtual Machines
+- AWS Lambda (4 functions) → Azure Functions Python v2, Consumption plan
+- AWS API Gateway → Azure Functions built-in HTTP triggers
 
 **Storage:**
-- AWS S3 → Azure Blob Storage (with lifecycle policies)
-- AWS EBS → Azure Managed Disks
-- AWS EFS → Azure Files
+- AWS S3 (images bucket) → Azure Blob Storage
+- AWS S3 (static site) → Azure Static Web Apps
 
-**Database:**
+**Security:**
+- AWS IAM Lambda execution role → Azure Managed Identity
+- AWS Secrets Manager → Azure Key Vault
+- AWS KMS → Azure Key Vault keys
+
+**Monitoring:**
+- AWS CloudWatch Logs → Azure Application Insights + Log Analytics
+
+**Infrastructure as Code:**
+- AWS CloudFormation → Azure Bicep (modular, subscription-scoped)
+
+**General mappings (for reference — used in larger migrations):**
+- AWS EKS → Azure Kubernetes Service (AKS)
 - AWS RDS PostgreSQL → Azure Database for PostgreSQL Flexible Server
-- AWS RDS MySQL → Azure Database for MySQL Flexible Server
 - AWS DynamoDB → Azure Cosmos DB
-
-**Messaging:**
 - AWS EventBridge → Azure Event Grid
 - AWS SQS → Azure Service Bus Queues
 - AWS SNS → Azure Service Bus Topics
-
-**Security:**
-- AWS IAM Roles → Azure Managed Identity + RBAC
-- AWS Secrets Manager → Azure Key Vault
-- AWS KMS → Azure Key Vault (with CMK)
-
-**Monitoring:**
-- AWS CloudWatch → Azure Monitor + Application Insights
-- AWS X-Ray → Azure Application Insights (distributed tracing)
 
 ---
 
@@ -410,14 +409,13 @@ Total 3-Year Cost:                  $217,400
 **What We'll Show:**
 
 **Minute 0-5: Environment Overview**
-- Complex AWS reference architecture
-  - EKS cluster with 3 microservices
-  - 3 Lambda functions
-  - RDS PostgreSQL database
-  - S3 buckets
-  - EventBridge event routing
-  - CloudFormation infrastructure
-  - Buildkite CI/CD pipeline
+- Real AWS serverless application (account 535002891143, ap-southeast-2)
+  - 4 Lambda functions (upload, list, view, delete)
+  - API Gateway REST endpoint
+  - 2 S3 buckets (images + artifacts)
+  - IAM execution roles
+  - CloudFormation template
+  - 8 CloudWatch log groups
 
 **Minute 5-10: Discovery Phase**
 - Invoke `@aws-discovery` agent
@@ -446,11 +444,11 @@ Total 3-Year Cost:                  $217,400
 ### Demonstration Outcomes
 
 After 30 minutes, attendees will see:
-1. Complete AWS infrastructure migrated to Azure
-2. All code refactored to Azure SDKs
-3. Infrastructure as Code converted to Bicep
-4. CI/CD pipelines updated for Azure
-5. Validation reports confirming success
+1. Complete AWS infrastructure discovered and assessed (18 active resources)
+2. All 4 Lambda functions refactored to Azure Functions Python v2
+3. Infrastructure as Code converted from CloudFormation to modular Bicep
+4. Azure environment deployed and validated (australiaeast)
+5. 81% cost reduction confirmed ($2.92 → $0.54/month at demo scale)
 
 ### Immediate Next Steps
 

@@ -268,6 +268,85 @@ For each recommendation:
 - **Break-Even Point:** 18 months
 ```
 
+## Primary Deliverable: Design Document
+
+Before writing any Bicep or diagram files, produce a single markdown design document at:
+
+**`outputs/azure-architecture-output/design-document.md`**
+
+This document is the authoritative handoff artifact consumed by the `code-refactor`, `iac-transformation`, and `deployment-validation` downstream agents. It must be self-contained and unambiguous.
+
+### Required Structure
+
+```markdown
+# Azure Architecture Design Document
+
+## 1. Executive Summary
+One-paragraph description of the migration scope, target architecture pattern, and primary outcomes.
+
+## 2. AWS Discovery Summary
+Bullet list of every AWS service identified in aws-inventory.json including instance counts, regions, and key configuration details drawn from migration-assessment.md.
+
+## 3. Azure Service Mapping
+Table for each AWS service:
+
+| AWS Service | AWS Config | Azure Equivalent | Azure Config | Migration Notes |
+|---|---|---|---|---|
+| Lambda (upload) | 512 MB, 30 s timeout | Azure Functions (HTTP trigger) | Consumption plan, Python 3.11 | Rewrite handler; use DefaultAzureCredential |
+
+## 4. Target Architecture
+Embed the Mermaid diagram inline (copy of architecture-diagram-azure.mmd) with a prose description of each major component group, network boundary, and data flow.
+
+## 5. Infrastructure as Code Specification
+For **every** Bicep module the iac-transformation agent must create or update:
+
+### 5.x <ModuleName> (`modules/<file>.bicep`)
+- **Purpose:** What this module deploys
+- **Parameters:** Name, type, allowed values, description
+- **Resources:** Exact Azure resource types and API versions
+- **Outputs:** Names and types exposed to the root template
+- **Security requirements:** Private endpoints, managed identity, RBAC assignments
+- **Environment differences:** How dev / staging / prod parameters differ
+
+## 6. Application Code Changes
+For **every** Lambda function the code-refactor agent must rewrite:
+
+### 6.x <FunctionName> (`outputs/azure-functions/function_app.py`)
+- **Original file:** Path in app-code/lambda/
+- **Trigger type:** HTTP / Timer / Blob / Queue
+- **SDK changes:** boto3 → azure-sdk package mapping (exact package names and import paths)
+- **Environment variables:** Old name → New name, where the value comes from (Key Vault reference, app setting)
+- **Auth pattern:** How the function authenticates to downstream services (DefaultAzureCredential)
+- **Configuration changes:** Any host.json or requirements.txt additions
+
+## 7. Environment Configuration
+Parameter values for each environment (dev / staging / prod):
+
+| Parameter | Dev | Staging | Prod |
+|---|---|---|---|
+| functionAppSku | Y1 | EP1 | EP2 |
+| storageReplication | LRS | ZRS | GRS |
+
+## 8. Security Requirements
+- Managed Identity assignments and their required RBAC roles
+- Key Vault secrets that must be pre-populated before deployment
+- Network Security Group rules
+- Private Endpoint DNS zones
+
+## 9. Deployment Order
+Numbered sequence of deployment steps the deployment-validation agent must follow, noting dependencies between steps.
+
+## 10. Validation Checklist
+Checkbox list of smoke tests the deployment-validation agent must run to confirm a successful migration.
+```
+
+### Rules for Populating the Document
+- Pull every fact from `outputs/aws-migration-artifacts/` — do **not** invent values.
+- For each section referencing code or IaC changes, be explicit enough that a downstream agent can act without additional context.
+- Use fenced code blocks with language identifiers for all code samples.
+- Do not omit sections; use "N/A — not applicable" with a reason if a section truly does not apply.
+- Write the file **before** generating any other output files (diagrams, cost reports, Bicep templates).
+
 ## Output Files
 
 ### 4. architecture-diagram-azure.mmd
@@ -329,11 +408,13 @@ Detailed mapping document showing:
 ## Success Criteria
 
 Architecture design is complete when:
-1. ✅ All AWS services mapped to Azure equivalents
-2. ✅ All Bicep templates generate without errors
-3. ✅ All parameters are configurable
-4. ✅ Cost comparison is detailed and justified
-5. ✅ Well-Architected Framework principles applied
-6. ✅ Security best practices implemented
-7. ✅ Documentation is comprehensive
-8. ✅ Templates tested with what-if validation
+1. ✅ `outputs/azure-architecture-output/design-document.md` exists and all 10 sections are populated
+2. ✅ All AWS services mapped to Azure equivalents in design-document.md Section 3
+3. ✅ All Bicep modules fully specified in design-document.md Section 5
+4. ✅ All Lambda-to-Function rewrites fully specified in design-document.md Section 6
+5. ✅ All Bicep templates generate without errors
+6. ✅ All parameters are configurable
+7. ✅ Cost comparison is detailed and justified
+8. ✅ Well-Architected Framework principles applied
+9. ✅ Security best practices implemented
+10. ✅ Templates tested with what-if validation

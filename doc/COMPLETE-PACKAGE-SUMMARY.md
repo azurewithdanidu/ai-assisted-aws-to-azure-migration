@@ -152,70 +152,34 @@ azure-infrastructure/
 
 **File Location:** `.github/agents/code-refactor.agent.md`
 
-**Purpose:** Refactor application code from AWS SDKs to Azure SDKs
+**Purpose:** Refactor Python Lambda handlers to Azure Functions Python v2 model
 
-**MCP Server Integration:**
-- GitHub MCP Server
-- URL: https://github.com/github/github-mcp-server
+**Source Directory:** `app-code/lambda-functions/`  
+**Target Directory:** `app-code/azure-functions/` (actual output: `outputs/azure-functions/`)
 
 **SDK Replacements:**
 
-**Node.js:**
-- `@aws-sdk/client-s3` → `@azure/storage-blob`
-- `@aws-sdk/client-eventbridge` → `@azure/eventgrid`
-- `@aws-sdk/client-dynamodb` → `@azure/cosmos`
-- `@aws-sdk/client-lambda` → HTTP calls to Azure Functions
-
-**Python:**
+Python:
 - `boto3.client('s3')` → `azure.storage.blob.BlobServiceClient`
-- `boto3.client('events')` → `azure.eventgrid.EventGridPublisherClient`
-- `boto3.client('dynamodb')` → `azure.cosmos.CosmosClient`
+- `boto3.session.Session()` → `azure.identity.DefaultAzureCredential()`
+- `s3.generate_presigned_url()` → `generate_sas()` via `get_user_delegation_key()`
 
-**Authentication Updates:**
-- Remove: AWS IAM credentials, access keys, secret keys
-- Add: `DefaultAzureCredential` from `@azure/identity`
-- Implement: Managed Identity for all service-to-service auth
+**Authentication:** `DefaultAzureCredential()` — works automatically with Managed Identity in Azure, and with `az login` locally
 
-**Environment Variable Changes:**
-```bash
-# Remove
-AWS_REGION, AWS_ACCESS_KEY_ID, AWS_SECRET_ACCESS_KEY
-S3_BUCKET_NAME, DYNAMODB_TABLE_NAME
+**Production Gotchas (learned from this migration):**
 
-# Add
-AZURE_STORAGE_ACCOUNT_NAME, AZURE_STORAGE_CONTAINER_NAME
-AZURE_EVENT_GRID_ENDPOINT, AZURE_COSMOS_ENDPOINT
-```
-
-**Capabilities:**
-- Scans repository for AWS SDK usage
-- Replaces SDK imports and method calls
-- Updates authentication mechanisms
-- Maintains 100% functional parity
-- Preserves all business logic
-- Updates package dependencies
-- Updates tests and mocks
-- Creates detailed pull requests
-
-**Quality Checklist:**
-- All AWS SDK imports removed
-- All Azure SDK imports added
-- DefaultAzureCredential used
-- No hardcoded credentials
-- Environment variables updated
-- All tests pass
-- Code coverage maintained
-- Error handling equivalent
+| Issue | Problem | Solution |
+|-------|---------|---------|
+| Python version | 3.12/3.13 crash with `0xC0000005` in Azure Functions v4 | Use Python 3.9–3.11 only |
+| Reserved env var | `CONTAINER_NAME` is reserved by Azure Functions host | Use `BLOB_CONTAINER_NAME` instead |
+| Static Web Apps | Rejects root with only `app.html` | Require `index.html` as default |
+| SAS with Managed Identity | Must call `get_user_delegation_key()` before `generate_blob_sas()` | See `outputs/azure-functions/function_app.py` |
 
 **Custom Instructions:** `.github/instructions/code-refactoring.instructions.md`
-- Business logic preservation requirements
-- Error handling equivalence mapping
-- Testing requirements (unit and integration)
-- Pull request template and format
 
 **Invocation:**
 ```
-@code-refactor Refactor the order-processor Lambda function to use Azure Functions and Azure SDKs
+@code-refactor Refactor all Lambda handlers to Azure Functions Python v2 model with Azure Blob Storage
 ```
 
 ---
@@ -224,78 +188,40 @@ AZURE_EVENT_GRID_ENDPOINT, AZURE_COSMOS_ENDPOINT
 
 **File Location:** `.github/agents/iac-transformation.agent.md`
 
-**Purpose:** Convert CloudFormation to Bicep and update CI/CD pipelines
+**Purpose:** Convert CloudFormation templates to modular Bicep and generate deployment scripts
+
+**Source:** `outputs/aws-migration-artifacts/cloudformation-template.yaml`  
+**Target:** `outputs/bicep-templates/`
 
 **MCP Server Integration:**
-- Azure MCP Server: https://learn.microsoft.com/en-us/azure/developer/azure-mcp-server/overview
-- Buildkite MCP Server: https://buildkite.com/docs/apis/mcp-server
+- Microsoft Learn MCP — retrieves Azure Verified Module (AVM) definitions
 
-**Capabilities:**
-- Converts CloudFormation YAML/JSON to Bicep
-- Creates modular Bicep structure (not monolithic)
-- Updates Buildkite pipelines for Azure deployment
-- Configures Azure service principal authentication
-- Implements deployment validation (what-if checks)
-- Adds rollback procedures
-
-**CloudFormation to Bicep Patterns:**
-```yaml
-# CloudFormation
-Resources:
-  MyBucket:
-    Type: AWS::S3::Bucket
-    Properties:
-      BucketName: !Sub '${EnvironmentName}-bucket'
+**Bicep Template Architecture Generated:**
 ```
-
-Converts to:
-
-```bicep
-// Bicep
-@description('The environment name')
-param environmentName string
-
-resource storageAccount 'Microsoft.Storage/storageAccounts@2023-01-01' = {
-  name: '${environmentName}storage'
-  location: location
-  kind: 'StorageV2'
-  sku: {
-    name: 'Standard_LRS'
-  }
-}
-```
-
-**Buildkite Pipeline Updates:**
-```yaml
-# BEFORE (AWS)
-steps:
-  - label: "Deploy to AWS"
-    commands:
-      - aws cloudformation deploy \
-          --template-file template.yaml \
-          --stack-name my-stack
-
-# AFTER (Azure)
-steps:
-  - label: "Deploy to Azure"
-    commands:
-      - az deployment group what-if \
-          --template-file main.bicep \
-          --resource-group my-rg
-      - az deployment group create \
-          --template-file main.bicep \
-          --resource-group my-rg
+outputs/bicep-templates/
+├── main.bicep              (targetScope = 'subscription')
+├── modules/
+│   ├── storage.bicep       (AVM: avm/res/storage/storage-account)
+│   ├── functions.bicep     (AVM: avm/res/web/site)
+│   ├── staticweb.bicep
+│   ├── keyvault.bicep
+│   ├── monitoring.bicep
+│   └── rbac.bicep
+└── parameters/
+    ├── dev.bicepparam
+    ├── staging.bicepparam
+    └── prod.bicepparam
 ```
 
 **Outputs:**
-- Converted Bicep templates
-- Updated Buildkite pipeline.yml
-- Deployment validation scripts
-- Rollback procedures
+- Modular Bicep template set (deployed successfully to `img-upload-dev-rg`, australiaeast)
+- Environment-specific parameter files
+
+**Custom Instructions:** `.github/instructions/iac-transformation.instructions.md`
 
 **Invocation:**
 ```
-@iac-transformation Convert all CloudFormation templates to Bicep and update the Buildkite pipeline
+@iac-transformation Convert the CloudFormation template to Bicep using Azure Verified Modules and deploy with az deployment sub create
 ```
 
 ---
@@ -304,349 +230,124 @@ steps:
 
 **File Location:** `.github/agents/deployment-validation.agent.md`
 
-**Purpose:** Validate deployments and ensure migration success
+**Purpose:** Validate Azure deployment and confirm migration success
 
-**MCP Server Integration:**
-- Azure MCP Server
-
-**Validation Steps:**
+**Validation Steps Performed:**
 
 **Pre-Deployment:**
-- Run `az bicep build` to validate syntax
-- Check Azure Policy compliance
-- Estimate costs using what-if
-- Verify service limits and quotas
+- `az bicep build` — syntax validation
+- `az deployment sub what-if` — preview resource changes
 
 **Post-Deployment:**
-- Confirm all resources deployed successfully
-- Test application endpoints (smoke tests)
-- Verify Managed Identity permissions
-- Validate Key Vault access
-- Check network connectivity (private endpoints)
-- Confirm monitoring and alerting configured
+- All Bicep outputs accessible (storage account name, function app URL)
+- Managed Identity has `Storage Blob Data Contributor` role on storage account
+- HTTP smoke tests: upload, list, view URL, delete endpoints all return expected status codes
+- Static web app serving `index.html` correctly
 
 **Security Validation:**
-- No public endpoints (except load balancers)
-- Private endpoints for PaaS services
-- Diagnostic settings enabled
-- All resources properly tagged
-- RBAC follows least privilege
+- No hardcoded credentials in function code
+- Key Vault configured for any future secrets
+- Application Insights connected for observability
+- `BLOB_CONTAINER_NAME` used (not the reserved `CONTAINER_NAME`)
 
-**Performance Validation:**
-- API response times comparable to AWS
-- Database query performance
-- Storage access latency
-- Function cold start times
-
-**Outputs:**
-- Validation report with pass/fail for each check
-- Security compliance scorecard
-- Performance comparison (AWS vs Azure)
-- Cost validation (estimate vs actual)
+**Custom Instructions:** `.github/instructions/deployment-validation.instructions.md`
 
 **Invocation:**
 ```
-@deployment-validation Validate the Azure deployment and run all compliance checks
+@deployment-validation Validate the Azure deployment — check all resources, run smoke tests, and confirm the static web app is accessible
 ```
 
 ---
 
-## AWS Demo Reference Architecture
+## Actual AWS Application (Migrated)
 
-### Overview
+### Image Upload Service
 
-Complex, production-like AWS environment for demonstration:
+A serverless image upload and management service originally built on AWS:
 
 **Components:**
-1. **EKS Cluster** - 3 microservices (Order API, Payment Service, Inventory Service)
-2. **Lambda Functions** - 3 functions (Order Validator, Email Notifier, Inventory Sync)
-3. **RDS PostgreSQL** - Shared database
-4. **S3 Buckets** - 3 buckets (invoices, images, backups)
-5. **EventBridge** - Event-driven communication
-6. **CloudFormation** - Infrastructure as Code
-7. **Buildkite** - CI/CD pipeline
+- **4 Lambda Functions** — upload, list, view (pre-signed URL), delete
+- **AWS API Gateway** — REST API fronting all functions
+- **2 S3 Buckets** — one for uploaded images, one for build artifacts
+- **IAM Roles** — Lambda execution roles + S3 access policies
+- **AWS CloudFormation** — infrastructure as code
+- **CloudWatch** — 8 log groups (one per function + API Gateway)
 
-### CloudFormation Templates
+**AWS Account:** 535002891143  
+**AWS Region:** ap-southeast-2 (Sydney)
 
-**Template 1: VPC and Networking**
-- VPC with CIDR 10.0.0.0/16
-- 2 public subnets, 2 private subnets across 2 AZs
-- Internet Gateway and NAT Gateway
-- Route tables and subnet associations
-- Security groups for EKS and RDS
-- DB subnet group
+### Azure Target Architecture
 
-**Template 2: EKS Cluster**
-- EKS cluster version 1.28
-- Managed node groups (t3.medium, 2-5 nodes)
-- Cluster IAM role
-- Node group IAM role
-- VPC CNI and CoreDNS add-ons
-
-**Template 3: RDS Database**
-- PostgreSQL 15.4
-- db.t3.medium instance
-- Multi-AZ deployment
-- 100 GB storage with auto-scaling
-- 7-day backup retention
-- Encryption at rest
-- Private subnet deployment
-
-**Template 4: S3 Buckets**
-- order-invoices bucket (versioning enabled)
-- product-images bucket (public read)
-- backup-archives bucket (lifecycle policy to Glacier)
-- Server-side encryption
-- Bucket policies
-
-**Template 5: Lambda Functions**
-- Order Validator (Node.js 18, 512 MB, API Gateway trigger)
-- Email Notifier (Python 3.11, 256 MB, EventBridge trigger)
-- Inventory Sync (Go 1.21, 256 MB, scheduled trigger)
-- IAM execution roles
-- Environment variables
-- VPC configuration for RDS access
-
-### Deployment Commands
-
-```bash
-# 1. Deploy VPC (5 minutes)
-aws cloudformation deploy \
-  --template-file aws-infrastructure/vpc-network.yaml \
-  --stack-name demo-network \
-  --capabilities CAPABILITY_IAM \
-  --region us-east-1
-
-# 2. Deploy RDS (15 minutes)
-aws cloudformation deploy \
-  --template-file aws-infrastructure/rds-database.yaml \
-  --stack-name demo-database \
-  --capabilities CAPABILITY_IAM \
-  --region us-east-1 \
-  --parameter-overrides \
-    VPCStackName=demo-network \
-    DBUsername=postgres \
-    DBPassword=SecurePassword123!
-
-# 3. Deploy S3 Buckets (2 minutes)
-aws cloudformation deploy \
-  --template-file aws-infrastructure/s3-buckets.yaml \
-  --stack-name demo-storage \
-  --region us-east-1
-
-# 4. Deploy Lambda Functions (5 minutes)
-aws cloudformation deploy \
-  --template-file aws-infrastructure/lambda-functions.yaml \
-  --stack-name demo-lambda \
-  --capabilities CAPABILITY_IAM \
-  --region us-east-1 \
-  --parameter-overrides \
-    VPCStackName=demo-network \
-    DBStackName=demo-database
-
-# 5. Deploy EKS Cluster (20 minutes)
-aws cloudformation deploy \
-  --template-file aws-infrastructure/eks-cluster.yaml \
-  --stack-name demo-eks \
-  --capabilities CAPABILITY_IAM \
-  --region us-east-1 \
-  --parameter-overrides VPCStackName=demo-network
-
-# Total deployment time: ~45 minutes
-```
+| AWS Component | Azure Equivalent | Deployed |
+|---|---|---|
+| AWS Lambda (4 functions) | Azure Functions (Python v2, single file) | ✅ `function_app.py` |
+| AWS API Gateway | Azure Functions HTTP triggers | ✅ (built-in) |
+| S3 image bucket | Azure Blob Storage container | ✅ `img-upload-dev-sa` |
+| S3 static site | Azure Static Web Apps | ✅ `outputs/static-web-app/` |
+| IAM Lambda role | Azure Managed Identity | ✅ `DefaultAzureCredential()` |
+| CloudFormation | Bicep templates | ✅ `outputs/bicep-templates/` |
+| CloudWatch Logs | Application Insights + Log Analytics | ✅ `monitoring.bicep` |
+| AWS Secrets Manager | Azure Key Vault | ✅ `keyvault.bicep` |
 
 ---
 
-## 30-Minute Demonstration Plan
+## Real Cost Comparison
 
-### Pre-Demo Setup (Complete 24 hours before)
+| Scale | AWS Monthly | Azure Monthly | Saving |
+|---|---|---|---|
+| Demo (minimal traffic) | $2.92 | $0.54 | **81% reduction** |
+| Production (1M calls, 100GB) | ~$148.80 | ~$108.80 | **27% reduction** |
 
-1. Deploy AWS reference architecture (45 minutes)
-2. Set up GitHub repository with custom agents (15 minutes)
-3. Configure MCP servers (15 minutes)
-4. Test all agents once (30 minutes)
-5. Prepare Azure subscription (5 minutes)
-
-**Total Pre-Work:** ~2 hours
-
-### Demonstration Flow
-
-**Minutes 0-5: Environment Overview**
-- Show AWS Console with deployed resources
-- Walk through architecture diagram
-- Explain complexity (EKS + Lambda + RDS + S3 + Events)
-- Show CloudFormation templates
-- Show Buildkite pipeline
-
-**Minutes 5-10: Discovery Phase**
-- Open VS Code with repository
-- Invoke: `@aws-discovery Discover all resources`
-- Show agent scanning AWS account
-- Review generated aws-inventory.json
-- Show dependency-matrix.csv
-- Display architecture-diagram.mmd rendering
-- Review migration-assessment.md (complexity ratings)
-
-**Minutes 10-18: Design Phase**
-- Invoke: `@azure-architect Design Azure architecture`
-- Show agent accessing Microsoft Learn for service mappings
-- Review generated Bicep templates (main.bicep, modules)
-- Show parameter files (dev/staging/prod)
-- Display architecture-diagram-azure.mmd
-- Review cost-comparison.md (AWS $850/mo → Azure $620/mo = $230 savings)
-
-**Minutes 18-23: Refactor Phase**
-- Invoke: `@code-refactor Refactor order-validator Lambda`
-- Show agent scanning code for AWS SDKs
-- Watch automated replacement (aws-sdk → @azure/storage-blob)
-- Review authentication update (IAM → DefaultAzureCredential)
-- Show generated pull request with before/after code
-- Display test results (all passing)
-
-**Minutes 23-27: Deploy Phase**
-- Invoke: `@iac-transformation Convert CloudFormation to Bicep`
-- Show CloudFormation → Bicep conversion
-- Review updated Buildkite pipeline
-- Invoke: `@deployment-validation Validate deployment`
-- Show validation report (all checks passing)
-
-**Minutes 27-30: Results and Q&A**
-- Show deployed Azure resources in Azure Portal
-- Compare side-by-side (AWS vs Azure)
-- Review total time saved: 16 weeks → 8 weeks
-- Review cost saved: $400K → $87K
-- Open for questions
+Source: `outputs/azure-architecture-output/cost-comparison.md`
 
 ---
 
-## Business Case Summary
+## Production Lessons Learned
 
-### Traditional Approach
+1. **Python runtime constraint** — Azure Functions v4 only supports Python 3.9–3.11. Python 3.12 and 3.13 crash the worker with access violation `0xC0000005`.
 
-**Timeline:** 16-20 weeks  
-**Cost:** $200,000 - $400,000  
-**Team:** 5-8 external consultants  
-**Risk:** Knowledge loss, inconsistent quality
+2. **Reserved environment variable** — `CONTAINER_NAME` is reserved by the Azure Functions host. Using it caused silent failures; switched to `BLOB_CONTAINER_NAME`.
 
-### AI-Assisted Approach
+3. **Static Web App root file** — Azure SWA rejects deployments where `index.html` does not exist at root. Added `index.html` redirecting to `app.html`.
 
-**Timeline:** 8-10 weeks (60% faster)  
-**Cost:** $50,000 - $100,000 (75% savings)  
-**Team:** 2-3 internal engineers  
-**Benefit:** Knowledge retained, reusable agents
+4. **Managed Identity SAS tokens** — Pre-signed URL generation with Managed Identity requires a two-step process: `get_user_delegation_key()` then `generate_blob_sas()`. Not identical to `boto3.generate_presigned_url()`.
 
-### ROI Calculation
-
-**First Migration:**
-- Investment: $87,400
-- Traditional Cost: $400,000
-- Savings: $312,600 (78% reduction)
-- Time Saved: 10 weeks
-
-**Subsequent Migrations:**
-- Investment: $50,000 (agents already exist)
-- Traditional Cost: $300,000
-- Savings: $250,000 (83% reduction)
-- Time Saved: 12 weeks (faster with experience)
-
-**3-Year Projection (3 migrations):**
-- Total Investment: $187,400
-- Traditional Cost: $1,150,000
-- Total Savings: $962,600 (84% reduction)
+5. **No CLI inside agents** — All agent tool access goes through MCP servers exclusively. No PowerShell or Azure CLI commands are issued inside agent prompts.
 
 ---
 
-## Next Steps
+## Migration Statistics
 
-### Week 1: Proof of Concept
-- Select 1-2 non-critical services
-- Execute full migration with agents
-- Validate time and cost estimates
-- Document lessons learned
-
-### Week 2-3: Team Training
-- Train engineers on GitHub Copilot and custom agents
-- Refine agent prompts based on POC
-- Create internal documentation
-- Set up Azure environments
-
-### Week 4-10: Full Migration
-- Migrate remaining services systematically
-- Batch similar services
-- Maintain AWS in parallel during transition
-- Gradual traffic cutover
-
-### Post-Migration: Optimization
-- Fine-tune agents based on experience
-- Build library of reusable patterns
-- Measure actual ROI
-- Plan future migrations
-
----
-
-## Technical Requirements
-
-### Tooling
-- GitHub Copilot Business ($19/user/month)
-- Azure OpenAI Service (~$50/month)
-- Azure subscription
-- MCP servers (can run locally, minimal cost)
-
-### Team
-- 2 engineers (80% allocated, 8-10 weeks)
-- 1 architect (20% allocated for guidance)
-- 1 project manager (50% allocated for coordination)
-
-### Skills
-- Familiarity with AWS and Azure (agents provide guidance)
-- Infrastructure as Code experience (CloudFormation/Bicep)
-- Application development (Node.js, Python, or Go)
-- CI/CD pipeline knowledge (Buildkite or similar)
-
----
-
-## Success Criteria
-
-**Migration completed when:**
-- All AWS resources migrated to Azure
-- All application code refactored
-- All tests passing in Azure
-- CI/CD pipelines updated and working
-- Monitoring and alerting configured
-- Security validation passed
-- Performance equivalent to AWS
-- AWS resources decommissioned
-
-**Success metrics:**
-- Timeline: 8-10 weeks actual vs 8-10 weeks estimate
-- Cost: $50K-$100K actual vs estimate
-- Quality: Zero critical defects in first 30 days
-- Performance: Response times within 10% of AWS baseline
-- Security: Pass all Azure Security Center checks
+| Metric | Value |
+|---|---|
+| AWS resources discovered | 18 active |
+| Lambda functions migrated | 4 |
+| Lines of Python refactored | ~250 |
+| Bicep modules created | 6 |
+| Deployment time | ~8 minutes |
+| Manual interventions | 0 |
+| Cost reduction (demo) | 81% |
 
 ---
 
 ## Document Status
 
-**Completed:**
-- Master index and navigation
-- Executive presentation (45 minutes)
-- Agent specifications summary
-
-**Available for Creation:**
-- Detailed agent specification files (all 5 agents)
-- Complete CloudFormation templates (all 5 stacks)
-- Demo execution scripts
-- Service mapping reference guide
-- MCP server setup guide
-
-**Ready For:**
-- Executive review and approval
-- Technical team review
-- Proof-of-concept execution
-- Live demonstration
+| Document | Status |
+|---|---|
+| 00-MASTER-INDEX.md | ✅ Updated — v2.0 |
+| 01-EXECUTIVE-PRESENTATION.md | ✅ Updated — completed migration results |
+| 03-CUSTOM-AGENT-SPECIFICATIONS.md | ✅ Updated — actual tool bindings + production gotchas |
+| 04-DEMO-PLAN.md | ✅ Updated — real Image Upload Service demo flow |
+| 05-AWS-INFRASTRUCTURE-SETUP.md | Reference only — original AWS setup |
+| 06-DEMO-EXECUTION-GUIDE.md | Reference — agent invocation scripts |
+| 07-SERVICE-MAPPING-REFERENCE.md | ✅ Updated — v2.0 header |
+| 08-MCP-SERVER-INTEGRATION.md | ✅ Updated — actual 5 MCP servers used |
+| COMPLETE-PACKAGE-SUMMARY.md | ✅ This file |
 
 ---
+
+*Generated by GitHub Copilot custom agents — AI-Assisted AWS to Azure Migration*
+
 
 ## Recommendations
 

@@ -7,7 +7,8 @@
 // AVM modules: web/serverfarm:0.7.0, web/site:0.22.0
 //
 // Breaking-change notes:
-//   serverfarm v0.7.0: removed skuTier, reserved, kind params — skuName: 'Y1' is sufficient
+//   serverfarm v0.7.0: skuTier removed; kind and reserved are still required for Linux plans
+//   Linux plan requires: kind: 'linux', reserved: true (otherwise defaults to Windows)
 //   Storage name: take(16) + 'funcstor'(8) = 24 chars max (must not exceed 24)
 // =============================================================================
 
@@ -75,8 +76,11 @@ module functionAppPlan 'br/public:avm/res/web/serverfarm:0.7.0' = {
   params: {
     name: '${resourceNamePrefix}-plan'
     location: location
-    // Y1 = Consumption (Dynamic) SKU — no skuTier/reserved/kind in v0.7.0
+    // Y1 = Consumption (Dynamic) SKU
     skuName: 'Y1'
+    // Required for Linux App Service Plan
+    kind: 'linux'
+    reserved: true
     tags: {
       environment: environment
       application: 'image-upload-service'
@@ -104,9 +108,9 @@ module functionApp 'br/public:avm/res/web/site:0.22.0' = {
       systemAssigned: true
     }
     siteConfig: {
-      // Consumption plan Linux Functions: linuxFxVersion must be empty string.
-      // Runtime is controlled via FUNCTIONS_WORKER_RUNTIME app setting, not this field.
-      linuxFxVersion: ''
+      // Python 3.11 runtime — matches Azure Functions v4 requirement and app code.
+      // Format: PYTHON|<version> (uppercase). Empty string defaults to Python 3.6.
+      linuxFxVersion: 'PYTHON|3.11'
       ftpsState: 'Disabled'
       minTlsVersion: '1.2'
       http20Enabled: true
@@ -145,8 +149,8 @@ module functionApp 'br/public:avm/res/web/site:0.22.0' = {
           value: imagesStorageAccountName
         }
         {
-          // Container name (no AWS equivalent — S3 uses bucket-level)
-          name: 'CONTAINER_NAME'
+          // Container name — BLOB_CONTAINER_NAME avoids conflict with reserved CONTAINER_NAME host variable
+          name: 'BLOB_CONTAINER_NAME'
           value: imagesContainerName
         }
         {
