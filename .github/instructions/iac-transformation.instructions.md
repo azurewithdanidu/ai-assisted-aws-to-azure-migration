@@ -6,6 +6,9 @@ applyTo: iac-transformation
 
 # IaC Transformation Agent - Custom Instructions
 
+### Golden Rule
+- Use the detailed design document for reference and guidance in outoputs/azure-architecture-output/
+
 ## Bicep Conversion Standards
 
 ### CloudFormation to Bicep Type Mapping

@@ -10,6 +10,7 @@ applyTo: code-refactor
 
 ### Golden Rule
 **NEVER modify business logic** - The refactored code must behave identically to the original code.
+- Use the detailed design document for reference and guidance in outoputs/azure-architecture-output/
 
 ### Input/Output Equivalence
 - Same inputs must produce same outputs

@@ -8,6 +8,10 @@ applyTo: deployment-validation
 
 ## Validation Requirements by Phase
 
+Golden rule: All critical checks must pass for successful validation. Optional checks should be reviewed and addressed as needed but do not block deployment if they fail.
+
+Golden rule: - Use the detailed design document for reference and guidance in outoputs/azure-architecture-output/ and validate code and configuration against the design specifications.
+
 ### Pre-Deployment Phase (Before `az deployment group create`)
 
 **Critical Checks (Must Pass):**
