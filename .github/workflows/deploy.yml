@@ -61,7 +61,7 @@ jobs:
   deploy-infra:
     name: "1 · IaC — Bicep (subscription scope)"
     runs-on: ubuntu-latest
-    environment: dev
+    environment: main
     outputs:
       # Expose any Bicep outputs (function app name, SWA name, etc.)
       # downstream jobs can use: ${{ needs.deploy-infra.outputs.<key> }}
