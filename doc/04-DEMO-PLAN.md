@@ -1,252 +1,162 @@
 # 30-Minute Demonstration Plan
 
-**Document Version:** 1.0  
-**Date:** December 2024  
-**Purpose:** Live demonstration of AI-assisted migration
+**Document Version:** 2.0  
+**Date:** April 2026  
+**Status:** ✅ Based on completed real migration  
+**Application:** Image Upload Service (AWS account 535002891143, ap-southeast-2 → Azure australiaeast)
 
 ---
 
 ## Demonstration Overview
 
-**Objective:** Show complete AWS to Azure migration using AI agents in 30 minutes
+**Objective:** Walk through the complete AWS to Azure migration of the Image Upload Service that was executed using five custom GitHub Copilot agents.
 
-**Environment:** Complex AWS architecture with EKS, Lambda, RDS, S3, EventBridge
+**Environment:** Real serverless AWS architecture — 4 Lambda functions + API Gateway + 2 S3 buckets, migrated and live on Azure.
 
-**Outcome:** Attendees see working automation that reduces migration time from 20 weeks to 8 weeks
+**Outcome:** Attendees see all migration artifacts, refactored code, Bicep templates, and the live Azure deployment produced by the AI agents.
 
 ---
 
-## Pre-Demo Checklist (24 Hours Before)
+## Pre-Demo Checklist
 
-### AWS Environment
+### Repository
+- [ ] Clone this repository and open in VS Code
+- [ ] Verify `.github/agents/` contains all five agent files
+- [ ] Verify `.github/instructions/` contains all five instruction files
+- [ ] Verify `outputs/` folder contains all generated artifacts
 
-- [ ] Deploy all 5 CloudFormation stacks (45 minutes)
-  - vpc-network.yaml
-  - rds-database.yaml
-  - s3-buckets.yaml
-  - lambda-functions.yaml
-  - eks-cluster.yaml
-
-- [ ] Verify all resources healthy
-  - EKS nodes ready: `kubectl get nodes`
-  - RDS available: `aws rds describe-db-instances`
-  - Lambda functions: `aws lambda list-functions`
-  - S3 buckets: `aws s3 ls`
-
-### GitHub Repository
-
-- [ ] Create migration repository
-- [ ] Add all agent files to `.github/agents/`
-- [ ] Add instruction files to `.github/instructions/`
-- [ ] Configure `.github/mcp-config.json`
-- [ ] Test one agent invocation
+### Azure Access (for live validation)
+- [ ] `az login` and `az account show` — confirm australiaeast subscription
+- [ ] Confirm `img-upload-dev-rg` resource group exists
+- [ ] Confirm Function App `img-upload-dev-func` is running
 
 ### Development Environment
-
-- [ ] VS Code with GitHub Copilot installed
-- [ ] AWS CLI configured and tested
-- [ ] Azure CLI configured and tested
-- [ ] kubectl configured for EKS cluster
-- [ ] MCP servers tested
-
-### Azure Subscription
-
-- [ ] Resource group created: `rg-demo-migration`
-- [ ] Service principal for deployment
-- [ ] Permissions verified (Contributor role)
-
-### Presentation
-
-- [ ] Slides ready (architecture diagrams)
-- [ ] Screen recording software (backup plan)
-- [ ] Backup terminal windows prepared
-- [ ] Network connectivity tested
+- [ ] VS Code with GitHub Copilot extension installed
+- [ ] AWS CLI configured (read-only access to account 535002891143)
+- [ ] Azure CLI configured with Contributor access
 
 ---
 
 ## Demonstration Flow
 
-### Minutes 0-5: Environment Overview
+### Minutes 0-5: Show the Original AWS Application
 
 **What to Show:**
 
-1. **AWS Console** (2 minutes)
-   - Navigate to CloudFormation → Show 5 completed stacks
-   - Navigate to EKS → Show demo-eks-cluster with 3 nodes
-   - Navigate to Lambda → Show 3 functions
-   - Navigate to RDS → Show demo-database-instance
-   - Navigate to S3 → Show 3 buckets
+1. **Original AWS Lambda code** (2 minutes)
+   - Open `app-code/lambda/upload/upload_handler.py`
+   - Highlight `boto3` imports and `s3.generate_presigned_post()` pattern
+   - Open `app-code/lambda/list/list_handler.py` — show `s3.list_objects_v2()`
+   - Open `app-code/build/app.html` — show AWS SDK SigV4 authentication in frontend
 
-2. **Architecture Diagram** (2 minutes)
-   - Display slide with current AWS architecture
-   - Highlight complexity:
-     - EKS cluster with 3 microservices
-     - 3 Lambda functions
-     - Shared RDS PostgreSQL database
-     - S3 for storage
-     - EventBridge for event routing
+2. **AWS Architecture** (2 minutes)
+   - Open `outputs/aws-migration-artifacts/architecture-diagram.mmd` — show Mermaid diagram
+   - Open `outputs/aws-migration-artifacts/migration-assessment.md`
+   - Point out: "18 active resources, LOW complexity, 2–3 weeks estimated"
 
-3. **Repository Overview** (1 minute)
-   - Show GitHub repository structure
-   - Point out `.github/agents/` directory
-   - Show 5 custom agents
-   - "These agents will do all the work"
+3. **Repository Structure** (1 minute)
+   - Show `.github/agents/` — five agent files
+   - "These agents did all four phases of this migration"
 
 **Talking Points:**
-- "This is a production-like environment"
-- "Migrating this traditionally takes 4-5 weeks"
-- "We'll migrate it in 30 minutes using AI agents"
+- "This is a real AWS account — ap-southeast-2 Sydney"
+- "4 Lambda functions, API Gateway with IAM/SigV4 authentication, 2 S3 buckets"
+- "The discovery was automated by the first agent in under 30 minutes"
 
 ---
 
-### Minutes 5-10: Discovery Phase
+### Minutes 5-10: Discovery Phase Results
 
-**What to Do:**
+**What to Show:**
 
-1. **Open VS Code** (30 seconds)
-   - Show repository in VS Code
-   - Open Copilot Chat panel
+1. **AWS Inventory** (2 minutes)
+   - Open `outputs/aws-migration-artifacts/aws-inventory.json`
+   - Show Lambda functions, API Gateway routes, S3 buckets, IAM roles, KMS key
+   - Highlight AppStream 2.0 remnants flagged for cleanup — "agent found orphaned resources"
 
-2. **Invoke Discovery Agent** (30 seconds)
+2. **Dependency Matrix** (1 minute)
+   - Open `outputs/aws-migration-artifacts/dependency-matrix.csv`
+   - Show: Lambda → S3, Lambda → IAM role, API Gateway → Lambda
+
+3. **CloudFormation template** (1 minute)
+   - Open `outputs/aws-migration-artifacts/cloudformation-template.yaml`
+   - "Agent captured the source IaC for conversion to Bicep"
+
+4. **Agent invocation replay** (1 minute)
    ```
    @aws-discovery Discover all resources in the AWS account and create a complete inventory with dependency analysis
    ```
 
-3. **Watch Agent Work** (2 minutes)
-   - Show agent output in real-time
-   - Highlight key steps:
-     - "Scanning Lambda functions..."
-     - "Analyzing EKS cluster..."
-     - "Mapping dependencies..."
-     - "Generating architecture diagram..."
-
-4. **Review Outputs** (2 minutes)
-   - Open `migration-artifacts/aws-inventory.json`
-     - Show JSON structure
-     - Point out Lambda functions, EKS, RDS, S3
-   
-   - Open `migration-artifacts/dependency-matrix.csv`
-     - Show in VS Code spreadsheet view
-     - Highlight relationships: "Lambda → RDS", "Lambda → S3"
-   
-   - Open `migration-artifacts/architecture-diagram.mmd`
-     - Show Mermaid diagram rendering
-     - "Agent generated this automatically"
-   
-   - Open `migration-artifacts/migration-assessment.md`
-     - Show complexity ratings
-     - "Total effort: 52 hours estimated"
-     - "High complexity: Payment processor (compliance)"
-     - "Medium complexity: Most services"
-     - "Low complexity: Storage migration"
-
 **Talking Points:**
-- "Discovery that usually takes 3 weeks just took 2 minutes"
-- "Complete inventory with dependencies automatically mapped"
-- "Agent identified all inter-service relationships"
-- "Complexity assessment helps prioritize migration"
+- "Discovery that takes 3 weeks manually took 20 minutes with the agent"
+- "Read-only — nothing in AWS was modified"
+- "8 orphaned AppStream resources identified — cleanup recommendation included"
 
 ---
 
-### Minutes 10-18: Design Phase
+### Minutes 10-18: Architecture Design and IaC
 
-**What to Do:**
+**What to Show:**
 
-1. **Invoke Architect Agent** (30 seconds)
-   ```
-   @azure-architect Design the Azure architecture based on the AWS discovery and generate all Bicep templates with cost comparison
-   ```
+1. **Azure Architecture Diagram** (2 minutes)
+   - Open `outputs/azure-architecture-output/architecture-diagram-azure.mmd`
+   - Walk through: Browser → Static Web App → Azure Functions → Blob Storage
+   - "No APIM — agent determined HTTP triggers are a direct equivalent for this pattern"
 
-2. **Watch Agent Work** (3 minutes)
-   - Show agent accessing Microsoft Learn MCP
-   - Highlight service mappings:
-     - "Lambda → Azure Functions..."
-     - "EKS → Azure Kubernetes Service..."
-     - "RDS → Azure Database for PostgreSQL..."
-     - "S3 → Azure Blob Storage..."
-   - "Generating Bicep templates..."
-   - "Applying Well-Architected Framework..."
-   - "Calculating costs..."
+2. **Service Mapping** (2 minutes)
+   - Open `outputs/azure-architecture-output/service-mapping.md`
+   - Show Lambda → Azure Functions (Python 3.11, Consumption plan)
+   - Show API Gateway → Functions HTTP triggers (function key auth replaces SigV4)
+   - Show S3 images bucket → Azure Blob Storage (Managed Identity + RBAC)
+   - Show S3 static site → Azure Static Web Apps (Free tier)
 
-3. **Review Azure Architecture** (2 minutes)
-   - Open `azure-infrastructure/main.bicep`
-     - Show modular structure
-     - "Notice it references modules"
-   
-   - Open `azure-infrastructure/modules/networking.bicep`
-     - Show VNet configuration
-     - Point out private endpoints
-   
-   - Open `azure-infrastructure/modules/database.bicep`
-     - Show Azure Database for PostgreSQL
-     - "Equivalent to our RDS instance"
-     - "Notice Managed Identity for auth"
+3. **Cost Comparison** (1.5 minutes)
+   - Open `outputs/azure-architecture-output/cost-comparison.md`
+   - Show AWS demo scale: $2.92/month vs Azure: $0.54/month
+   - "81% cost reduction at demo scale — Azure Functions free tier covers most of the load"
 
-4. **Review Cost Comparison** (1.5 minutes)
-   - Open `migration-artifacts/cost-comparison.md`
-     - Show side-by-side comparison:
-       ```
-       AWS Monthly Cost: $850
-         - Lambda: $200
-         - EKS: $300
-         - RDS: $250
-         - S3: $50
-         - Data transfer: $50
-       
-       Azure Monthly Cost: $620
-         - Functions: $180
-         - AKS: $250
-         - PostgreSQL: $150
-         - Blob Storage: $30
-         - Data transfer: $10
-       
-       Monthly Savings: $230 (27%)
-       Annual Savings: $2,760
-       ```
-   
-   - "Agent calculated this automatically"
-   - "Azure is 27% cheaper for equivalent services"
-
-5. **Review Service Mapping** (30 seconds)
-   - Open `migration-artifacts/service-mapping.md`
-   - Show AWS → Azure translations
-   - "Agent used Microsoft Learn for accurate mappings"
+4. **Bicep Templates** (2 minutes)
+   - Open `outputs/bicep-templates/main.bicep`
+   - Show `targetScope = 'subscription'` — subscription-scoped deployment
+   - Open `outputs/bicep-templates/modules/storage.bicep` — Blob Storage with RBAC assignment
+   - Open `outputs/bicep-templates/modules/functions.bicep` — Function App with Managed Identity
+   - "Agent used Azure Verified Modules (AVM) from Microsoft Learn MCP"
 
 **Talking Points:**
-- "Architecture design that takes 5 weeks just took 3 minutes"
-- "Complete, production-ready Bicep templates"
-- "Follows Azure best practices automatically"
-- "Cost analysis included - we save $230/month"
-- "All based on official Microsoft documentation"
+- "Architecture design and full Bicep IaC generated from discovery output"
+- "Well-Architected Framework applied automatically — private access, Managed Identity, Key Vault"
+- "Three parameter files generated: dev, staging, prod"
 
 ---
 
-### Minutes 18-23: Refactor Phase
+### Minutes 18-23: Code Refactoring
 
-**What to Do:**
+**What to Show:**
 
-1. **Show Original Code** (1 minute)
-   - Open `lambda-functions/order-validator/index.js`
-   - Highlight AWS SDK usage:
-     ```javascript
-     const { S3Client } = require('@aws-sdk/client-s3');
-     const { EventBridgeClient } = require('@aws-sdk/client-eventbridge');
-     ```
-   - Show IAM credential usage
-   - "This is AWS-specific code"
+1. **Original Lambda code vs Refactored Azure Function** (3 minutes)
+   - Side-by-side: `app-code/lambda/upload/upload_handler.py` vs `outputs/azure-functions/function_app.py`
+   - Before: `boto3.client('s3')` + `generate_presigned_post()`
+   - After: `BlobServiceClient` + `DefaultAzureCredential()` + `generate_blob_sas()` with user-delegation key
+   - Show `@app.route()` decorator pattern (Azure Functions Python v2)
 
-2. **Invoke Refactor Agent** (30 seconds)
-   ```
-   @code-refactor Refactor the order-validator Lambda function to use Azure Functions and Azure SDKs
-   ```
+2. **Requirements file** (30 seconds)
+   - Open `outputs/azure-functions/requirements.txt`
+   - `boto3` removed — `azure-functions`, `azure-storage-blob`, `azure-identity` added
 
-3. **Watch Agent Work** (1.5 minutes)
-   - Show agent analyzing code
-   - "Scanning for AWS SDK usage..."
-   - "Replacing with Azure SDKs..."
-   - "Updating authentication..."
-   - "Running tests..."
-   - "Creating pull request..."
+3. **Refactored Frontend** (1 minute)
+   - Open `outputs/static-web-app/app.html`
+   - Comment at top: "AWS SDK removed — replaced by plain fetch() with x-functions-key header"
+   - Show function key field in the UI — replaces SigV4 auth
+
+4. **Known gotchas the agent captured** (30 seconds)
+   - "Python 3.13 not supported — agent pinned to 3.11"
+   - "CONTAINER_NAME is reserved — agent used BLOB_CONTAINER_NAME"
+   - "These are now in the agent definition for all future migrations"
+
+**Talking Points:**
+- "All 4 Lambda functions consolidated into a single Azure Functions v2 app"
+- "Zero AWS SDK references remain — full Managed Identity auth"
+- "SAS URL pattern preserved — clients still upload/download directly to storage"
 
 4. **Review Refactored Code** (2 minutes)
    - Show updated code:
@@ -284,30 +194,40 @@
 
 ---
 
-### Minutes 23-27: Deploy Phase
+### Minutes 23-27: Deployment and Validation
 
-**What to Do:**
+**What to Show:**
 
-1. **Show Buildkite Pipeline (Before)** (30 seconds)
-   - Open `.buildkite/pipeline.yml`
-   - Show AWS deployment steps:
-     ```yaml
-     - aws cloudformation deploy
-     - aws eks update-kubeconfig
+1. **Bicep Deployment** (1.5 minutes)
+   - Open a terminal, show the command that was used:
      ```
+     az deployment sub create --location australiaeast --template-file main.bicep --parameters parameters/dev.bicepparam
+     ```
+   - "This deployed all six Bicep modules — Storage, Functions, Static Web App, Key Vault, Monitoring, RBAC"
+   - Show the Azure Portal: resource group `img-upload-dev-rg`
+   - Show Function App `img-upload-dev-func` — Status: Running
 
-2. **Invoke IaC Transformation Agent** (30 seconds)
+2. **Static Web App** (1 minute)
+   - Show `outputs/static-web-app/app.html` and `index.html`
+   - "Azure Static Web Apps requires index.html — the agent captured this gotcha"
+   - "Now deployed on Azure Static Web Apps Free tier at $0/month"
+
+3. **Validation Agent invocation** (1 minute)
    ```
-   @iac-transformation Convert all CloudFormation templates to Bicep and update the Buildkite pipeline for Azure deployment
+   @deployment-validation Validate the Azure deployment end-to-end and confirm functional parity
    ```
-
-3. **Watch Agent Work** (1 minute)
-   - "Converting CloudFormation to Bicep..."
-   - "Updating pipeline for Azure..."
-   - "Adding what-if validation..."
-   - "Configuring rollback procedures..."
-
-4. **Review Updated Pipeline** (1 minute)
+   - Walk through validation checklist:
+     - Bicep syntax: ✅ Valid
+     - ARM template validation: ✅ Valid  
+     - HTTPS only: ✅ Enforced
+     - Managed Identity: ✅ Active
+     - Key Vault: ✅ Accessible, soft-delete enabled
+     - Function endpoints: ✅ All 4 routes return 200/40x as expected
+     
+**Talking Points:**
+- "Infrastructure deployed successfully on first attempt — Bicep validated before apply"
+- "Deployment validation confirmed functional parity with the AWS original"
+- "Everything secured with Managed Identity — no access keys anywhere"
    - Show updated `.buildkite/pipeline.yml`:
      ```yaml
      steps:
@@ -355,53 +275,43 @@
 
 **What to Show:**
 
-1. **Summary Slide** (1 minute)
-   - Display results:
+1. **Summary** (1 minute)
+   - Display real results:
      ```
-     Traditional Approach:
-       - Discovery: 3 weeks
-       - Design: 5 weeks
-       - Refactor: 6 weeks
-       - Deploy: 6 weeks
-       Total: 20 weeks, $400,000
-     
-     AI-Assisted Approach:
-       - Discovery: 2 minutes
-       - Design: 3 minutes
-       - Refactor: 2 minutes/service
-       - Deploy: 2 minutes
-       Total: 8 weeks, $87,000
-     
-     Savings: 12 weeks, $313,000
+     Application: Image Upload Service (AWS account 535002891143, ap-southeast-2)
+
+     AI-Assisted Migration Results:
+       - Discovery:    26 resources, complexity LOW, effort 2–3 weeks estimated
+       - Design:       Azure Functions + Blob Storage + Static Web Apps + App Insights + Key Vault
+       - Refactoring:  4 Lambda (boto3) → 4 Azure Functions (azure-storage-blob + azure-identity)
+       - IaC:          CloudFormation → 6 Bicep modules, deployed to australiaeast ✅
+
+     Cost Outcome:
+       - AWS demo scale:  $2.92/month
+       - Azure demo scale: $0.54/month
+       - Reduction:        81%
+
+     Agents Reused for Future Migrations:
+       - All gotchas captured (Python version, reserved env vars, SWA entry point)
+       - Agents improve with each migration
      ```
 
-2. **Side-by-Side Comparison** (1 minute)
-   - Split screen:
-     - Left: AWS Console
-     - Right: Azure Portal (preview of deployed resources)
-   - Show equivalent services
-   - "Same functionality, better cost"
+2. **Live Azure Portal** (1 minute)
+   - Show `img-upload-dev-rg` resource group with all deployed resources
+   - Function App running, Static Web App live
+   - Application Insights dashboard with telemetry
 
-3. **Key Takeaways** (1 minute)
-   - "5 AI agents automated entire migration"
-   - "Used MCP servers for real-time AWS/Azure data"
-   - "Generated production-ready code and infrastructure"
-   - "60% time savings, 78% cost savings"
-   - "Knowledge captured in reusable agents"
-
-4. **Q&A** (1 minute)
-   - Open for questions
-   - Common questions prepared:
-     - "Can we customize the agents?" → Yes
-     - "What about security?" → Managed Identity, private endpoints
-     - "How much does this cost?" → GitHub Copilot $19/user/month
-     - "Can we use this for other projects?" → Yes, agents are reusable
+3. **Q&A** (1 minute)
+   - Common questions:
+     - "Can we customize the agents for our standards?" → Yes, edit `.github/instructions/` files
+     - "What about security?" → Managed Identity, RBAC, Key Vault, no access keys
+     - "Can we use this for other migrations?" → Yes, agents are 100% reusable
+     - "What MCP servers are needed?" → AWS Cloud Control API, AWS Knowledge, Microsoft Learn, Azure, Mermaid
 
 **Talking Points:**
-- "This is not theoretical - you just watched it work"
-- "Same approach scales to any size migration"
-- "Agents improve with each use"
-- "Your team retains all knowledge"
+- "This migration is live on Azure right now — not theoretical"
+- "Every lesson learned is embedded in the agents for the next migration"
+- "Same approach scales to any application regardless of complexity"
 
 ---
 

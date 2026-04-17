@@ -1,14 +1,17 @@
 # MCP Server Integration Guide
 
-**Document Version:** 1.0  
-**Date:** December 2024  
-**Purpose:** Model Context Protocol server setup and configuration
+**Document Version:** 2.0  
+**Date:** April 2026  
+**Status:** ✅ Validated — all servers used in completed migration  
+**Application:** Image Upload Service (AWS account 535002891143, ap-southeast-2 → Azure australiaeast)
 
 ---
 
 ## Overview
 
-Model Context Protocol (MCP) is a standardized interface that allows AI agents to interact with external systems and tools. This guide covers setup, configuration, and usage of MCP servers for AWS to Azure migration.
+Model Context Protocol (MCP) is a standardized interface that allows AI agents to interact with external systems and tools. This guide covers the MCP servers used by the five migration agents in this repository, based on actual usage during the completed Image Upload Service migration.
+
+**Key design principle:** All five agents operate exclusively through MCP servers and VS Code tools. No agent executes CLI or PowerShell commands — all external data access goes through MCP.
 
 ---
 
@@ -29,11 +32,23 @@ Model Context Protocol (MCP) is a standardized interface that allows AI agents t
 
 ---
 
+## MCP Servers Used in This Migration
+
+| MCP Server | Used By Agents | Purpose |
+|------------|---------------|---------|
+| AWS Cloud Control API MCP | `aws-discovery` | Read-only AWS resource discovery |
+| AWS Knowledge MCP | `aws-discovery`, `azure-architect`, `code-refactor` | AWS service documentation |
+| Microsoft Learn MCP | `azure-architect`, `iac-transformation`, `code-refactor` | Azure docs, AVM modules, best practices |
+| Azure MCP | `azure-architect`, `iac-transformation`, `deployment-validation` | Azure resource information |
+| Mermaid Chart MCP | `azure-architect` | Architecture diagram generation and validation |
+
+---
+
 ## Required MCP Servers
 
 ### 1. AWS Cloud Control API MCP Server
 
-**Purpose:** Discovery of AWS resources
+**Purpose:** Discovery of AWS resources (read-only)
 
 **Installation:**
 ```bash
@@ -48,7 +63,7 @@ npm install -g @aws/mcp-server-ccapi
       "command": "npx",
       "args": ["-y", "@aws/mcp-server-ccapi"],
       "env": {
-        "AWS_REGION": "us-east-1",
+        "AWS_REGION": "ap-southeast-2",
         "AWS_PROFILE": "default"
       }
     }
@@ -65,14 +80,11 @@ npm install -g @aws/mcp-server-ccapi
 **Prerequisites:**
 - AWS CLI installed and configured
 - Valid AWS credentials in `~/.aws/credentials`
-- IAM permissions: Read access to all resources
+- IAM permissions: Read-only access (`ReadOnlyAccess` policy minimum)
 
 **Testing:**
 ```bash
-# Test AWS credentials
 aws sts get-caller-identity
-
-# Test MCP server
 npx @aws/mcp-server-ccapi
 ```
 
@@ -82,7 +94,7 @@ npx @aws/mcp-server-ccapi
 
 ### 2. Microsoft Learn MCP Server
 
-**Purpose:** Access Azure documentation for accurate service mappings
+**Purpose:** Access Azure documentation, AVM modules, best practices, and code samples
 
 **Installation:**
 ```bash
@@ -105,14 +117,13 @@ npm install -g @microsoft/mcp-server-learn
 - `search_documentation` - Search Microsoft Learn
 - `get_article` - Retrieve specific documentation article
 - `list_related` - Find related documentation
-- `get_code_samples` - Get code examples from docs
+- `get_code_samples` - Get code examples including Bicep samples
 - `get_quickstart` - Get quickstart guides
 
-**Use Cases:**
-- Find Azure equivalent for AWS service
-- Get Bicep template examples
-- Retrieve best practices documentation
-- Find migration guides
+**Key use in this migration:**
+- Azure Architect Agent: find Azure equivalent services, retrieve AVM module definitions
+- IaC Transformation Agent: fetch AVM Bicep module examples for storage, functions, Key Vault
+- Code Refactor Agent: find `azure-storage-blob` SDK documentation and code samples
 
 **Testing:**
 ```bash

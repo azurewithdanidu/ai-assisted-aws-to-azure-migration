@@ -1,14 +1,16 @@
 # AWS to Azure Service Mapping Reference
 
-**Document Version:** 1.0  
-**Date:** December 2024  
-**Purpose:** Comprehensive service translation guide
+**Document Version:** 2.0  
+**Date:** April 2026  
+**Status:** ✅ Validated by completed migration  
+**Application:** Image Upload Service (AWS account 535002891143, ap-southeast-2 → Azure australiaeast)  
+**Note:** See `outputs/azure-architecture-output/service-mapping.md` for the full auto-generated service mapping produced by the Azure Architect Agent for this specific migration.
 
 ---
 
 ## Overview
 
-This document provides detailed mappings from AWS services to Azure equivalents, including configuration guidance, pricing considerations, and migration notes.
+This document provides reference mappings from AWS services to Azure equivalents for general use, supplemented with configuration data from the real Image Upload Service migration. Detailed mapping for this specific application is in `outputs/azure-architecture-output/service-mapping.md`.
 
 ---
 

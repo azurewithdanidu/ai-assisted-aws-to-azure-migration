@@ -1,8 +1,9 @@
-# AWS to Azure AI-Assisted Migration Investigation
+# AWS to Azure AI-Assisted Migration — Document Index
 
-**Document Version:** 1.0  
-**Date:** December 2024  
-**Purpose:** Investigation into using AI agents for cloud migration
+**Document Version:** 2.0  
+**Date:** April 2026  
+**Status:** ✅ Migration Complete  
+**Application:** Image Upload Service (AWS account 535002891143, ap-southeast-2 → Azure australiaeast)
 
 ---
 
@@ -11,34 +12,34 @@
 ### Executive Documents
 
 **01-EXECUTIVE-PRESENTATION.md**  
-45-minute executive presentation covering business case, technical approach, and ROI analysis.
+Business case, ROI, and completed migration outcomes. Includes real cost comparison data (AWS $2.92/month → Azure $0.54/month at demo scale).
 
 **02-TECHNICAL-DEEP-DIVE.md**  
-Deep technical analysis of GitHub Copilot custom agents, MCP servers, and migration architecture.
+Technical architecture of the five GitHub Copilot agents, MCP server integration, and the complete migration approach.
 
 ### Agent Specifications
 
 **03-CUSTOM-AGENT-SPECIFICATIONS.md**  
-Complete specifications for all five custom GitHub Copilot agents including prompts and instructions.
+Complete specifications for all five custom GitHub Copilot agents including prompts, instructions, MCP tool bindings, and lessons learned from production use.
 
 ### Demonstration Materials
 
 **04-DEMO-PLAN.md**  
-30-minute demonstration plan with step-by-step walkthrough.
+30-minute demonstration plan showing the complete migration workflow using the five agents against the real migrated application.
 
 **05-AWS-INFRASTRUCTURE-SETUP.md**  
-Complete AWS reference architecture deployment (CloudFormation templates and commands).
+Reference documentation for the original AWS environment (Lambda + API Gateway + S3 serverless stack).
 
 **06-DEMO-EXECUTION-GUIDE.md**  
-Live demonstration execution guide with agent interactions and expected outputs.
+Step-by-step execution guide with exact agent invocations and expected outputs.
 
 ### Reference Materials
 
 **07-SERVICE-MAPPING-REFERENCE.md**  
-Comprehensive AWS to Azure service mapping guide.
+Detailed AWS to Azure service mapping for the Image Upload Service, including configuration differences, gotchas, and cost data.
 
 **08-MCP-SERVER-INTEGRATION.md**  
-Detailed guide on Model Context Protocol server integration and configuration.
+MCP server configuration and usage guide for all servers used in this migration.
 
 ---
 
@@ -47,65 +48,72 @@ Detailed guide on Model Context Protocol server integration and configuration.
 **For Executives:** Start with Document 01  
 **For Architects:** Read Documents 01, 02, and 07  
 **For Technical Leads:** Read Documents 02, 03, and 08  
-**For Demo Setup:** Follow Documents 04, 05, and 06 in sequence
+**For Demo Setup:** Follow Documents 04 and 06 in sequence  
+**For Agent Reuse:** Start with Document 03, then `.github/QUICK-START-GUIDE.md`
 
 ---
 
 ## Document Purpose Summary
 
-**Document 01:** Business case and high-level approach (45-minute presentation)  
-**Document 02:** Technical architecture and implementation details  
-**Document 03:** Custom agent definitions (prompt files and instructions)  
-**Document 04:** Demonstration plan and objectives  
-**Document 05:** AWS infrastructure deployment guide  
-**Document 06:** Step-by-step demonstration execution  
-**Document 07:** Service translation reference guide  
-**Document 08:** MCP server setup and configuration
+**Document 01:** Business case, completed migration outcomes, and real ROI data  
+**Document 02:** Technical architecture — agents, MCP servers, Python v2 model  
+**Document 03:** Full agent definitions with production-validated gotchas  
+**Document 04:** 30-minute demonstration flow  
+**Document 05:** Original AWS environment reference  
+**Document 06:** Agent invocation scripts with expected outputs  
+**Document 07:** Service-by-service AWS → Azure mapping with real config data  
+**Document 08:** MCP server setup and configuration guide
 
 ---
 
-## Key Deliverables
+## Completed Migration Deliverables
 
-1. Five custom GitHub Copilot agents for Discovery, Design, Refactor, IaC, and Validation
-2. Complete AWS reference architecture (EKS + Lambda + RDS + S3)
-3. 30-minute live demonstration plan
-4. End-to-end migration workflow
-5. ROI analysis showing 60% time savings and 75% cost reduction
+| Artifact | Location | Description |
+|----------|----------|-------------|
+| AWS inventory | `outputs/aws-migration-artifacts/aws-inventory.json` | Full resource inventory (18 active + 8 remnant) |
+| Architecture diagrams | `outputs/aws-migration-artifacts/architecture-diagram.mmd` | AWS Mermaid diagram |
+| Migration assessment | `outputs/aws-migration-artifacts/migration-assessment.md` | Complexity: LOW, Effort: 2–3 weeks |
+| CloudFormation template | `outputs/aws-migration-artifacts/cloudformation-template.yaml` | Captured source IaC |
+| Azure architecture | `outputs/azure-architecture-output/architecture-diagram-azure.mmd` | Azure Mermaid diagram |
+| Service mapping | `outputs/azure-architecture-output/service-mapping.md` | Full AWS → Azure mapping |
+| Cost comparison | `outputs/azure-architecture-output/cost-comparison.md` | 81% reduction at demo scale |
+| Refactored functions | `outputs/azure-functions/function_app.py` | Python v2 Azure Functions (4 endpoints) |
+| Bicep templates | `outputs/bicep-templates/` | Deployed to australiaeast ✅ |
+| Static web app | `outputs/static-web-app/` | Deployed to Azure Static Web Apps ✅ |
 
 ---
 
 ## Technology Stack
 
 **AI Orchestration:**
-- GitHub Copilot custom agents
-- Repository and path-specific instructions
+- GitHub Copilot custom agents (VS Code agent mode)
+- Repository-specific instruction files (`.github/instructions/`)
+- No CLI or PowerShell inside agent workflows — MCP only
 
-**MCP Servers:**
-- AWS Cloud Control API (Discovery)
-- Microsoft Learn (Design)
-- GitHub MCP (Refactor)
-- Azure MCP (Deploy)
-- Buildkite MCP (CI/CD)
+**MCP Servers Used:**
+- AWS Cloud Control API MCP — read-only AWS discovery
+- AWS Knowledge MCP — AWS service documentation
+- Microsoft Learn MCP — Azure docs and AVM modules
+- Azure MCP — Azure resource information
+- Mermaid Chart MCP — diagram generation and validation
 
-**Target Migration:**
-- CloudFormation to Bicep
-- AWS SDKs to Azure SDKs
-- Buildkite pipelines to Azure-native
-- EKS to AKS
-- Lambda to Azure Functions
-- RDS to Azure Database for PostgreSQL
-- S3 to Azure Blob Storage
-
----
-
-## Getting Started
-
-1. Review Document 00 (this index)
-2. Read Document 01 for executive overview
-3. Review Document 03 for agent specifications
-4. Follow Document 05 to deploy AWS demo environment
-5. Execute Document 06 for live demonstration
+**Migration Stack:**
+- 4 AWS Lambda (Python 3.11) → 4 Azure Functions (Python 3.11, v2 model)
+- S3 presigned URLs → Azure Blob SAS tokens (user-delegation key)
+- IAM roles + access keys → System-Assigned Managed Identity + RBAC
+- S3 static website → Azure Static Web Apps (Free tier)
+- CloudFormation → Bicep (modular, subscription-scoped, AVM-aligned)
 
 ---
 
-**Total Package:** 8 documents covering investigation, design, implementation, and demonstration
+## Getting Started with Agent Reuse
+
+1. Clone this repository into your migration project
+2. Copy `.github/agents/` and `.github/instructions/` to the target repo
+3. Configure MCP servers (see Document 08)
+4. Open VS Code with GitHub Copilot, invoke agents in order (see Document 04)
+5. Review outputs in `outputs/` folder structure
+
+---
+
+**Total Package:** 8 documents + 10 agent/instruction files + complete migration outputs

@@ -1,8 +1,8 @@
 # Executive Presentation: AWS to Azure AI-Assisted Migration
 
-**Presentation Duration:** 45 minutes  
-**Audience:** Executive Leadership and Technical Stakeholders  
-**Date:** December 2024
+**Status:** ✅ Migration Completed  
+**Date:** April 2026  
+**Application:** Image Upload Service (AWS account 535002891143, ap-southeast-2 → Azure australiaeast)
 
 ---
 
@@ -12,32 +12,29 @@
 2. The Migration Challenge (5 min)
 3. AI-Assisted Solution Overview (10 min)
 4. Technical Architecture (10 min)
-5. ROI and Business Case (10 min)
-6. Demonstration Preview and Next Steps (5 min)
+5. Results and Business Case (10 min)
+6. Demonstration Walkthrough (5 min)
 
 ---
 
 ## 1. Executive Summary
 
-### The Opportunity
+### What Was Done
 
-Migrating from AWS to Azure represents a significant technical undertaking. Traditional approaches are slow, expensive, and dependent on external consultants. We can leverage AI-assisted tooling to transform this process.
-
-### The Solution
-
-Use GitHub Copilot custom agents integrated with Model Context Protocol (MCP) servers to automate the four critical phases of migration:
+A complete AWS to Azure migration of a production serverless image-upload application, executed using five custom GitHub Copilot agents integrated with Model Context Protocol (MCP) servers. The migration covered four phases entirely automated by AI:
 
 - **Discovery:** Automated AWS resource inventory and dependency mapping
 - **Design:** AI-generated Azure architecture and Infrastructure as Code
-- **Refactor:** Automated code transformation from AWS to Azure SDKs  
-- **Deploy:** Automated Bicep generation and CI/CD pipeline updates
+- **Refactor:** Automated code transformation from AWS SDKs to Azure SDKs  
+- **Deploy:** Automated Bicep generation and validated deployment to Azure
 
-### The Impact
+### The Results
 
-**Time:** 16-20 weeks reduced to 8-10 weeks (60% faster)  
-**Cost:** $200K-$400K reduced to $50K-$100K (75% savings)  
-**Quality:** Consistent application of best practices  
-**Knowledge:** Reusable agents and retained expertise
+**Infrastructure:** 4 Lambda functions + API Gateway + S3 migrated to Azure Functions + Blob Storage + Static Web Apps  
+**Cost reduction:** AWS $2.92/month → Azure $0.54/month at demo scale (**81% reduction**)  
+**Deployment:** ✅ Live in Azure australiaeast (resource group `img-upload-dev-rg`)  
+**Code:** Zero AWS SDK references remain — all replaced with Azure SDKs and Managed Identity  
+**IaC:** CloudFormation converted to modular Bicep using Azure Verified Modules (AVM)
 
 ---
 

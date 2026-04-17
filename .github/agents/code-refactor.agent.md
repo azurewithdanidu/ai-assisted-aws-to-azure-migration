@@ -21,14 +21,35 @@ DO NOT USE CLI OR POWERSHELL. ONLY USE Avaible MCP servers for this task
 ## Target Location
  - Refactored application files should be output to app-code/azure-functions
 
+## Known Gotchas (Learned from Production)
+
+### Azure Functions Python Runtime
+- **Python 3.13 is NOT supported** by Azure Functions v4 — it crashes the worker with `0xC0000005` Access Violation
+- Supported versions: **Python 3.9, 3.10, 3.11 only**
+- Always create `.venv` using Python 3.11: `python3.11 -m venv .venv`
+- If Python 3.11 is missing, install via `winget install Python.Python.3.11`
+- Azure Functions Core Tools (`func`) must be installed: `npm install -g azure-functions-core-tools@4`
+
+### Reserved Environment Variable Names
+- **`CONTAINER_NAME` is reserved** by the Azure Functions host — do NOT use it
+- Use `BLOB_CONTAINER_NAME` instead for Blob Storage container references
+- Other reserved names to avoid: `WEBSITE_*`, `FUNCTIONS_*`, `AzureWebJobs*`
+
+### Azure Static Web Apps Deployment
+- SWA requires `index.html` or `Index.html` as the default file — `app.html` alone will be rejected
+- `StaticSitesClient.exe` correct args: `upload --skipAppBuild --workdir <dir> --app "." --apiToken <token>`
+- Wrong args (do NOT use): `--skipBuild`, `--branch`, `--deploymentToken`
+- Binary is cached at `%TEMP%\StaticSitesClient.exe` after first `npx @azure/static-web-apps-cli` run
+
 ## Responsibilities
 
 1. **SDK Replacement** - Replace AWS SDKs with Azure SDKs
 2. **Authentication Updates** - Convert IAM to Managed Identity
 3. **Method Mapping** - Map AWS API calls to Azure API calls
-4. **Environment Variables** - Update all AWS-specific configuration
-5. **Testing** - Verify behavior equivalence
-6. **Code Review** - Create detailed pull requests with documentation
+4. **Environment Variables** - Update all AWS-specific configuration (avoid reserved names)
+5. **Python Version** - Ensure `.venv` uses Python 3.9–3.11 (NOT 3.12+)
+6. **Testing** - Verify behavior equivalence
+7. **Code Review** - Create detailed pull requests with documentation
 
 ## Language-Specific SDK Replacements
 

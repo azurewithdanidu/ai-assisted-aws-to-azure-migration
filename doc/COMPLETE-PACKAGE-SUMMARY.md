@@ -1,26 +1,47 @@
-# AWS to Azure AI-Assisted Migration - Complete Package Summary
+# AWS to Azure AI-Assisted Migration — Complete Package Summary
 
-**Date:** December 2024  
-**Status:** Ready for Executive Review and Demo Execution
+**Date:** April 2026  
+**Status:** ✅ Migration Complete — Azure environment live  
+**Application:** Image Upload Service (AWS account 535002891143, ap-southeast-2 → Azure australiaeast)
 
 ---
 
 ## Package Overview
 
-This investigation provides a complete solution for using GitHub Copilot custom agents and MCP servers to automate AWS to Azure migrations. The package includes executive presentation materials, technical specifications, and a full demonstration plan.
+This repository contains a complete, end-to-end AI-assisted migration of a real AWS serverless application to Azure, executed using five custom GitHub Copilot agents. It includes all agent definitions, generated migration artifacts, refactored Python code, Bicep infrastructure templates, and a deployed Azure environment.
 
 ---
 
-## Documents Created
+## Documents
 
-**00-MASTER-INDEX.md** (3.2 KB)  
-Navigation guide with document index and quick reference
+| File | Description |
+|------|-------------|
+| **00-MASTER-INDEX.md** | Document index and quick navigation |
+| **01-EXECUTIVE-PRESENTATION.md** | Business case, real ROI, and completed outcomes |
+| **03-CUSTOM-AGENT-SPECIFICATIONS.md** | Full agent and instruction file specifications (production-validated) |
+| **04-DEMO-PLAN.md** | 30-minute demonstration walkthrough |
+| **05-AWS-INFRASTRUCTURE-SETUP.md** | Original AWS environment reference |
+| **06-DEMO-EXECUTION-GUIDE.md** | Agent invocation scripts and expected outputs |
+| **07-SERVICE-MAPPING-REFERENCE.md** | AWS → Azure service mapping reference guide |
+| **08-MCP-SERVER-INTEGRATION.md** | MCP server setup and configuration |
 
-**01-EXECUTIVE-PRESENTATION.md** (17 KB)  
-45-minute presentation covering business case, ROI, technical architecture, and migration approach
+---
 
-**03-CUSTOM-AGENT-SPECIFICATIONS-PART1.md** (2.5 KB)  
-Specifications for AWS Discovery, Azure Architect, and Code Refactor agents
+## Migration Outputs
+
+| Artifact | Location |
+|----------|----------|
+| AWS inventory (JSON) | `outputs/aws-migration-artifacts/aws-inventory.json` |
+| AWS architecture diagram | `outputs/aws-migration-artifacts/architecture-diagram.mmd` |
+| Dependency matrix | `outputs/aws-migration-artifacts/dependency-matrix.csv` |
+| Migration assessment | `outputs/aws-migration-artifacts/migration-assessment.md` |
+| CloudFormation template (captured) | `outputs/aws-migration-artifacts/cloudformation-template.yaml` |
+| Azure architecture diagram | `outputs/azure-architecture-output/architecture-diagram-azure.mmd` |
+| Service mapping | `outputs/azure-architecture-output/service-mapping.md` |
+| Cost comparison | `outputs/azure-architecture-output/cost-comparison.md` |
+| Refactored Azure Functions | `outputs/azure-functions/function_app.py` |
+| Bicep templates (deployed) | `outputs/bicep-templates/` |
+| Static web app | `outputs/static-web-app/` |
 
 ---
 
@@ -30,14 +51,14 @@ Specifications for AWS Discovery, Azure Architect, and Code Refactor agents
 
 **File Location:** `.github/agents/aws-discovery.agent.md`
 
-**Purpose:** Automated discovery of AWS resources and dependency analysis
+**Purpose:** Automated, read-only discovery of AWS resources using AWS Cloud Control API MCP Server
 
 **MCP Server Integration:**
-- AWS Cloud Control API MCP Server
-- URL: https://awslabs.github.io/mcp/servers/ccapi-mcp-server
+- AWS Cloud Control API MCP Server — https://awslabs.github.io/mcp/servers/ccapi-mcp-server
+- AWS Knowledge MCP
 
 **Capabilities:**
-- Discovers all AWS resources (Lambda, EKS, RDS, S3, EventBridge, etc.)
+- Discovers all AWS resources (Lambda, API Gateway, S3, IAM, CloudWatch, KMS, CloudFormation, etc.)
 - Maps dependencies between resources
 - Generates Mermaid architecture diagrams
 - Assesses migration complexity (LOW/MEDIUM/HIGH)
