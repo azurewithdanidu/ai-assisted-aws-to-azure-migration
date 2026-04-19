@@ -6,6 +6,8 @@ applyTo: code-refactor
 
 # Code Refactor Agent - Custom Instructions
 
+> **IGNORE THE `backup/` FOLDER** — Never read from or write to the `backup/` directory. All output must go to `outputs/azure-functions/`.
+
 ## Business Logic Preservation Rules
 
 ### Golden Rule

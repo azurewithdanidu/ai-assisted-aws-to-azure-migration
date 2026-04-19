@@ -6,6 +6,8 @@ applyTo: deployment-validation
 
 # Deployment Validation Agent - Custom Instructions
 
+> **IGNORE THE `backup/` FOLDER** — Never read from or write to the `backup/` directory. All inputs come from `outputs/` and all reports go to `outputs/validation-report.md`.
+
 ## Validation Requirements by Phase
 
 Golden rule: All critical checks must pass for successful validation. Optional checks should be reviewed and addressed as needed but do not block deployment if they fail.

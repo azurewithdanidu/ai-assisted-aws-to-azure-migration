@@ -1,0 +1,14 @@
+{
+  "name": "migration-dashboard",
+  "version": "1.0.0",
+  "description": "AWS → Azure Migration Dashboard",
+  "type": "module",
+  "scripts": {
+    "dev": "vite --open",
+    "build": "vite build",
+    "preview": "vite preview"
+  },
+  "devDependencies": {
+    "vite": "^5.2.0"
+  }
+}

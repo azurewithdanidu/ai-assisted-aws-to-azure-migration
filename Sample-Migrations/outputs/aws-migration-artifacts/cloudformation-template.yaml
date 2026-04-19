@@ -1,0 +1,441 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Description: 'Image Upload Service - S3, Lambda, and API Gateway (Demo - IAM Auth)'
+
+Parameters:
+  Environment:
+    Type: String
+    Default: dev
+    Description: Environment name
+    AllowedValues:
+      - dev
+      - staging
+      - prod
+
+Resources:
+  # S3 Bucket for storing images
+  ImageBucket:
+    Type: AWS::S3::Bucket
+    Properties:
+      CorsConfiguration:
+        CorsRules:
+          - AllowedHeaders:
+              - '*'
+            AllowedMethods:
+              - GET
+              - PUT
+              - POST
+              - HEAD
+              - DELETE
+            AllowedOrigins:
+              - '*'
+            ExposedHeaders:
+              - ETag
+              - Content-Type
+              - x-amz-server-side-encryption
+              - x-amz-request-id
+              - x-amz-id-2
+            MaxAge: 3000
+      PublicAccessBlockConfiguration:
+        BlockPublicAcls: true
+        BlockPublicPolicy: true
+        IgnorePublicAcls: true
+        RestrictPublicBuckets: true
+      VersioningConfiguration:
+        Status: Enabled
+
+  # S3 Bucket for static website hosting
+  WebsiteBucket:
+    Type: AWS::S3::Bucket
+    Properties:
+      WebsiteConfiguration:
+        IndexDocument: app.html
+        ErrorDocument: error.html
+      PublicAccessBlockConfiguration:
+        BlockPublicAcls: false
+        BlockPublicPolicy: false
+        IgnorePublicAcls: false
+        RestrictPublicBuckets: false
+
+  # Bucket Policy for public read access
+  WebsiteBucketPolicy:
+    Type: AWS::S3::BucketPolicy
+    Properties:
+      Bucket: !Ref WebsiteBucket
+      PolicyDocument:
+        Statement:
+          - Sid: PublicReadGetObject
+            Effect: Allow
+            Principal: '*'
+            Action: s3:GetObject
+            Resource: !Sub '${WebsiteBucket.Arn}/*'
+
+  # IAM Role for Lambda
+  LambdaExecutionRole:
+    Type: AWS::IAM::Role
+    Properties:
+      AssumeRolePolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service: lambda.amazonaws.com
+            Action: sts:AssumeRole
+      ManagedPolicyArns:
+        - arn:aws:iam::aws:policy/service-role/AWSLambdaBasicExecutionRole
+      Policies:
+        - PolicyName: S3Access
+          PolicyDocument:
+            Version: '2012-10-17'
+            Statement:
+              - Effect: Allow
+                Action:
+                  - s3:PutObject
+                  - s3:PutObjectTagging
+                  - s3:GetObject
+                  - s3:GetObjectTagging
+                  - s3:DeleteObject
+                Resource: !Sub '${ImageBucket.Arn}/*'
+              - Effect: Allow
+                Action:
+                  - s3:ListBucket
+                Resource: !GetAtt ImageBucket.Arn
+
+  # IAM Role for API Gateway CloudWatch Logging
+  ApiGatewayCloudWatchLogsRole:
+    Type: AWS::IAM::Role
+    Properties:
+      AssumeRolePolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service: apigateway.amazonaws.com
+            Action: sts:AssumeRole
+      ManagedPolicyArns:
+        - arn:aws:iam::aws:policy/service-role/AmazonAPIGatewayPushToCloudWatchLogs
+
+  # API Gateway Account Configuration for CloudWatch Logs
+  ApiGatewayAccount:
+    Type: AWS::ApiGateway::Account
+    Properties:
+      CloudWatchRoleArn: !GetAtt ApiGatewayCloudWatchLogsRole.Arn
+
+  # IAM User for accessing the API
+  ApiUser:
+    Type: AWS::IAM::User
+    Properties:
+      UserName: !Sub '${AWS::StackName}-api-user'
+      Policies:
+        - PolicyName: ApiGatewayInvokePolicy
+          PolicyDocument:
+            Version: '2012-10-17'
+            Statement:
+              - Effect: Allow
+                Action:
+                  - execute-api:Invoke
+                Resource: !Sub 'arn:aws:execute-api:${AWS::Region}:${AWS::AccountId}:${ImageUploadApi}/*'
+
+  # Access Key for API User
+  ApiUserAccessKey:
+    Type: AWS::IAM::AccessKey
+    Properties:
+      UserName: !Ref ApiUser
+
+  # Lambda Function for Upload URL Generation
+  UploadFunction:
+    Type: AWS::Lambda::Function
+    Properties:
+      Runtime: python3.11
+      Handler: upload_handler.lambda_handler
+      Role: !GetAtt LambdaExecutionRole.Arn
+      Timeout: 30
+      MemorySize: 256
+      Code:
+        ZipFile: |
+          # Placeholder - will be replaced during deployment
+          def lambda_handler(event, context):
+              return {'statusCode': 200, 'body': 'Deploy lambda code'}
+      Environment:
+        Variables:
+          BUCKET_NAME: !Ref ImageBucket
+          URL_EXPIRATION: '3600'
+
+  # Lambda Function for Listing Files
+  ListFilesFunction:
+    Type: AWS::Lambda::Function
+    Properties:
+      Runtime: python3.11
+      Handler: list_handler.lambda_handler
+      Role: !GetAtt LambdaExecutionRole.Arn
+      Timeout: 30
+      MemorySize: 256
+      Code:
+        ZipFile: |
+          # Placeholder - will be replaced during deployment
+          def lambda_handler(event, context):
+              return {'statusCode': 200, 'body': 'Deploy lambda code'}
+      Environment:
+        Variables:
+          BUCKET_NAME: !Ref ImageBucket
+          URL_EXPIRATION: '3600'
+
+  # Lambda Function for Getting View URL
+  GetViewUrlFunction:
+    Type: AWS::Lambda::Function
+    Properties:
+      Runtime: python3.11
+      Handler: view_handler.lambda_handler
+      Role: !GetAtt LambdaExecutionRole.Arn
+      Timeout: 30
+      MemorySize: 256
+      Code:
+        ZipFile: |
+          # Placeholder - will be replaced during deployment
+          def lambda_handler(event, context):
+              return {'statusCode': 200, 'body': 'Deploy lambda code'}
+      Environment:
+        Variables:
+          BUCKET_NAME: !Ref ImageBucket
+          URL_EXPIRATION: '3600'
+
+  # Lambda Function for Deleting Files
+  DeleteFileFunction:
+    Type: AWS::Lambda::Function
+    Properties:
+      Runtime: python3.11
+      Handler: delete_handler.lambda_handler
+      Role: !GetAtt LambdaExecutionRole.Arn
+      Timeout: 30
+      MemorySize: 256
+      Code:
+        ZipFile: |
+          # Placeholder - will be replaced during deployment
+          def lambda_handler(event, context):
+              return {'statusCode': 200, 'body': 'Deploy lambda code'}
+      Environment:
+        Variables:
+          BUCKET_NAME: !Ref ImageBucket
+
+  # API Gateway REST API
+  ImageUploadApi:
+    Type: AWS::ApiGateway::RestApi
+    Properties:
+      Name: !Sub '${AWS::StackName}-api'
+      Description: API for image upload service (IAM Auth)
+      EndpointConfiguration:
+        Types:
+          - REGIONAL
+
+  # API Gateway Resource: /upload
+  UploadResource:
+    Type: AWS::ApiGateway::Resource
+    Properties:
+      RestApiId: !Ref ImageUploadApi
+      ParentId: !GetAtt ImageUploadApi.RootResourceId
+      PathPart: upload
+
+  # API Gateway Method: POST /upload
+  UploadMethod:
+    Type: AWS::ApiGateway::Method
+    Properties:
+      RestApiId: !Ref ImageUploadApi
+      ResourceId: !Ref UploadResource
+      HttpMethod: POST
+      AuthorizationType: AWS_IAM
+      Integration:
+        Type: AWS_PROXY
+        IntegrationHttpMethod: POST
+        Uri: !Sub 'arn:aws:apigateway:${AWS::Region}:lambda:path/2015-03-31/functions/${UploadFunction.Arn}/invocations'
+      MethodResponses:
+        - StatusCode: 200
+          ResponseParameters:
+            method.response.header.Access-Control-Allow-Origin: true
+
+  # API Gateway Resource: /files
+  FilesResource:
+    Type: AWS::ApiGateway::Resource
+    Properties:
+      RestApiId: !Ref ImageUploadApi
+      ParentId: !GetAtt ImageUploadApi.RootResourceId
+      PathPart: files
+
+  # API Gateway Method: GET /files
+  ListFilesMethod:
+    Type: AWS::ApiGateway::Method
+    Properties:
+      RestApiId: !Ref ImageUploadApi
+      ResourceId: !Ref FilesResource
+      HttpMethod: GET
+      AuthorizationType: AWS_IAM
+      RequestParameters:
+        method.request.querystring.prefix: false
+      Integration:
+        Type: AWS_PROXY
+        IntegrationHttpMethod: POST
+        Uri: !Sub 'arn:aws:apigateway:${AWS::Region}:lambda:path/2015-03-31/functions/${ListFilesFunction.Arn}/invocations'
+      MethodResponses:
+        - StatusCode: 200
+          ResponseParameters:
+            method.response.header.Access-Control-Allow-Origin: true
+
+  # API Gateway Resource: /files/{fileId}
+  FileViewUrlResource:
+    Type: AWS::ApiGateway::Resource
+    Properties:
+      RestApiId: !Ref ImageUploadApi
+      ParentId: !Ref FilesResource
+      PathPart: '{fileId}'
+
+  # API Gateway Resource: /files/{fileId}/view-url
+  ViewUrlResource:
+    Type: AWS::ApiGateway::Resource
+    Properties:
+      RestApiId: !Ref ImageUploadApi
+      ParentId: !Ref FileViewUrlResource
+      PathPart: view-url
+
+  # API Gateway Method: GET /files/{fileId}/view-url
+  GetViewUrlMethod:
+    Type: AWS::ApiGateway::Method
+    Properties:
+      RestApiId: !Ref ImageUploadApi
+      ResourceId: !Ref ViewUrlResource
+      HttpMethod: GET
+      AuthorizationType: AWS_IAM
+      RequestParameters:
+        method.request.path.fileId: true
+      Integration:
+        Type: AWS_PROXY
+        IntegrationHttpMethod: POST
+        Uri: !Sub 'arn:aws:apigateway:${AWS::Region}:lambda:path/2015-03-31/functions/${GetViewUrlFunction.Arn}/invocations'
+      MethodResponses:
+        - StatusCode: 200
+          ResponseParameters:
+            method.response.header.Access-Control-Allow-Origin: true
+
+  # API Gateway Method: DELETE /files/{fileId}
+  DeleteFileMethod:
+    Type: AWS::ApiGateway::Method
+    Properties:
+      RestApiId: !Ref ImageUploadApi
+      ResourceId: !Ref FileViewUrlResource
+      HttpMethod: DELETE
+      AuthorizationType: AWS_IAM
+      RequestParameters:
+        method.request.path.fileId: true
+      Integration:
+        Type: AWS_PROXY
+        IntegrationHttpMethod: POST
+        Uri: !Sub 'arn:aws:apigateway:${AWS::Region}:lambda:path/2015-03-31/functions/${DeleteFileFunction.Arn}/invocations'
+      MethodResponses:
+        - StatusCode: 200
+          ResponseParameters:
+            method.response.header.Access-Control-Allow-Origin: true
+
+  # CORS OPTIONS methods (omitted for brevity – full template retrieved from AWS)
+
+  # API Gateway Deployment
+  ApiDeployment:
+    Type: AWS::ApiGateway::Deployment
+    DependsOn:
+      - UploadMethod
+      - ListFilesMethod
+      - GetViewUrlMethod
+      - DeleteFileMethod
+    Properties:
+      RestApiId: !Ref ImageUploadApi
+      Description: !Sub 'Deployment for ${Environment}'
+
+  # API Gateway Stage
+  ApiStage:
+    Type: AWS::ApiGateway::Stage
+    Properties:
+      RestApiId: !Ref ImageUploadApi
+      DeploymentId: !Ref ApiDeployment
+      StageName: !Ref Environment
+      Description: !Sub '${Environment} stage'
+      TracingEnabled: true
+      MethodSettings:
+        - ResourcePath: '/*'
+          HttpMethod: '*'
+          LoggingLevel: INFO
+          DataTraceEnabled: true
+          MetricsEnabled: true
+
+  # Lambda Permissions for API Gateway
+  UploadFunctionPermission:
+    Type: AWS::Lambda::Permission
+    Properties:
+      FunctionName: !Ref UploadFunction
+      Action: lambda:InvokeFunction
+      Principal: apigateway.amazonaws.com
+      SourceArn: !Sub 'arn:aws:execute-api:${AWS::Region}:${AWS::AccountId}:${ImageUploadApi}/*/*'
+
+  ListFilesFunctionPermission:
+    Type: AWS::Lambda::Permission
+    Properties:
+      FunctionName: !Ref ListFilesFunction
+      Action: lambda:InvokeFunction
+      Principal: apigateway.amazonaws.com
+      SourceArn: !Sub 'arn:aws:execute-api:${AWS::Region}:${AWS::AccountId}:${ImageUploadApi}/*/*'
+
+  GetViewUrlFunctionPermission:
+    Type: AWS::Lambda::Permission
+    Properties:
+      FunctionName: !Ref GetViewUrlFunction
+      Action: lambda:InvokeFunction
+      Principal: apigateway.amazonaws.com
+      SourceArn: !Sub 'arn:aws:execute-api:${AWS::Region}:${AWS::AccountId}:${ImageUploadApi}/*/*'
+
+  DeleteFileFunctionPermission:
+    Type: AWS::Lambda::Permission
+    Properties:
+      FunctionName: !Ref DeleteFileFunction
+      Action: lambda:InvokeFunction
+      Principal: apigateway.amazonaws.com
+      SourceArn: !Sub 'arn:aws:execute-api:${AWS::Region}:${AWS::AccountId}:${ImageUploadApi}/*/*'
+
+Outputs:
+  ApiUrl:
+    Description: API Gateway URL
+    Value: !Sub 'https://${ImageUploadApi}.execute-api.${AWS::Region}.amazonaws.com/${Environment}'
+    Export:
+      Name: !Sub '${AWS::StackName}-api-url'
+
+  BucketName:
+    Description: S3 Bucket Name
+    Value: !Ref ImageBucket
+    Export:
+      Name: !Sub '${AWS::StackName}-bucket-name'
+
+  WebsiteUrl:
+    Description: Static Website URL
+    Value: !GetAtt WebsiteBucket.WebsiteURL
+    Export:
+      Name: !Sub '${AWS::StackName}-website-url'
+
+  WebsiteBucketName:
+    Description: Website S3 Bucket Name
+    Value: !Ref WebsiteBucket
+    Export:
+      Name: !Sub '${AWS::StackName}-website-bucket-name'
+
+  ApiUserName:
+    Description: IAM User Name for API Access
+    Value: !Ref ApiUser
+
+  UploadFunctionName:
+    Description: Upload Lambda Function Name
+    Value: !Ref UploadFunction
+
+  ListFilesFunctionName:
+    Description: List Files Lambda Function Name
+    Value: !Ref ListFilesFunction
+
+  GetViewUrlFunctionName:
+    Description: Get View URL Lambda Function Name
+    Value: !Ref GetViewUrlFunction
+
+  DeleteFileFunctionName:
+    Description: Delete File Lambda Function Name
+    Value: !Ref DeleteFileFunction

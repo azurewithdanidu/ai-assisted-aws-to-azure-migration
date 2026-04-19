@@ -6,6 +6,8 @@ applyTo: iac-transformation
 
 # IaC Transformation Agent - Custom Instructions
 
+> **IGNORE THE `backup/` FOLDER** — Never read from or write to the `backup/` directory. All output must go to `outputs/bicep-templates/`.
+
 ### Golden Rule
 - Use the detailed design document for reference and guidance in outoputs/azure-architecture-output/
 

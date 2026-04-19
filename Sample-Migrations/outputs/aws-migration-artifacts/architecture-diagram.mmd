@@ -1,0 +1,326 @@
+graph TB
+    %% ── AWS Account 535002891143 ── ap-southeast-2 ──────────────────────────
+
+    subgraph Client["Client (Browser)"]
+        FE["Static Frontend\napp.html / HTML+JS"]
+    end
+
+    subgraph S3_Website["S3 — Static Website Hosting"]
+        WEB["image-upload-websitebucket-vd866vxtcs1z\nPublic · Index: app.html\nURL: s3-website-ap-southeast-2.amazonaws.com"]
+    end
+
+    subgraph IAM_Auth["IAM — Authentication"]
+        IAM_USER["IAM User: image-upload-api-user\nAccess Key (AKIAXZEFIIOD2OIWPRPK)\nPolicy: execute-api:Invoke"]
+        LAMBDA_ROLE["IAM Role: LambdaExecutionRole\nManaged: AWSLambdaBasicExecutionRole\nInline: s3:Get/Put/Delete/List on ImageBucket"]
+        APIGW_ROLE["IAM Role: ApiGatewayCloudWatchLogsRole\nManaged: AmazonAPIGatewayPushToCloudWatchLogs"]
+    end
+
+    subgraph APIGW["API Gateway — REST API (Regional)"]
+        API["image-upload-api\nID: 4lrh2l7i86\nAuth: AWS_IAM (SigV4)\nURL: /dev\nX-Ray: enabled\nLogging: INFO"]
+        R_UPLOAD["/upload\nPOST"]
+        R_FILES["/files\nGET"]
+        R_FILE_ID["/files/{fileId}\nDELETE"]
+        R_VIEW_URL["/files/{fileId}/view-url\nGET"]
+        API --> R_UPLOAD
+        API --> R_FILES
+        API --> R_FILE_ID
+        API --> R_VIEW_URL
+    end
+
+    subgraph Lambda["Lambda — Compute (ap-southeast-2)"]
+        FN_UPLOAD["UploadFunction\npython3.11 · 256 MB · 30s\nupload_handler.lambda_handler\nEnv: BUCKET_NAME, URL_EXPIRATION=3600"]
+        FN_LIST["ListFilesFunction\npython3.11 · 256 MB · 30s\nlist_handler.lambda_handler\nEnv: BUCKET_NAME, URL_EXPIRATION=3600"]
+        FN_VIEW["GetViewUrlFunction\npython3.11 · 256 MB · 30s\nview_handler.lambda_handler\nEnv: BUCKET_NAME, URL_EXPIRATION=3600"]
+        FN_DELETE["DeleteFileFunction\npython3.11 · 256 MB · 30s\ndelete_handler.lambda_handler\nEnv: BUCKET_NAME"]
+    end
+
+    subgraph S3_Images["S3 — Image Storage"]
+        IMG_BUCKET["image-upload-imagebucket-t8isnbr8sswv\nPrivate · Versioning: ON · CORS: ALL methods\nPublic Access Block: Full"]
+    end
+
+    subgraph Monitoring["CloudWatch — Observability"]
+        LOG_UPLOAD["/aws/lambda/.../UploadFunction"]
+        LOG_LIST["/aws/lambda/.../ListFilesFunction"]
+        LOG_VIEW["/aws/lambda/.../GetViewUrlFunction"]
+        LOG_DELETE["/aws/lambda/.../DeleteFileFunction"]
+        LOG_APIGW["API-Gateway-Execution-Logs_4lrh2l7i86/dev"]
+    end
+
+    subgraph CFN["CloudFormation — IaC"]
+        STACK["Stack: image-upload\nStatus: CREATE_COMPLETE\nCreated: 2026-01-14\nEnv param: dev"]
+    end
+
+    subgraph KMS_Tier["KMS"]
+        KMS_KEY["CMK: 6c852b32-...\nRegion: ap-southeast-2"]
+    end
+
+    subgraph VPC_Tier["VPC (Default)"]
+        VPC["vpc-013c0ebfccfefd966\n172.31.0.0/16\nDefault VPC · No Lambda VPC attachment"]
+    end
+
+    subgraph Legacy["Legacy / Residual (AppStream 2.0 – June 2025)"]
+        AS_BUCKETS["2 × AppStream S3 Buckets\napp-settings · streaming-data"]
+        AS_ALARMS["2 × CloudWatch Alarms\nAppStream fleet scale-in/out\n(INSUFFICIENT_DATA – fleet deleted)"]
+        AS_ROLES["3 × AppStream Service-Linked IAM Roles"]
+    end
+
+    %% ─── Flow ───────────────────────────────────────────────────────────────
+
+    %% User loads frontend
+    FE -->|"HTTPS (public)"| WEB
+
+    %% User signs requests with IAM credentials from stack output
+    IAM_USER -->|"SigV4 signed API calls"| API
+
+    %% API Gateway → Lambda integrations (AWS_PROXY)
+    R_UPLOAD  -->|"invoke"| FN_UPLOAD
+    R_FILES   -->|"invoke"| FN_LIST
+    R_VIEW_URL-->|"invoke"| FN_VIEW
+    R_FILE_ID -->|"invoke"| FN_DELETE
+
+    %% Lambda assumes execution role
+    FN_UPLOAD  -->|"assumes"| LAMBDA_ROLE
+    FN_LIST    -->|"assumes"| LAMBDA_ROLE
+    FN_VIEW    -->|"assumes"| LAMBDA_ROLE
+    FN_DELETE  -->|"assumes"| LAMBDA_ROLE
+
+    %% Lambda ↔ S3
+    FN_UPLOAD  -->|"s3:PutObject → pre-signed URL"| IMG_BUCKET
+    FN_LIST    -->|"s3:ListBucket + s3:GetObject"| IMG_BUCKET
+    FN_VIEW    -->|"s3:GetObject → pre-signed URL"| IMG_BUCKET
+    FN_DELETE  -->|"s3:DeleteObject"| IMG_BUCKET
+
+    %% Logging
+    FN_UPLOAD  -->|"logs"| LOG_UPLOAD
+    FN_LIST    -->|"logs"| LOG_LIST
+    FN_VIEW    -->|"logs"| LOG_VIEW
+    FN_DELETE  -->|"logs"| LOG_DELETE
+    API        -->|"execution logs"| LOG_APIGW
+    APIGW_ROLE -->|"push logs"| LOG_APIGW
+
+    %% CloudFormation ownership
+    STACK -. "manages" .-> FN_UPLOAD
+    STACK -. "manages" .-> FN_LIST
+    STACK -. "manages" .-> FN_VIEW
+    STACK -. "manages" .-> FN_DELETE
+    STACK -. "manages" .-> API
+    STACK -. "manages" .-> IMG_BUCKET
+    STACK -. "manages" .-> WEB
+    STACK -. "manages" .-> LAMBDA_ROLE
+    STACK -. "manages" .-> IAM_USER
+
+    %% KMS present but not used by current stack
+    KMS_KEY -. "not used by active stack" .-> IMG_BUCKET
+
+    %% Lambda in default VPC (no VPC config)
+    VPC -. "default VPC (unused by Lambda)" .-> FN_UPLOAD
+
+    %% Styling
+    classDef critical fill:#c0392b,color:#fff,stroke:#922b21
+    classDef high    fill:#e67e22,color:#fff,stroke:#d35400
+    classDef medium  fill:#2980b9,color:#fff,stroke:#1a5276
+    classDef low     fill:#27ae60,color:#fff,stroke:#1e8449
+    classDef legacy  fill:#7f8c8d,color:#fff,stroke:#566573
+
+    class FN_UPLOAD,FN_LIST,FN_VIEW,FN_DELETE,API,IMG_BUCKET critical
+    class WEB,IAM_USER,LAMBDA_ROLE,STACK high
+    class APIGW_ROLE,LOG_UPLOAD,LOG_LIST,LOG_VIEW,LOG_DELETE,LOG_APIGW medium
+    class KMS_KEY,VPC low
+    class AS_BUCKETS,AS_ALARMS,AS_ROLES legacy
+graph TB
+    subgraph Users["👤 End Users / Browser"]
+        BROWSER[Web Browser / SPA Client]
+    end
+
+    subgraph StaticHosting["Static Website Hosting (S3 - ap-southeast-2)"]
+        WEBSITE["🌐 WebsiteBucket\nimage-upload-websitebucket-vd866vxtcs1z\nHTTP only · Public read\nIndex: app.html"]
+    end
+
+    subgraph APILayer["API Layer (API Gateway REST - ap-southeast-2)"]
+        APIGW["🔌 image-upload-api\n4lrh2l7i86\nRegional · IAM Auth / SigV4\nStage: dev · X-Ray ON · CW Metrics ON"]
+    end
+
+    subgraph ComputeLayer["Compute Layer (Lambda - ap-southeast-2 · Python 3.11)"]
+        UPLOAD["λ UploadFunction\n256MB · 30s\nPOST /upload\nGenerates pre-signed S3 POST"]
+        LIST["λ ListFilesFunction\n256MB · 30s\nGET /files\nLists objects + pre-signed URLs"]
+        VIEW["λ GetViewUrlFunction\n256MB · 30s\nGET /files/{fileId}/view-url\nPre-signed GET URL (1h)"]
+        DELETE["λ DeleteFileFunction\n256MB · 30s\nDELETE /files/{fileId}\nDeletes S3 objects by prefix"]
+    end
+
+    subgraph StorageLayer["Storage Layer (S3 - ap-southeast-2)"]
+        IMGBUCKET["🪣 ImageBucket\nimage-upload-imagebucket-t8isnbr8sswv\nPrivate · Versioning ON\nCORS: * (GET/PUT/POST/DELETE)"]
+    end
+
+    subgraph IAMLayer["Security & Identity (IAM - Global)"]
+        LAMBDAROLE["🔐 LambdaExecutionRole\nS3: PutObject/GetObject/\nDeleteObject/ListBucket\n+ CloudWatch Logs"]
+        APIGWROLE["🔐 ApiGatewayCloudWatchLogsRole\nPushToCloudWatchLogs"]
+        APIUSER["👤 image-upload-api-user\nIAM User · Static access key\nexecute-api:Invoke on API"]
+    end
+
+    subgraph ObservabilityLayer["Observability (CloudWatch - ap-southeast-2)"]
+        CW["📊 CloudWatch Logs\n/aws/lambda/* (4 groups)\nAPI-Gateway-Execution-Logs_4lrh2l7i86/dev\nMetrics + Traces (X-Ray passive)"]
+    end
+
+    subgraph IaC["Infrastructure as Code"]
+        CFN["📋 CloudFormation Stack: image-upload\nap-southeast-2 · CREATE_COMPLETE\nManages all application resources\nSource: app-code/template.yaml"]
+    end
+
+    subgraph Legacy["🗑 Legacy / Orphaned Resources"]
+        APPSTREAM["AppStream S3 Buckets x2\n+ CloudWatch Alarms x2\n(No active fleet - from June 2025 demo)"]
+        OLDLOGS["Old CloudWatch Log Groups\nimage-upload-v2-* · older API GW logs\n(Residual from previous stack iterations)"]
+    end
+
+    %% User flows
+    BROWSER -->|"HTTP (no HTTPS)"| WEBSITE
+    BROWSER -->|"HTTPS + SigV4\n(static IAM key)"| APIGW
+
+    %% API Gateway → Lambda
+    APIGW -->|"POST /upload → Lambda Proxy"| UPLOAD
+    APIGW -->|"GET /files → Lambda Proxy"| LIST
+    APIGW -->|"GET /files/{fileId}/view-url → Lambda Proxy"| VIEW
+    APIGW -->|"DELETE /files/{fileId} → Lambda Proxy"| DELETE
+
+    %% Lambda → S3
+    UPLOAD -->|"generate_presigned_post()"| IMGBUCKET
+    LIST -->|"list_objects_v2() + generate_presigned_url()"| IMGBUCKET
+    VIEW -->|"list_objects_v2() + generate_presigned_url()"| IMGBUCKET
+    DELETE -->|"list_objects_v2() + delete_object()"| IMGBUCKET
+
+    %% Browser direct S3 upload (pre-signed POST)
+    BROWSER -->|"Direct HTTPS PUT/POST\n(pre-signed URL)"| IMGBUCKET
+
+    %% IAM
+    UPLOAD & LIST & VIEW & DELETE -->|"Assumes"| LAMBDAROLE
+    LAMBDAROLE -->|"Grants access"| IMGBUCKET
+    APIGW -->|"Assumes"| APIGWROLE
+    APIGWROLE -->|"Writes logs"| CW
+    APIUSER -->|"Authenticates browser"| APIGW
+
+    %% Observability
+    UPLOAD & LIST & VIEW & DELETE -->|"Logs to"| CW
+    APIGW -->|"Execution logs"| CW
+
+    %% IaC manages everything
+    CFN -.->|"Manages"| UPLOAD & LIST & VIEW & DELETE
+    CFN -.->|"Manages"| IMGBUCKET & WEBSITE
+    CFN -.->|"Manages"| APIGW
+    CFN -.->|"Manages"| LAMBDAROLE & APIGWROLE & APIUSER
+
+    %% Styles
+    classDef lambda fill:#FF9900,color:#000,stroke:#cc7700
+    classDef s3 fill:#3F9142,color:#fff,stroke:#2d6b30
+    classDef apigw fill:#E7157B,color:#fff,stroke:#b30d5e
+    classDef iam fill:#DD344C,color:#fff,stroke:#aa2338
+    classDef cw fill:#FF4F8B,color:#fff,stroke:#cc3c6e
+    classDef cfn fill:#E05243,color:#fff,stroke:#b03030
+    classDef user fill:#232F3E,color:#fff,stroke:#000
+    classDef legacy fill:#888,color:#fff,stroke:#555,stroke-dasharray:5 5
+
+    class UPLOAD,LIST,VIEW,DELETE lambda
+    class IMGBUCKET,WEBSITE s3
+    class APIGW apigw
+    class LAMBDAROLE,APIGWROLE,APIUSER iam
+    class CW cw
+    class CFN cfn
+    class BROWSER user
+    class APPSTREAM,OLDLOGS legacy
+graph TB
+    subgraph "Client / Browser"
+        CLIENT[Web Browser / API Client]
+    end
+
+    subgraph "ap-southeast-2 — Static Hosting"
+        WEBSITE["WebsiteBucket\n(S3 Static Website)\nimage-upload-websitebucket-vd866vxtcs1z\napp.html — public read"]
+    end
+
+    subgraph "ap-southeast-2 — API Layer"
+        APIGW["API Gateway REST API\nimage-upload-api\nhttps://4lrh2l7i86.execute-api.ap-southeast-2.amazonaws.com/dev\nAuth: AWS_IAM / SigV4\nTracing: X-Ray\nLogging: INFO"]
+    end
+
+    subgraph "ap-southeast-2 — Compute (Lambda — Python 3.11 / 256 MB)"
+        L_UPLOAD["UploadFunction\nupload_handler.lambda_handler\nGenerates pre-signed PUT URL"]
+        L_LIST["ListFilesFunction\nlist_handler.lambda_handler\nLists objects in S3"]
+        L_VIEW["GetViewUrlFunction\nview_handler.lambda_handler\nGenerates pre-signed GET URL"]
+        L_DELETE["DeleteFileFunction\ndelete_handler.lambda_handler\nDeletes object from S3"]
+    end
+
+    subgraph "ap-southeast-2 — Storage"
+        S3_IMG["ImageBucket (S3)\nimage-upload-imagebucket-t8isnbr8sswv\nVersioning: Enabled\nPublic Access: Blocked\nCORS: Enabled"]
+    end
+
+    subgraph "Global — IAM"
+        IAM_ROLE["LambdaExecutionRole\nimage-upload-LambdaExecutionRole-2MhYmRQ3aAnA\nAWSLambdaBasicExecutionRole + S3 inline policy"]
+        IAM_USER["ApiUser (IAM User)\nimage-upload-api-user\nPermission: execute-api:Invoke on all routes"]
+        IAM_APIGW["ApiGatewayCloudWatchLogsRole\nAmazonAPIGatewayPushToCloudWatchLogs"]
+    end
+
+    subgraph "ap-southeast-2 — Observability"
+        CW_LOGS["CloudWatch Logs\n4x Lambda log groups\n2x API Gateway execution logs"]
+        XRAY["X-Ray Tracing\n(API Gateway stage)"]
+    end
+
+    subgraph "ap-southeast-2 — IaC"
+        CFN["CloudFormation Stack\nimage-upload\nCREATE_COMPLETE"]
+    end
+
+    %% Client interactions
+    CLIENT -->|"Load website"| WEBSITE
+    CLIENT -->|"SigV4 signed requests\n(using IAM User credentials)"| APIGW
+
+    %% IAM User auth
+    IAM_USER -->|"allows execute-api:Invoke"| APIGW
+
+    %% API Gateway → Lambda
+    APIGW -->|"POST /upload"| L_UPLOAD
+    APIGW -->|"GET /files"| L_LIST
+    APIGW -->|"GET /files/{fileId}/view-url"| L_VIEW
+    APIGW -->|"DELETE /files/{fileId}"| L_DELETE
+
+    %% Lambda → S3
+    L_UPLOAD -->|"s3:PutObject / pre-signed URL"| S3_IMG
+    L_LIST   -->|"s3:ListBucket"| S3_IMG
+    L_VIEW   -->|"s3:GetObject / pre-signed URL"| S3_IMG
+    L_DELETE -->|"s3:DeleteObject"| S3_IMG
+
+    %% IAM Role → Lambda
+    IAM_ROLE -->|"assumed by"| L_UPLOAD
+    IAM_ROLE -->|"assumed by"| L_LIST
+    IAM_ROLE -->|"assumed by"| L_VIEW
+    IAM_ROLE -->|"assumed by"| L_DELETE
+
+    %% API GW logging role
+    IAM_APIGW -->|"used by"| APIGW
+
+    %% Observability
+    L_UPLOAD -->|"logs"| CW_LOGS
+    L_LIST   -->|"logs"| CW_LOGS
+    L_VIEW   -->|"logs"| CW_LOGS
+    L_DELETE -->|"logs"| CW_LOGS
+    APIGW    -->|"execution logs"| CW_LOGS
+    APIGW    -->|"traces"| XRAY
+
+    %% IaC
+    CFN -.->|"manages"| APIGW
+    CFN -.->|"manages"| L_UPLOAD
+    CFN -.->|"manages"| L_LIST
+    CFN -.->|"manages"| L_VIEW
+    CFN -.->|"manages"| L_DELETE
+    CFN -.->|"manages"| S3_IMG
+    CFN -.->|"manages"| WEBSITE
+    CFN -.->|"manages"| IAM_ROLE
+    CFN -.->|"manages"| IAM_USER
+
+    %% Styling
+    classDef aws_compute fill:#FF9900,color:#000,stroke:#DD6B00
+    classDef aws_storage fill:#3F8624,color:#fff,stroke:#2D6B17
+    classDef aws_apigw fill:#E7157B,color:#fff,stroke:#B8006A
+    classDef aws_iam fill:#DD344C,color:#fff,stroke:#B02036
+    classDef aws_observe fill:#E7157B,color:#fff,stroke:#B8006A
+    classDef aws_infra fill:#8C4FFF,color:#fff,stroke:#6A2FCC
+
+    class L_UPLOAD,L_LIST,L_VIEW,L_DELETE aws_compute
+    class S3_IMG,WEBSITE aws_storage
+    class APIGW aws_apigw
+    class IAM_ROLE,IAM_USER,IAM_APIGW aws_iam
+    class CW_LOGS,XRAY aws_observe
+    class CFN aws_infra

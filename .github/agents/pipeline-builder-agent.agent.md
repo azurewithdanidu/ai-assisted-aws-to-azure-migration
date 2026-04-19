@@ -22,6 +22,8 @@ Your goal is to produce **production-ready, secure, and maintainable** workflow 
 
 ---
 
+> **IGNORE THE `backup/` FOLDER** — Never read from or write to the `backup/` directory. All workflow files must be written to `.github/workflows/`.
+
 ## Core Principles
 
 1. **Security first** — never store credentials as plain text; always use OIDC / Workload Identity Federation or GitHub Secrets backed by Azure Key Vault.

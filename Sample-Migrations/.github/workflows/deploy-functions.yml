@@ -1,0 +1,168 @@
+# =============================================================================
+# deploy-functions.yml — Azure Functions Application Deployment
+#
+# Builds the Python package and deploys to Azure Functions via ZIP deploy.
+# Uses Python 3.11 — Azure Functions v4 constraint (3.12+ crashes with
+# 0xC0000005 Access Violation in the worker process).
+#
+# Required GitHub Secrets:
+#   AZURE_CLIENT_ID          — App Registration Application (client) ID
+#   AZURE_TENANT_ID          — Azure AD Tenant ID
+#   AZURE_SUBSCRIPTION_ID    — Target Azure Subscription ID
+#   AZURE_RESOURCE_GROUP     — Target Resource Group (e.g. img-upload-dev-rg)
+#   AZURE_FUNCTION_APP_NAME  — Function App name   (e.g. img-upload-dev-func)
+#
+# Multi-environment strategy:
+#   dev     — auto-deploys on push to main (no approval gate)
+#   staging — workflow_dispatch only; 1 required reviewer via GitHub Environments
+#   prod    — workflow_dispatch only; 2 required reviewers via GitHub Environments
+#
+# Important:
+#   - CONTAINER_NAME is reserved by the Azure Functions host.
+#     Use BLOB_CONTAINER_NAME in app settings instead.
+#   - scm-do-build-during-deployment is false because we pre-install packages
+#     into .python_packages/ in this workflow.
+# =============================================================================
+
+name: Deploy Azure Functions
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'outputs/azure-functions/**'
+      - '.github/workflows/deploy-functions.yml'
+  workflow_dispatch:
+    inputs:
+      environment:
+        description: 'Target environment'
+        required: true
+        default: 'dev'
+        type: choice
+        options: [dev, staging, prod]
+
+permissions:
+  id-token: write   # Required for OIDC token exchange
+  contents: read
+
+env:
+  DEPLOY_ENV: ${{ github.event.inputs.environment || 'dev' }}
+  FUNCTIONS_SRC: outputs/azure-functions
+
+jobs:
+  build-and-deploy:
+    name: Build & Deploy → ${{ github.event.inputs.environment || 'dev' }}
+    runs-on: ubuntu-latest
+    environment: ${{ github.event.inputs.environment || 'dev' }}
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Python 3.11
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'   # Azure Functions v4: 3.9–3.11 only; 3.12+ crashes
+
+      - name: Cache pip dependencies
+        uses: actions/cache@v4
+        with:
+          path: ~/.cache/pip
+          key: ${{ runner.os }}-pip-${{ hashFiles('outputs/azure-functions/requirements.txt') }}
+          restore-keys: ${{ runner.os }}-pip-
+
+      - name: Install dependencies into package folder
+        working-directory: ${{ env.FUNCTIONS_SRC }}
+        run: |
+          pip install -r requirements.txt \
+            --target .python_packages/lib/site-packages \
+            --upgrade
+
+      - name: Upload build artifact (for debugging)
+        uses: actions/upload-artifact@v4
+        with:
+          name: functions-build-${{ env.DEPLOY_ENV }}-${{ github.run_id }}
+          path: ${{ env.FUNCTIONS_SRC }}
+          retention-days: 7
+
+      - name: Azure Login (OIDC)
+        uses: azure/login@v2
+        with:
+          client-id: ${{ secrets.AZURE_CLIENT_ID }}
+          tenant-id: ${{ secrets.AZURE_TENANT_ID }}
+          subscription-id: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
+
+      - name: Create deployment ZIP package
+        run: |
+          cd ${{ env.FUNCTIONS_SRC }}
+          zip -r ../../function-deploy.zip . \
+            --exclude '*.pyc' \
+            --exclude '__pycache__/*' \
+            --exclude '.git/*' \
+            --exclude '*.md'
+          cd ../..
+          echo "ZIP size: $(du -sh function-deploy.zip | cut -f1)"
+
+      - name: Deploy to Azure Functions (ZIP deploy)
+        run: |
+          az functionapp deployment source config-zip \
+            --resource-group ${{ secrets.AZURE_RESOURCE_GROUP }} \
+            --name ${{ secrets.AZURE_FUNCTION_APP_NAME }} \
+            --src function-deploy.zip \
+            --build-remote false \
+            --timeout 300
+
+      - name: Smoke test — verify Functions endpoint
+        run: |
+          FUNC_URL="https://${{ secrets.AZURE_FUNCTION_APP_NAME }}.azurewebsites.net/api/files"
+          echo "Smoke testing: ${FUNC_URL}"
+          # Expect 200 (no auth) or 401 (auth enabled) — both mean the app is running.
+          # 5xx or connection failure indicates a broken deployment.
+          HTTP_STATUS=$(curl -s -o /dev/null -w "%{http_code}" \
+            --max-time 30 \
+            --retry 3 \
+            --retry-delay 10 \
+            "${FUNC_URL}")
+          echo "HTTP status: ${HTTP_STATUS}"
+          if [[ "${HTTP_STATUS}" == "200" || "${HTTP_STATUS}" == "401" || "${HTTP_STATUS}" == "403" ]]; then
+            echo "Smoke test PASSED (status ${HTTP_STATUS})"
+          else
+            echo "Smoke test FAILED (status ${HTTP_STATUS})"
+            exit 1
+          fi
+
+  rollback:
+    name: Rollback on failure
+    needs: build-and-deploy
+    if: failure()
+    runs-on: ubuntu-latest
+    environment: ${{ github.event.inputs.environment || 'dev' }}
+
+    steps:
+      - name: Azure Login (OIDC)
+        uses: azure/login@v2
+        with:
+          client-id: ${{ secrets.AZURE_CLIENT_ID }}
+          tenant-id: ${{ secrets.AZURE_TENANT_ID }}
+          subscription-id: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
+
+      - name: Download previous build artifact
+        uses: actions/download-artifact@v4
+        with:
+          # Download most recent prior artifact — update name pattern to match
+          # the previous successful run if automated rollback is required.
+          name: functions-build-${{ env.DEPLOY_ENV }}-${{ github.run_id }}
+          path: rollback-package
+
+      - name: Repackage and redeploy previous version
+        run: |
+          cd rollback-package
+          zip -r ../rollback.zip . --exclude '*.pyc' --exclude '__pycache__/*'
+          cd ..
+          az functionapp deployment source config-zip \
+            --resource-group ${{ secrets.AZURE_RESOURCE_GROUP }} \
+            --name ${{ secrets.AZURE_FUNCTION_APP_NAME }} \
+            --src rollback.zip \
+            --build-remote false \
+            --timeout 300
+          echo "Rollback deployment complete."

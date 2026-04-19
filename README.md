@@ -1,31 +1,17 @@
-# AWS to Azure AI-Assisted Migration
+# AI-Assisted AWS to Azure Migration Framework
 
-**Status:** ✅ Migration Completed  
 **Version:** 2.0  
-**Date:** April 2026  
-**AWS Account:** 535002891143 (ap-southeast-2 / Sydney)  
-**Azure Region:** australiaeast (Sydney — same geographic zone)
+**Date:** April 19, 2026
+
+A framework of custom GitHub Copilot agents that automate the full AWS-to-Azure migration pipeline — from live account discovery through architecture design, code refactoring, IaC generation, CI/CD pipelines, and deployment validation.
 
 ---
 
 ## What's in This Repository
 
-A complete, end-to-end AI-assisted migration of a real AWS serverless application to Azure, executed using five custom GitHub Copilot agents. This repository contains all agent definitions, generated outputs, refactored code, and infrastructure-as-code ready for reuse on future migrations.
+This repository contains the **agent definitions, instructions, and skills** that power the migration framework. The agents run entirely inside VS Code using GitHub Copilot's agent mode and MCP servers — no external tooling or scripts required.
 
-**Application Migrated:** Image Upload Service — a serverless REST API allowing users to upload, list, view, and delete images.
-
-| | AWS (Source) | Azure (Target) |
-|---|---|---|
-| **Compute** | 4 Lambda functions (Python 3.11) | Azure Functions — Consumption plan (Python 3.11) |
-| **API Layer** | API Gateway REST (IAM/SigV4 auth) | Azure Functions HTTP triggers (function key auth) |
-| **Object Storage** | S3 (images bucket) | Azure Blob Storage (Managed Identity + RBAC) |
-| **Static Website** | S3 static website hosting | Azure Static Web Apps (Free tier) |
-| **IaC** | AWS CloudFormation | Azure Bicep (modular, AVM-aligned) |
-| **Observability** | CloudWatch Logs | Application Insights + Log Analytics |
-| **Secrets** | — | Azure Key Vault (Standard, soft-delete) |
-| **Auth** | IAM roles + access keys | System-Assigned Managed Identity + RBAC |
-
-**Cost outcome:** AWS ~$2.92/month → Azure ~$0.54/month at demo scale (81% reduction).
+A complete worked example (an image upload serverless app migrated from AWS account `535002891143`) lives in [`Sample-Migrations/`](Sample-Migrations/) along with all its generated outputs.
 
 ---
 
@@ -33,280 +19,277 @@ A complete, end-to-end AI-assisted migration of a real AWS serverless applicatio
 
 ```
 .github/
-  agents/               # Five custom GitHub Copilot agent definitions
-  instructions/         # Agent-specific instruction files
-  skills/               # Reusable skill definitions
-  COMPLETION-REPORT.md  # Agent creation completion report
-  QUICK-START-GUIDE.md  # 5-minute agent quick-start reference
+  agents/               # Eight custom GitHub Copilot agent definitions
+    aws-discovery.agent.md
+    aws-discovery-skills.agent.md
+    azure-architect.agent.md
+    code-refactor.agent.md
+    iac-transformation.agent.md
+    pipeline-builder-agent.agent.md
+    deployment-validation.agent.md
+    migration-project-manager.agent.md
+  instructions/         # Per-agent instruction files
+    discovery.instructions.md
+    azure-architecture.instructions.md
+    code-refactoring.instructions.md
+    iac-transformation.instructions.md
+    deployment-validation.instructions.md
+  skills/               # Reusable AWS discovery skill (no MCP required)
+    aws-discovery/SKILL.md
+  workflows/            # GitHub Actions CI/CD pipelines (generated for each migration)
+    deploy-infra.yml       # Bicep IaC deployment (subscription-scoped, OIDC)
+    deploy-functions.yml   # Azure Functions build + zip deploy
+    deploy-static-web.yml  # Azure Static Web Apps asset deployment
+  COMPLETION-REPORT.md
+  QUICK-START-GUIDE.md
 
-app-code/
-  lambda/               # Original AWS Lambda source (Python 3.11)
-    upload/             # upload_handler.py
-    list/               # list_handler.py
-    view/               # view_handler.py
-    delete/             # delete_handler.py
-  build/app.html        # Original AWS-SDK frontend (SigV4 auth)
-  template.yaml         # AWS SAM / CloudFormation template
+visualizer/             # Migration Dashboard — live Vite web app
+  src/
+    main.js             # Reads migration-task-plan.md, renders phase status
+    renderers.js        # Mermaid diagram + artifact file viewer
+    style.css
+  index.html
+  package.json          # npm run dev / build / preview
 
-outputs/
-  aws-migration-artifacts/
-    aws-inventory.json           # Full AWS resource inventory (Discovery Agent)
-    architecture-diagram.mmd     # Mermaid diagram of AWS architecture
-    dependency-matrix.csv        # Service dependency relationships
-    migration-assessment.md      # Complexity ratings and effort estimates
-    cloudformation-template.yaml # Captured CloudFormation stack template
-
-  azure-architecture-output/
-    architecture-diagram-azure.mmd  # Mermaid diagram of Azure target architecture
-    service-mapping.md              # Full AWS → Azure service mapping
-    cost-comparison.md              # AWS vs Azure cost analysis
-
-  azure-functions/
-    function_app.py      # Refactored Python v2 Azure Functions (all 4 endpoints)
-    requirements.txt     # azure-functions, azure-storage-blob, azure-identity
-    host.json            # Functions host config (extension bundle v4)
-    local.settings.json  # Local dev environment variables
-
-  bicep-templates/
-    main.bicep           # Entry point — subscription-scoped deployment
-    main.json            # Compiled ARM template
-    modules/             # Individual resource modules
-    parameters/          # dev / staging / prod parameter files
-
-  static-web-app/
-    app.html             # Refactored frontend (AWS SDK removed, fetch + function key)
-    index.html           # SWA default entry point (required by Azure Static Web Apps)
-
-doc/                     # Project documentation (see below)
-scripts/
-  deploy.sh              # Deployment helper script
-  rollback.sh            # Rollback procedures
-  validate-deployment.sh # Post-deployment validation checks
+Sample-Migrations/      # Full worked example — image upload service (AWS → Azure)
+  app-code/             # Original AWS Lambda source + CloudFormation template
+  outputs/              # All agent-generated artifacts
+    aws-migration-artifacts/   # Discovery phase outputs
+    azure-architecture-output/ # Architecture design phase outputs
+    azure-functions/           # Refactored Python Azure Functions
+    bicep-templates/           # Generated Bicep IaC (6 modules, 3 environments)
+    migration-task-plan.md
+    validation-report.md
+  doc/                  # Extended documentation for the sample migration
 ```
 
 ---
 
 ## Quick Start
 
-**To use the agents on a new migration:**
+**Prerequisites:**
+- VS Code with the GitHub Copilot extension
+- AWS CLI configured with read access to the source account
+- Azure CLI with Contributor access to the target subscription
+- MCP servers configured (AWS Cloud Control API, AWS Knowledge, Microsoft Learn, Azure, Mermaid Chart)
 
-1. Ensure GitHub Copilot is installed in VS Code
-2. Open Copilot Chat (`Ctrl+Shift+I`)
-3. Invoke agents in sequence:
+**Running a migration:**
+
+1. Open Copilot Chat (`Ctrl+Shift+I`) in VS Code
+2. Use the **`@migration-project-manager`** agent to run all phases automatically:
 
 ```
-@aws-discovery Discover all resources in the AWS account and create a complete inventory
-```
-```
-@azure-architect Design Azure architecture based on the discovery output and generate Bicep templates
-```
-```
-@code-refactor Refactor all Lambda functions to Azure Functions using Azure SDKs
-```
-```
-@iac-transformation Convert CloudFormation to Bicep and generate deployment scripts
-```
-```
-@deployment-validation Validate the Azure deployment and confirm functional parity
+@migration-project-manager Run the full migration pipeline for AWS account <your-account-id>
 ```
 
-See [.github/QUICK-START-GUIDE.md](.github/QUICK-START-GUIDE.md) and [doc/04-DEMO-PLAN.md](doc/04-DEMO-PLAN.md) for detailed usage.
+Or run individual phases in order:
+
+| Step | Agent | Sample prompt |
+|------|-------|---------------|
+| 1 — Discovery | `@aws-discovery` | `Discover all resources in AWS account <id> and produce the inventory artifacts` |
+| 2 — Architecture | `@azure-architect` | `Design Azure architecture based on the discovery outputs in outputs/aws-migration-artifacts/` |
+| 3a — IaC | `@iac-transformation` | `Convert the CloudFormation template to Bicep using AVM modules` |
+| 3b — Code | `@code-refactor` | `Refactor all Lambda functions to Azure Functions v2 (Python 3.11)` |
+| 3c — Pipelines | `@pipeline-builder-agent` | `Create GitHub Actions CI/CD pipelines for infra, functions, and static web app` |
+| 4 — Validation | `@deployment-validation` | `Validate all generated artifacts and produce a validation report` |
+
+See [.github/QUICK-START-GUIDE.md](.github/QUICK-START-GUIDE.md) for detailed instructions.
 
 ---
 
-## The Five AI Agents
+## The Agents
 
-All agents live in [`.github/agents/`](.github/agents/) and use instruction files from [`.github/instructions/`](.github/instructions/).
+All agents are defined in [`.github/agents/`](.github/agents/) and backed by instruction files in [`.github/instructions/`](.github/instructions/).
 
-### 1. AWS Discovery Agent (`@aws-discovery`)
+![Agent Orchestration — One Prompt, Full Pipeline](assets/d2f90bf1-f01e-4b82-9ec7-0914d11bedf2.jpg)
+
+### `@migration-project-manager`
+**File:** `.github/agents/migration-project-manager.agent.md`  
+The orchestrator. Runs all phases in the correct dependency order (Discovery → Architecture → IaC + Code Refactor + Pipelines in parallel → Validation), verifies output artifacts after each phase, and maintains a live task plan at `outputs/migration-task-plan.md`.
+
+### `@aws-discovery`
 **File:** `.github/agents/aws-discovery.agent.md`  
-**Purpose:** Read-only discovery of all AWS resources using AWS MCP Server (no CLI).  
-**Outputs:** `aws-inventory.json`, `architecture-diagram.mmd`, `dependency-matrix.csv`, `migration-assessment.md`, captured CloudFormation template.  
-**Tools:** AWS Cloud Control API MCP, AWS Knowledge MCP
+Read-only discovery of all AWS resources using the AWS Cloud Control API MCP server — no CLI commands. Scans all enabled regions and produces:
+- `outputs/aws-migration-artifacts/aws-inventory.json` — complete resource list with metadata
+- `outputs/aws-migration-artifacts/architecture-diagram.mmd` — Mermaid diagram of the AWS topology
+- `outputs/aws-migration-artifacts/dependency-matrix.csv` — service dependency relationships
+- `outputs/aws-migration-artifacts/migration-assessment.md` — complexity ratings and effort estimates
+- `outputs/aws-migration-artifacts/cloudformation-template.yaml` — captured stack template
 
-### 2. Azure Architect Agent (`@azure-architect`)
+![Phase 1: Discovery](assets/Slide12.JPG)
+
+### `@aws-discovery-skills`
+**File:** `.github/agents/aws-discovery-skills.agent.md`  
+Alternative discovery agent using the built-in AWS discovery skill (`SKILL.md`) rather than MCP servers. Useful when MCP access is unavailable or restricted.
+
+### `@azure-architect`
 **File:** `.github/agents/azure-architect.agent.md`  
-**Purpose:** Map AWS services to Azure equivalents, generate Bicep IaC, produce cost comparisons using Microsoft Learn MCP.  
-**Outputs:** `architecture-diagram-azure.mmd`, `service-mapping.md`, `cost-comparison.md`, Bicep templates.  
-**Tools:** Microsoft Learn MCP, Azure MCP, Mermaid Chart validator
+Maps AWS services to Azure equivalents, produces a full architecture design document (11 sections), and generates Mermaid diagrams, service mapping tables, and cost comparisons using Microsoft Learn MCP. Outputs:
+- `outputs/azure-architecture-output/design-document.md`
+- `outputs/azure-architecture-output/architecture-diagram-azure.mmd`
+- `outputs/azure-architecture-output/service-mapping.md`
+- `outputs/azure-architecture-output/cost-comparison.md`
 
-### 3. Code Refactor Agent (`@code-refactor`)
-**File:** `.github/agents/code-refactor.agent.md`  
-**Purpose:** Convert Python Lambda handlers to Azure Functions (Python v2 model). Replaces `boto3` with `azure-storage-blob` + `azure-identity`. Updates the frontend to remove the AWS SDK.  
-**Source:** `app-code/lambda/` → **Target:** `outputs/azure-functions/`  
-**Key gotchas captured in agent:**
-- Python 3.13 is **not supported** by Azure Functions v4 — use Python 3.11
-- `CONTAINER_NAME` is a **reserved** Azure Functions environment variable — use `BLOB_CONTAINER_NAME`
-- Azure Static Web Apps requires `index.html` as the default entry point
-- `StaticSitesClient.exe` correct arguments: `upload --skipAppBuild --workdir <dir> --app "." --apiToken <token>`
+![Phase 2: Architecture Design](assets/Slide13.JPG)
 
-### 4. IaC Transformation Agent (`@iac-transformation`)
+### `@iac-transformation`
 **File:** `.github/agents/iac-transformation.agent.md`  
-**Purpose:** Convert AWS CloudFormation to Azure Bicep using AVM modules. Generate deployment validation scripts and rollback procedures.  
-**Source:** `outputs/aws-migration-artifacts/cloudformation-template.yaml` → **Target:** `outputs/bicep-templates/`  
-**Tools:** Azure MCP, Microsoft Learn MCP (AVM modules)
+Converts AWS CloudFormation to modular Azure Bicep using AVM modules. Generates a subscription-scoped `main.bicep`, individual resource modules, and three environment parameter files (`dev`, `staging`, `prod`). Outputs write to `outputs/bicep-templates/`.
 
-### 5. Deployment Validation Agent (`@deployment-validation`)
+### `@code-refactor`
+**File:** `.github/agents/code-refactor.agent.md`  
+Rewrites Python Lambda handlers to Azure Functions v2 (decorator model). Replaces `boto3` with `azure-storage-blob` + `azure-identity`. Updates the frontend to remove AWS SDK dependencies. Outputs write to `outputs/azure-functions/` and `outputs/static-web-app/`.
+
+![Phase 3: Code Refactor](assets/Slide15.JPG)
+
+### `@pipeline-builder-agent`
+**File:** `.github/agents/pipeline-builder-agent.agent.md`  
+Designs and builds GitHub Actions CI/CD pipelines for Azure deployment using OIDC / Workload Identity Federation (no long-lived credentials). Generates three workflows:
+- `.github/workflows/deploy-infra.yml` — subscription-scoped Bicep IaC (what-if → deploy → smoke test)
+- `.github/workflows/deploy-functions.yml` — Python 3.11, pip, zip deploy, rollback job on failure
+- `.github/workflows/deploy-static-web.yml` — `Azure/static-web-apps-deploy@v1`, `skip_app_build: true`
+
+### `@deployment-validation`
 **File:** `.github/agents/deployment-validation.agent.md`  
-**Purpose:** Pre- and post-deployment validation — Bicep syntax, policy compliance, security checks, smoke tests, and AWS vs Azure functional parity verification.
+Runs a 15-point static validation checklist across all generated artifacts: Bicep syntax, security posture, policy compliance, RBAC correctness, smoke test readiness, and AWS vs Azure functional parity. Outputs `outputs/validation-report.md`.
+
+![Phase 4: Deploy & Validate](assets/Slide16.JPG)
 
 ---
 
-## Migration Outputs
+## The Visualizer
 
-### AWS Discovery Results
-- **18 active resources** discovered across Lambda, API Gateway, S3, IAM, CloudWatch, KMS, CloudFormation
-- **8 AppStream 2.0 remnant resources** identified for cleanup
-- **Overall complexity: LOW** — clean serverless architecture
-- **Estimated effort: 2–3 weeks** (1–2 engineers), validated as accurate
+The `visualizer/` folder contains a live **Migration Dashboard** — a Vite-powered single-page app that shows the real-time status of any migration run.
 
-### Azure Architecture
-```
-Browser
-  └─→ Azure Static Web Apps (index.html / app.html)
-         └─→ Azure Functions HTTP Triggers (Consumption, Python 3.11)
-                  POST   /api/upload              → upload_function     → Blob Storage (SAS PUT URL)
-                  GET    /api/files               → list_files_function → Blob Storage (list blobs)
-                  GET    /api/files/{id}/view-url → get_view_url_function→ Blob Storage (SAS GET URL)
-                  DELETE /api/files/{id}          → delete_file_function → Blob Storage (delete blob)
+### What it shows
+- **Phase cards** with status badges (not started / in progress / completed)
+- **Artifact file viewer** — opens any generated artifact (JSON, CSV, Markdown, Mermaid, YAML) directly in the browser
+- **Mermaid diagram renderer** — renders `architecture-diagram.mmd` and `architecture-diagram-azure.mmd` side-by-side
+- **30-second auto-refresh countdown** — polls `outputs/migration-task-plan.md` so the dashboard stays live as agents run
 
-Identity: System-Assigned Managed Identity → Storage Blob Data Contributor RBAC
-Secrets:  Azure Key Vault (Standard, soft-delete, purge-protected)
-Logs:     Log Analytics Workspace → Application Insights
+### How to run it
+
+```bash
+cd visualizer
+npm install
+npm run dev
 ```
 
-### Bicep Deployment
-- Deployed via `az deployment sub create` — subscription-scoped
-- Modules: Storage, Functions, Static Web App, Key Vault, Monitoring, RBAC
-- Three parameter files: `dev.bicepparam`, `staging.bicepparam`, `prod.bicepparam`
-- **Deployment status: ✅ Successful** (australiaeast, resource group `img-upload-dev-rg`)
+The dashboard opens at `http://localhost:5173`. It reads `outputs/migration-task-plan.md` from the workspace root, so it works with any migration run — not just the sample.
 
-### Cost Comparison
-
-| Scale | AWS | Azure | Saving |
-|-------|-----|-------|--------|
-| Demo/Dev | $2.92/month | $0.54/month | **81%** |
-| Production (1M calls, 100 GB) | ~$148.80/month | ~$108.80/month | **27%** |
+```bash
+npm run build    # build for static hosting
+npm run preview  # preview the production build
+```
 
 ---
 
-## Key Features
+## CI/CD Pipelines
 
-### No CLI in Agents
-All five agents operate exclusively through MCP servers and VS Code tools — no PowerShell or CLI commands are run inside agent workflows, keeping them portable and cross-platform.
+The three generated GitHub Actions workflows under `.github/workflows/` are ready to use for any migration that produces the standard output folder structure.
 
-### Managed Identity Throughout
-AWS IAM roles and access keys are fully replaced by Azure System-Assigned Managed Identity with RBAC, following the principle of least privilege. No credentials are stored in environment variables or code.
+| Workflow | Trigger | What it does |
+|---|---|---|
+| `deploy-infra.yml` | push to `main` (`bicep-templates/**`) or `workflow_dispatch` | `az deployment sub validate` → what-if → `az deployment sub create` |
+| `deploy-functions.yml` | push to `main` (`azure-functions/**`) or `workflow_dispatch` | pip install, zip deploy, smoke test (expect 200/401/403), rollback on failure |
+| `deploy-static-web.yml` | push to `main` (`static-web-app/**`) or `workflow_dispatch` | `Azure/static-web-apps-deploy@v1`, auto-creates `staticwebapp.config.json` if missing |
 
-### SAS URL Pattern Preserved
-The pre-signed URL pattern (clients upload/download directly to storage, API only generates the URL) is preserved identically using Azure Blob SAS tokens generated via user-delegation keys.
+**Authentication:** OIDC / Workload Identity Federation — configure once per subscription, no secret rotation.
 
-### Production-Ready Bicep
-Generated templates use Azure Verified Modules (AVM) where available, include environment-specific parameter files, and are validated with `az deployment sub validate` before deployment.
+**Required GitHub Secrets:**
+
+```
+AZURE_CLIENT_ID          # service principal client ID
+AZURE_TENANT_ID          # Azure AD tenant ID
+AZURE_SUBSCRIPTION_ID    # target subscription
+AZURE_RESOURCE_GROUP     # resource group name
+AZURE_FUNCTION_APP_NAME  # function app resource name
+STATIC_WEB_APP_TOKEN     # deployment token from Azure Portal
+```
+
+**Environment gates:** dev auto-deploys; staging requires 1 reviewer; prod requires 2 reviewers.
+
+---
+
+## Sample Migration
+
+[`Sample-Migrations/`](Sample-Migrations/) contains a complete worked example: an AWS serverless **Image Upload Service** (4 Lambda functions + S3 + API Gateway + CloudFormation) migrated to Azure.
+
+```
+Sample-Migrations/
+  app-code/           # Original AWS Lambda source (Python 3.11) + frontend + SAM template
+  outputs/            # All artifacts produced by the agents during the migration run
+    aws-migration-artifacts/    # Phase 1: Discovery
+    azure-architecture-output/  # Phase 2: Architecture (APIM excluded — HTTP triggers only)
+    azure-functions/            # Phase 3b: Refactored Python Azure Functions
+    bicep-templates/            # Phase 3a: 6 Bicep modules + 3 parameter files
+    migration-task-plan.md      # All phases ✅
+    validation-report.md        # 15/15 checks PASSED
+  doc/                # Extended documentation for this specific migration
+```
+
+Use the sample outputs as a reference when verifying what your own migration run should produce at each phase.
+
+---
+
+## Design Principles
+
+**Agents operate through MCP servers, not CLI.** All agents use AWS and Azure MCP servers for resource discovery and documentation — no PowerShell or CLI commands inside agent workflows. This keeps agents portable and cross-platform.
+
+**Managed Identity replaces IAM keys.** AWS IAM roles and access keys are replaced by Azure System-Assigned Managed Identity with fine-grained RBAC. No credentials in environment variables or code.
+
+**Pre-signed URL pattern is preserved.** Clients upload/download directly to storage; the API generates short-lived SAS URLs. This maps cleanly from S3 pre-signed URLs to Azure Blob SAS tokens using user-delegation keys.
+
+**Bicep is modular and AVM-aligned.** Generated templates use Azure Verified Modules where available, are subscription-scoped, and include environment-specific parameter files validated before deployment.
 
 ---
 
 ## Technology Stack
 
-### AI Orchestration
-- **GitHub Copilot** — custom agents in VS Code agent mode
-- **Agent definition files** — `.github/agents/*.agent.md`
-- **Custom instructions** — `.github/instructions/*.instructions.md`
+### MCP Servers
 
-### MCP Servers Used
-| MCP Server | Used By | Purpose |
+| MCP Server | Used by | Purpose |
 |------------|---------|---------|
-| AWS Cloud Control API MCP | Discovery Agent | Read-only AWS resource discovery |
-| AWS Knowledge MCP | Discovery, Architect, Refactor | AWS service documentation |
-| Microsoft Learn MCP | Architect, IaC, Refactor | Azure service documentation and AVM modules |
-| Azure MCP | Architect, IaC, Validation | Azure resource information |
-| Mermaid Chart MCP | Architect | Diagram generation and validation |
+| AWS Cloud Control API MCP | `@aws-discovery` | Read-only AWS resource enumeration |
+| AWS Knowledge MCP | `@aws-discovery`, `@azure-architect`, `@code-refactor` | AWS service documentation lookups |
+| Microsoft Learn MCP | `@azure-architect`, `@iac-transformation`, `@code-refactor` | Azure docs and AVM module references |
+| Azure MCP | `@azure-architect`, `@iac-transformation`, `@deployment-validation` | Live Azure resource information |
+| Mermaid Chart MCP | `@azure-architect` | Diagram generation and syntax validation |
 
-### Infrastructure as Code
-- **Bicep** — modular, subscription-scoped, AVM-aligned
-- **Azure Verified Modules (AVM)** — used where available
-- **Parameter files** — per-environment (`dev`, `staging`, `prod`)
-
-### Azure Runtime
-- **Azure Functions v4** — Python 3.11, Consumption plan
-- **Azure Blob Storage** — Hot tier, Standard LRS (dev) / ZRS (prod)
-- **Azure Static Web Apps** — Free tier
-- **Application Insights + Log Analytics** — full observability
-- **Azure Key Vault** — Standard tier, soft-delete enabled
+### Azure Runtime (generated output targets)
+- **Azure Functions v4** — Python 3.11, Consumption plan, v2 decorator model
+- **Azure Blob Storage** — Hot tier, Standard LRS (dev) / ZRS (prod), Managed Identity access
+- **Azure Static Web Apps** — Free tier, `index.html` required as entry point
+- **Application Insights + Log Analytics** — structured logging, distributed traces
+- **Azure Key Vault** — Standard tier, soft-delete + purge protection enabled
 
 ---
 
-## Documentation
+## Known Gotchas
 
-All documentation is in the [`doc/`](doc/) folder:
+These issues were encountered during the first migration run and are now captured inside the relevant agent definitions so future runs avoid them automatically:
 
-| Document | Purpose |
-|----------|---------|
-| [00-MASTER-INDEX.md](doc/00-MASTER-INDEX.md) | Document index and navigation |
-| [01-EXECUTIVE-PRESENTATION.md](doc/01-EXECUTIVE-PRESENTATION.md) | Business case, ROI, and outcomes |
-| [02-TECHNICAL-DEEP-DIVE.md](doc/02-TECHNICAL-DEEP-DIVE.md) | Technical architecture details |
-| [03-CUSTOM-AGENT-SPECIFICATIONS.md](doc/03-CUSTOM-AGENT-SPECIFICATIONS.md) | Full agent definitions and instructions |
-| [04-DEMO-PLAN.md](doc/04-DEMO-PLAN.md) | Step-by-step demonstration guide |
-| [05-AWS-INFRASTRUCTURE-SETUP.md](doc/05-AWS-INFRASTRUCTURE-SETUP.md) | Original AWS environment reference |
-| [06-DEMO-EXECUTION-GUIDE.md](doc/06-DEMO-EXECUTION-GUIDE.md) | Live demo execution script |
-| [07-SERVICE-MAPPING-REFERENCE.md](doc/07-SERVICE-MAPPING-REFERENCE.md) | AWS to Azure service translation guide |
-| [08-MCP-SERVER-INTEGRATION.md](doc/08-MCP-SERVER-INTEGRATION.md) | MCP server setup and configuration |
+1. **Python version** — Azure Functions v4 supports Python 3.9–3.11 only. Python 3.12/3.13 crash the worker (`0xC0000005`). Always create the venv with Python 3.11: `python3.11 -m venv .venv`
+2. **Reserved environment variable** — `CONTAINER_NAME` is reserved by the Azure Functions host. Use `BLOB_CONTAINER_NAME` for Blob Storage container references.
+3. **Static Web Apps entry point** — Azure Static Web Apps requires `index.html` as the default file. A standalone `app.html` is not served as the root without a `staticwebapp.config.json` routing rule.
+4. **SAS token generation** — Use `get_user_delegation_key()` from `BlobServiceClient` (Managed Identity path) rather than storage account keys.
+5. **APIM is optional** — For simple Lambda + API Gateway → Azure Functions migrations, HTTP triggers are a direct equivalent. Add APIM only when gateway-layer features (rate limiting, request transformation, developer portal) are explicitly required.
 
 ---
 
-## Lessons Learned
+## Requirements
 
-Key issues discovered during the actual migration (all captured in the agent definitions for future use):
-
-1. **Python version:** Azure Functions v4 supports Python 3.9–3.11 only. Python 3.12 and 3.13 cause worker crashes (`0xC0000005`). Always create `.venv` with Python 3.11.
-2. **Reserved env var:** `CONTAINER_NAME` is reserved by the Azure Functions host. Use `BLOB_CONTAINER_NAME` for Blob Storage container references.
-3. **Static Web App entry point:** Azure Static Web Apps requires `index.html` (or `Index.html`) as the default file. A standalone `app.html` is not served as the root.
-4. **SAS token auth:** Azure Functions Consumption plan does not support Managed Identity for Blob SAS generation at scale without user-delegation keys — use `get_user_delegation_key()` from `BlobServiceClient`.
-5. **No APIM needed:** For a simple Lambda + API Gateway → Azure Functions migration, Azure Functions HTTP triggers are a direct equivalent. APIM adds cost and complexity only when gateway features (rate limiting, transformation) are required.
-
----
-
-## Requirements for Reuse
-
-### Tooling
-- VS Code with GitHub Copilot extension
-- AWS CLI configured with read access to source account
-- Azure CLI with Contributor access to target subscription
+**Tooling:**
+- VS Code with GitHub Copilot extension (agent mode enabled)
+- GitHub Copilot subscription
 - MCP servers: AWS Cloud Control API, AWS Knowledge, Microsoft Learn, Azure, Mermaid Chart
 
-### Permissions
-- **AWS:** Read-only (IAM `ReadOnlyAccess` policy minimum)
-- **Azure:** Contributor on subscription + User Access Administrator (for RBAC assignments)
+**Permissions:**
+- **AWS (source):** IAM `ReadOnlyAccess` policy minimum
+- **Azure (target):** `Contributor` + `User Access Administrator` on the target subscription (required for RBAC module in Bicep)
 
 ---
 
-## Migration Statistics
+## Key Takeaways
 
-| Metric | Value |
-|--------|-------|
-| AWS resources discovered | 26 (18 active + 8 AppStream remnants) |
-| Lambda functions migrated | 4 |
-| Lines of Python refactored | ~600 |
-| Bicep modules generated | 6 (storage, functions, staticweb, keyvault, monitoring, rbac) |
-| Cost reduction (demo scale) | 81% ($2.92 → $0.54/month) |
-| Cost reduction (prod scale) | 27% ($148.80 → $108.80/month) |
-| Agent files created | 10 (5 agents + 5 instruction files) |
-| Deployment status | ✅ Live in australiaeast |
-
----
-
-## Contact and Status
-
-**Completed:** April 2026  
-**Version:** 2.0  
-**Status:** ✅ Migration complete — Azure environment live
-
-**Milestones:**
-- [x] AWS discovery completed
-- [x] Azure architecture designed
-- [x] Code refactored (4 Lambda → 4 Azure Functions)
-- [x] Bicep templates generated and validated
-- [x] Azure infrastructure deployed (`img-upload-dev-rg`, australiaeast)
-- [x] Static web app deployed to Azure Static Web Apps
-- [x] Functional parity confirmed
-- [x] Cost reduction validated
+![Key Takeaways](assets/Slide22.JPG)

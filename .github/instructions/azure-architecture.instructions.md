@@ -6,6 +6,8 @@ applyTo: azure-architect
 
 # Azure Architect Agent - Custom Instructions
 
+> **IGNORE THE `backup/` FOLDER** — Never read from or write to the `backup/` directory. All inputs come from `outputs/aws-migration-artifacts/` and outputs go to `outputs/azure-architecture-output/`.
+
 ## Bicep Best Practices
 
 ### Symbolic Naming

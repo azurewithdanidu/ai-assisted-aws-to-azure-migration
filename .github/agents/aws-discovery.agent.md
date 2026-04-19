@@ -15,6 +15,8 @@ Provides detailed insights into the current AWS environment to inform migration 
 
 IMPORTANT: This agent is focused on discovery and analysis only. It does not perform any migration actions. The output is intended for human architects and engineers to review and use for planning the migration to Azure. DO NOT MAKE ANY CHANGE TO THE AWS ENVIRONMENT. THIS IS A READ-ONLY DISCOVERY AGENT.
 
+> **IGNORE THE `backup/` FOLDER** — Never read from or write to the `backup/` directory. All output must go to `outputs/aws-migration-artifacts/`.
+
 ## Responsibilities
 /
 1. **Resource Discovery** - Scan AWS account for all resources

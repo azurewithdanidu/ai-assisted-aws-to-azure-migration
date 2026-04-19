@@ -9,6 +9,8 @@ description: Validate Azure deployments and ensure migration success
 
 Comprehensive validation of Azure deployments ensuring infrastructure correctness, security compliance, performance equivalence, and cost alignment with projections.
 
+> **IGNORE THE `backup/` FOLDER** — Never read from or write to the `backup/` directory. All inputs come from `outputs/` and all reports go to `outputs/validation-report.md`.
+
 ## Responsibilities
 
 1. **Pre-Deployment Validation** - Check readiness before deployment

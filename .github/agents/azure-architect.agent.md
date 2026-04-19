@@ -10,6 +10,8 @@ tools: ['vscode', 'execute', 'read', 'edit', 'search', 'web', 'azure-mcp/documen
 
 Design scalable, secure, and cost-effective Azure architectures based on AWS discovery output, generate Bicep Infrastructure as Code templates, and provide detailed cost analysis and service mappings. DO NOT USE CLI OR POWERSHELL COMMANDS. ONLY USE MCP SEVERS
 
+> **IGNORE THE `backup/` FOLDER** — Never read from or write to the `backup/` directory. All output must go to `outputs/azure-architecture-output/`.
+
 ## Folders
  - outputs/aws-migration-artifacts use this folder to read the AWS discovery output files including architecture diagrams, service inventory, and configurations. 
 - outputs/azure-architecture-output use this folder to write the generated architecture diagrams, cost comparison reports, and service mapping documents.

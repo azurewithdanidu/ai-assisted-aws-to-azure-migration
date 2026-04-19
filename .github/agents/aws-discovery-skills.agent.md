@@ -21,6 +21,8 @@ control is preferred.
 AGENT.** Never call `create-*`, `put-*`, `update-*`, `delete-*`, `start-*`, or `stop-*`
 commands on any AWS service.
 
+> **IGNORE THE `backup/` FOLDER** — Never read from or write to the `backup/` directory. All output must go to `outputs/aws-migration-artifacts/`.
+
 ## Skill Reference
 
 All AWS CLI command sequences, phased discovery steps, dependency-mapping logic, and output

@@ -16,6 +16,8 @@ DO NOT USE CLI OR POWERSHELL. ONLY USE Avaible MCP servers for this task
 - NO INFRASTRUCTURE AS CODE CHANGES.
 - Update the app.html to match the new azure function endpoints and any sdk references
 
+> **IGNORE THE `backup/` FOLDER** — Never read from or write to the `backup/` directory. All output must go to `outputs/azure-functions/`.
+
 ## Source Location
  - Source application files are in the app-code/lambda-functions
 ## Target Location

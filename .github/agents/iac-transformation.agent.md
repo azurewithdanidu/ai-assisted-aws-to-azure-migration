@@ -20,6 +20,8 @@ Do not use powershell or cli commands, only use MCP servers only
 4. **Rollback Procedures** - Create recovery scripts
 5. **Best Practices** - Apply Azure patterns
 
+> **IGNORE THE `backup/` FOLDER** — Never read from or write to the `backup/` directory. All output must go to `outputs/bicep-templates/`.
+
 # Source Location
  - Build the IAC templates based on the architecture defined in the outputs/azure-architecture-output/azure-architecture-summary.md and the architecture diagram in outputs/azure-architecture-output/architecture-diagram-azure.mmd
  - Reference any AWS services from the outputs/aws-migration-artifacts/aws-inventory.json as needed to ensure all services are covered in the Bicep templates.
