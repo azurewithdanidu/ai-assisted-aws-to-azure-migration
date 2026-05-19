@@ -1,0 +1,125 @@
+# =============================================================================
+# deploy-static-web.yml — Azure Static Web Apps Deployment
+#
+# Deploys pre-built static frontend assets to Azure Static Web Apps.
+# No build step — HTML/JS files deployed as-is (skip_app_build: true).
+#
+# Required GitHub Secrets:
+#   STATIC_WEB_APP_TOKEN     — SWA deployment token
+#                              (Azure portal → Static Web App → Manage deployment token
+#                               OR: az staticwebapp secrets list --name <swa-name>)
+#
+# Additionally used (provided automatically by GitHub Actions):
+#   GITHUB_TOKEN             — Required by the SWA action for PR comment support
+#
+# Multi-environment strategy:
+#   dev     — auto-deploys on push to main (no approval gate)
+#   staging — workflow_dispatch only; configure 1 required reviewer
+#             via GitHub Environments → staging → Protection rules
+#   prod    — workflow_dispatch only; configure 2 required reviewers
+#             via GitHub Environments → prod → Protection rules
+#
+# Important: The app_location folder must contain index.html (or Index.html).
+#   The outputs/static-web-app folder should also include staticwebapp.config.json:
+#   {
+#     "navigationFallback": { "rewrite": "/app.html" },
+#     "routes": [{ "route": "/", "rewrite": "/app.html" }]
+#   }
+#
+# OIDC federated credential subject filter (configure on App Registration):
+#   repo:{owner}/{repo}:ref:refs/heads/main
+# =============================================================================
+
+name: Deploy Static Web App
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'outputs/static-web-app/**'
+      - 'app-code/build/**'
+      - '.github/workflows/deploy-static-web.yml'
+  workflow_dispatch:
+    inputs:
+      environment:
+        description: 'Target environment'
+        required: true
+        default: 'dev'
+        type: choice
+        options: [dev, staging, prod]
+
+permissions:
+  id-token: write       # Required for OIDC token exchange
+  contents: read
+  pull-requests: write  # Required for SWA action to comment on PRs
+
+env:
+  DEPLOY_ENV: ${{ github.event.inputs.environment || 'dev' }}
+
+jobs:
+  deploy:
+    name: Deploy → ${{ github.event.inputs.environment || 'dev' }}
+    runs-on: ubuntu-latest
+    environment: ${{ github.event.inputs.environment || 'dev' }}
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Verify app_location contains index.html
+        run: |
+          if [[ ! -f "outputs/static-web-app/index.html" ]]; then
+            echo "ERROR: outputs/static-web-app/index.html not found."
+            echo "Azure Static Web Apps requires index.html as the default document."
+            echo "Files in outputs/static-web-app/:"
+            ls -la outputs/static-web-app/ || echo "(directory does not exist)"
+            exit 1
+          fi
+          echo "index.html found — proceeding with deployment."
+
+      - name: Verify staticwebapp.config.json exists
+        run: |
+          if [[ ! -f "outputs/static-web-app/staticwebapp.config.json" ]]; then
+            echo "WARNING: staticwebapp.config.json not found in outputs/static-web-app/."
+            echo "Creating a minimal config to ensure routing works correctly."
+            cat > outputs/static-web-app/staticwebapp.config.json << 'EOF'
+          {
+            "navigationFallback": {
+              "rewrite": "/app.html"
+            },
+            "routes": [
+              { "route": "/", "rewrite": "/app.html" }
+            ]
+          }
+          EOF
+            echo "Created staticwebapp.config.json"
+          else
+            echo "staticwebapp.config.json found."
+          fi
+
+      - name: Deploy to Azure Static Web Apps
+        uses: Azure/static-web-apps-deploy@v1
+        with:
+          azure_static_web_apps_api_token: ${{ secrets.STATIC_WEB_APP_TOKEN }}
+          repo_token: ${{ secrets.GITHUB_TOKEN }}
+          action: upload
+          app_location: outputs/static-web-app
+          skip_app_build: true    # Assets are pre-built; no framework build needed
+          output_location: ''
+
+      - name: Verify deployment (smoke test)
+        # The SWA hostname can be found after deploy; this step validates the
+        # deployment token was accepted and the deploy action completed without error.
+        # For a full URL smoke test, set the SWA_HOSTNAME environment secret and
+        # uncomment the curl command below.
+        run: |
+          echo "Static Web App deployment completed successfully."
+          echo "Environment: ${{ env.DEPLOY_ENV }}"
+          echo ""
+          echo "To confirm deployment, browse to your SWA hostname:"
+          echo "  https://<your-swa-hostname>.azurestaticapps.net/app.html"
+          echo ""
+          echo "To find your SWA hostname:"
+          echo "  az staticwebapp show --name <swa-name> --query 'defaultHostname' -o tsv"
+          # Uncomment and set SWA_HOSTNAME secret to enable automated URL smoke test:
+          # curl -f "https://${{ secrets.SWA_HOSTNAME }}/app.html"

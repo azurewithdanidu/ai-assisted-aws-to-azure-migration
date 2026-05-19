@@ -1,0 +1,74 @@
+%% Azure Target Architecture — Image Upload Service
+%% Generated: 2026-05-18 by azure-architect agent
+%% Region: Australia East (primary) — single-region, cost-optimized, serverless
+graph TB
+    USER([End User / Browser])
+
+    subgraph "Frontend Tier"
+        SWA[Azure Static Web Apps<br/>SKU: Free<br/>app.html SPA + Managed TLS + Global CDN]
+    end
+
+    subgraph "Identity & Secrets"
+        UAMI[User-Assigned Managed Identity<br/>id-imgupload-&lt;env&gt;<br/>RBAC: Storage Blob Data Contributor]
+        KV[Azure Key Vault<br/>kv-imgupload-&lt;env&gt;<br/>SKU: Standard<br/>Stores: function host keys, app secrets]
+    end
+
+    subgraph "API + Compute Tier (Azure Functions — Consumption Y1, Python 3.11)"
+        FUNC[Function App<br/>func-imgupload-&lt;env&gt;<br/>Plan: Consumption Y1<br/>Runtime: Python 3.11<br/>AuthLevel: function]
+        H1[/POST /api/upload/]
+        H2[/GET /api/files/]
+        H3[/GET /api/files/&#123;fileId&#125;/view-url/]
+        H4[/DELETE /api/files/&#123;fileId&#125;/]
+        FUNC --> H1
+        FUNC --> H2
+        FUNC --> H3
+        FUNC --> H4
+    end
+
+    subgraph "Storage Tier"
+        ST[Storage Account: stimgupload&lt;env&gt;<br/>SKU: Standard_LRS<br/>Kind: StorageV2<br/>TLS 1.2 min, HTTPS only<br/>Encryption: Microsoft-managed keys]
+        IMGC[(Blob Container: images<br/>Private access<br/>Blob versioning ON<br/>Soft delete: 7 days<br/>CORS configured for SWA origin)]
+        FUNCST[(Blob Container: function-host<br/>AzureWebJobsStorage backing)]
+        LIFECYCLE[Lifecycle Mgmt Policy<br/>Hot → Cool after 30 days<br/>Cool → Archive after 180 days<br/>Delete prev versions after 90 days]
+        ST --- IMGC
+        ST --- FUNCST
+        ST -.applies.-> LIFECYCLE
+    end
+
+    subgraph "Observability"
+        AI[Application Insights<br/>appi-imgupload-&lt;env&gt;<br/>Workspace-based]
+        LAW[Log Analytics Workspace<br/>log-imgupload-&lt;env&gt;<br/>Retention: 30 days<br/>SKU: PerGB2018]
+        AI --> LAW
+    end
+
+    USER -->|HTTPS<br/>GET app.html| SWA
+    SWA -->|HTTPS + x-functions-key header| FUNC
+
+    H1 -->|generate User Delegation SAS<br/>BlobClient via DefaultAzureCredential| IMGC
+    H2 -->|list_blobs + SAS| IMGC
+    H3 -->|generate User Delegation SAS| IMGC
+    H4 -->|delete_blob| IMGC
+
+    USER -.->|"Direct PUT via SAS URL"| IMGC
+    USER -.->|"Direct GET via SAS URL"| IMGC
+
+    FUNC -.uses.-> UAMI
+    UAMI -.RBAC: Storage Blob Data Contributor.-> IMGC
+    UAMI -.RBAC: Storage Blob Delegator.-> ST
+    FUNC -.reads secrets.-> KV
+    UAMI -.RBAC: Key Vault Secrets User.-> KV
+
+    FUNC -->|telemetry + logs| AI
+    SWA -->|optional telemetry| AI
+
+    classDef compute fill:#0078D4,stroke:#0a3d62,color:#fff
+    classDef storage fill:#3F8624,stroke:#0a3d62,color:#fff
+    classDef frontend fill:#00BCF2,stroke:#0a3d62,color:#fff
+    classDef identity fill:#742774,stroke:#0a3d62,color:#fff
+    classDef obs fill:#9B4F96,stroke:#0a3d62,color:#fff
+
+    class FUNC,H1,H2,H3,H4 compute
+    class ST,IMGC,FUNCST,LIFECYCLE storage
+    class SWA frontend
+    class UAMI,KV identity
+    class AI,LAW obs

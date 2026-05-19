@@ -1,0 +1,130 @@
+# =============================================================================
+# deploy-infra.yml — Azure Infrastructure Deployment (Bicep)
+#
+# Deploys all Azure resources via Bicep at subscription scope.
+# main.bicep uses targetScope = 'subscription', so we use
+# `az deployment sub create` (NOT `az deployment group create`).
+#
+# Required GitHub Secrets:
+#   AZURE_CLIENT_ID          — App Registration Application (client) ID
+#   AZURE_TENANT_ID          — Azure AD Tenant ID
+#   AZURE_SUBSCRIPTION_ID    — Target Azure Subscription ID
+#
+# Multi-environment strategy:
+#   dev     — auto-deploys on push to main (no approval gate)
+#   staging — workflow_dispatch only; configure 1 required reviewer
+#             via GitHub Environments → staging → Protection rules
+#   prod    — workflow_dispatch only; configure 2 required reviewers
+#             via GitHub Environments → prod → Protection rules
+#
+# OIDC federated credential subject filter (configure on App Registration):
+#   repo:{owner}/{repo}:ref:refs/heads/main
+# =============================================================================
+
+name: Deploy Infrastructure (Bicep)
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'bicep-templates/**'
+      - '.github/workflows/deploy-infra.yml'
+  workflow_dispatch:
+    inputs:
+      environment:
+        description: 'Target environment'
+        required: true
+        default: 'dev'
+        type: choice
+        options: [dev, staging, prod]
+
+permissions:
+  id-token: write   # Required for OIDC token exchange
+  contents: read
+
+env:
+  AZURE_LOCATION: australiaeast
+  # environment resolves to 'dev' on push triggers (no input available)
+  DEPLOY_ENV: ${{ github.event.inputs.environment || 'dev' }}
+
+jobs:
+  validate:
+    name: Lint & What-If (${{ github.event.inputs.environment || 'dev' }})
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Azure Login (OIDC)
+        uses: azure/login@v2
+        with:
+          client-id: ${{ secrets.AZURE_CLIENT_ID }}
+          tenant-id: ${{ secrets.AZURE_TENANT_ID }}
+          subscription-id: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
+
+      - name: Bicep Lint
+        run: az bicep lint --file bicep-templates/main.bicep
+
+      - name: What-If (dry run — subscription scope)
+        run: |
+          az deployment sub what-if \
+            --location ${{ env.AZURE_LOCATION }} \
+            --template-file bicep-templates/main.bicep \
+            --parameters bicep-templates/parameters/${{ env.DEPLOY_ENV }}.bicepparam \
+            --name "whatif-${{ github.run_id }}"
+
+  deploy:
+    name: Deploy → ${{ github.event.inputs.environment || 'dev' }}
+    needs: validate
+    runs-on: ubuntu-latest
+    environment: ${{ github.event.inputs.environment || 'dev' }}
+    outputs:
+      functionAppUrl: ${{ steps.get-outputs.outputs.functionAppUrl }}
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Azure Login (OIDC)
+        uses: azure/login@v2
+        with:
+          client-id: ${{ secrets.AZURE_CLIENT_ID }}
+          tenant-id: ${{ secrets.AZURE_TENANT_ID }}
+          subscription-id: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
+
+      - name: Deploy Bicep (subscription scope)
+        run: |
+          az deployment sub create \
+            --location ${{ env.AZURE_LOCATION }} \
+            --template-file bicep-templates/main.bicep \
+            --parameters bicep-templates/parameters/${{ env.DEPLOY_ENV }}.bicepparam \
+            --name "deploy-${{ github.run_id }}" \
+            --output json > deployment-output.json
+          echo "Deployment complete. Outputs:"
+          cat deployment-output.json | python3 -c "
+          import sys, json
+          data = json.load(sys.stdin)
+          outputs = data.get('properties', {}).get('outputs', {})
+          for k, v in outputs.items():
+              print(f'  {k}: {v.get(\"value\", \"\")}')
+          "
+
+      - name: Capture functionAppUrl output
+        id: get-outputs
+        run: |
+          FUNC_URL=$(cat deployment-output.json | python3 -c "
+          import sys, json
+          data = json.load(sys.stdin)
+          outputs = data.get('properties', {}).get('outputs', {})
+          func = outputs.get('functionAppUrl', {}).get('value', '')
+          print(func)
+          ")
+          echo "functionAppUrl=${FUNC_URL}" >> $GITHUB_OUTPUT
+          echo "Function App URL: ${FUNC_URL}"
+
+      - name: Upload deployment outputs as artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: bicep-outputs-${{ env.DEPLOY_ENV }}-${{ github.run_id }}
+          path: deployment-output.json
+          retention-days: 30

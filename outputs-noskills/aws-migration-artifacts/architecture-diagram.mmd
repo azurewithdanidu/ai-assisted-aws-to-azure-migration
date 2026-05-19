@@ -1,0 +1,104 @@
+%% AWS Image-Upload Service — Current State (account 535002891143, region ap-southeast-2)
+%% Generated: 2026-05-18 by aws-discovery agent
+graph TB
+    USER([End User / Browser])
+
+    subgraph "Client Tier (S3 Static Website)"
+        WEB[WebsiteBucket<br/>image-upload-websitebucket-vd866vxtcs1z<br/>S3 Static Website Hosting<br/>app.html SPA]
+    end
+
+    subgraph "Identity"
+        APIUSER[IAM User: image-upload-api-user<br/>Access Key: AKIA...PRPK<br/>Policy: execute-api:Invoke]
+    end
+
+    subgraph "API Tier (API Gateway REST — Regional)"
+        APIGW[image-upload-api<br/>ID: 4lrh2l7i86<br/>Stage: dev<br/>Auth: AWS_IAM SigV4<br/>X-Ray: enabled]
+        R1[/POST /upload/]
+        R2[/GET /files/]
+        R3[/GET /files/&#123;fileId&#125;/view-url/]
+        R4[/DELETE /files/&#123;fileId&#125;/]
+        APIGW --> R1
+        APIGW --> R2
+        APIGW --> R3
+        APIGW --> R4
+    end
+
+    subgraph "Compute Tier (Lambda — Python 3.11, 256MB, 30s)"
+        L1[UploadFunction<br/>upload_handler.lambda_handler]
+        L2[ListFilesFunction<br/>list_handler.lambda_handler]
+        L3[GetViewUrlFunction<br/>view_handler.lambda_handler]
+        L4[DeleteFileFunction<br/>delete_handler.lambda_handler]
+    end
+
+    subgraph "Storage Tier"
+        IMG[(ImageBucket<br/>image-upload-imagebucket-t8isnbr8sswv<br/>SSE-S3 AES256<br/>Versioning: Enabled<br/>Public Access: Blocked<br/>CORS: enabled)]
+    end
+
+    subgraph "Observability"
+        CWL[CloudWatch Logs<br/>4 log groups<br/>/aws/lambda/image-upload-*]
+        XRAY[X-Ray Traces]
+    end
+
+    subgraph "IAM Roles"
+        RLE[LambdaExecutionRole<br/>+ S3Access inline policy<br/>+ AWSLambdaBasicExecutionRole]
+        RAG[ApiGatewayCloudWatchLogsRole]
+    end
+
+    subgraph "IaC"
+        CFN[CloudFormation Stack:<br/>image-upload<br/>33 managed resources]
+    end
+
+    USER -->|"HTTP GET app.html"| WEB
+    WEB -->|"AWS SDK SigV4 sign with"| APIUSER
+    USER -->|"HTTPS + SigV4"| APIGW
+
+    R1 -->|AWS_PROXY| L1
+    R2 -->|AWS_PROXY| L2
+    R3 -->|AWS_PROXY| L3
+    R4 -->|AWS_PROXY| L4
+
+    L1 -->|generate presigned PUT URL| IMG
+    L2 -->|list_objects_v2| IMG
+    L3 -->|generate presigned GET URL| IMG
+    L4 -->|delete_object| IMG
+
+    USER -.->|"PUT object via presigned URL (direct)"| IMG
+    USER -.->|"GET object via presigned URL (direct)"| IMG
+
+    L1 -.assume.-> RLE
+    L2 -.assume.-> RLE
+    L3 -.assume.-> RLE
+    L4 -.assume.-> RLE
+    APIGW -.assume.-> RAG
+
+    L1 --> CWL
+    L2 --> CWL
+    L3 --> CWL
+    L4 --> CWL
+    APIGW --> CWL
+    APIGW --> XRAY
+
+    CFN -.manages.-> APIGW
+    CFN -.manages.-> L1
+    CFN -.manages.-> L2
+    CFN -.manages.-> L3
+    CFN -.manages.-> L4
+    CFN -.manages.-> IMG
+    CFN -.manages.-> WEB
+    CFN -.manages.-> RLE
+    CFN -.manages.-> RAG
+    CFN -.manages.-> APIUSER
+
+    classDef compute fill:#FF9900,stroke:#232F3E,color:#fff
+    classDef storage fill:#3F8624,stroke:#232F3E,color:#fff
+    classDef api fill:#C925D1,stroke:#232F3E,color:#fff
+    classDef iam fill:#DD344C,stroke:#232F3E,color:#fff
+    classDef obs fill:#7AA116,stroke:#232F3E,color:#fff
+    classDef iac fill:#4D72F3,stroke:#232F3E,color:#fff
+
+    class L1,L2,L3,L4 compute
+    class IMG,WEB storage
+    class APIGW,R1,R2,R3,R4 api
+    class APIUSER,RLE,RAG iam
+    class CWL,XRAY obs
+    class CFN iac
