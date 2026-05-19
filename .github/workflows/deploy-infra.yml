@@ -1,0 +1,193 @@
+# deploy-infra.yml
+# Deploys Bicep infrastructure (storage, monitoring, function app, RBAC, SWA)
+# to dev / staging / prod via OIDC Workload Identity Federation.
+# Authentication: azure/login@v2 with federated credentials — NO long-lived secrets.
+# Dependency order (Section 11.5): this workflow must succeed before deploy-functions
+# or deploy-static-web are run.
+
+name: Deploy Infrastructure (Bicep)
+
+on:
+  push:
+    branches: [main, staging, dev]
+    paths:
+      - 'outputs/bicep-templates/**'
+      - '.github/workflows/deploy-infra.yml'
+  workflow_dispatch:
+    inputs:
+      environment:
+        description: 'Target environment'
+        type: choice
+        options: [dev, staging, prod]
+        required: true
+
+permissions:
+  id-token: write   # Required for OIDC token exchange
+  contents: read
+
+env:
+  AZURE_LOCATION: australiaeast
+
+# ─────────────────────────────────────────────────────────────────────────────
+jobs:
+# ─────────────────────────────────────────────────────────────────────────────
+
+  # ---------------------------------------------------------------------------
+  # Job 1: Determine target environment from branch name or manual input
+  # ---------------------------------------------------------------------------
+  determine-env:
+    name: Determine Environment
+    runs-on: ubuntu-latest
+    outputs:
+      env_name: ${{ steps.set-env.outputs.env_name }}
+      resource_group: ${{ steps.set-env.outputs.resource_group }}
+      param_file: ${{ steps.set-env.outputs.param_file }}
+    steps:
+      - name: Derive environment name
+        id: set-env
+        run: |
+          if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
+            ENV_NAME="${{ github.event.inputs.environment }}"
+          else
+            case "${{ github.ref_name }}" in
+              main)    ENV_NAME="prod"    ;;
+              staging) ENV_NAME="staging" ;;
+              dev)     ENV_NAME="dev"     ;;
+              *)       echo "Unknown branch: ${{ github.ref_name }}" && exit 1 ;;
+            esac
+          fi
+          echo "env_name=${ENV_NAME}" >> "$GITHUB_OUTPUT"
+          echo "resource_group=rg-photo-gallery-${ENV_NAME}" >> "$GITHUB_OUTPUT"
+          echo "param_file=outputs/bicep-templates/parameters/${ENV_NAME}.bicepparam" >> "$GITHUB_OUTPUT"
+          echo "Resolved environment: ${ENV_NAME}"
+
+  # ---------------------------------------------------------------------------
+  # Job 2: Lint + What-If (runs before any deployment; fails fast on errors)
+  # ---------------------------------------------------------------------------
+  validate:
+    name: Lint & What-If
+    needs: determine-env
+    runs-on: ubuntu-latest
+    environment: ${{ needs.determine-env.outputs.env_name }}
+    env:
+      ENV_NAME: ${{ needs.determine-env.outputs.env_name }}
+      RESOURCE_GROUP: ${{ needs.determine-env.outputs.resource_group }}
+      PARAM_FILE: ${{ needs.determine-env.outputs.param_file }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Azure Login (OIDC)
+        uses: azure/login@v2
+        with:
+          client-id: ${{ secrets.AZURE_CLIENT_ID }}
+          tenant-id: ${{ secrets.AZURE_TENANT_ID }}
+          subscription-id: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
+
+      - name: Cache Bicep CLI
+        uses: actions/cache@v4
+        with:
+          path: ~/.bicep
+          key: bicep-${{ hashFiles('outputs/bicep-templates/**/*.bicep') }}
+
+      - name: Bicep Lint
+        run: az bicep lint --file outputs/bicep-templates/main.bicep
+
+      - name: Bicep What-If (dry run)
+        run: |
+          az deployment group what-if \
+            --resource-group "$RESOURCE_GROUP" \
+            --template-file outputs/bicep-templates/main.bicep \
+            --parameters "$PARAM_FILE" \
+            --result-format FullResourcePayloads
+
+  # ---------------------------------------------------------------------------
+  # Job 3: Deploy to target environment (gated by validate)
+  # ---------------------------------------------------------------------------
+  deploy:
+    name: Deploy → ${{ needs.determine-env.outputs.env_name }}
+    needs: [determine-env, validate]
+    runs-on: ubuntu-latest
+    # GitHub Environment object provides approval gate for prod
+    environment: ${{ needs.determine-env.outputs.env_name }}
+    env:
+      ENV_NAME: ${{ needs.determine-env.outputs.env_name }}
+      RESOURCE_GROUP: ${{ needs.determine-env.outputs.resource_group }}
+      PARAM_FILE: ${{ needs.determine-env.outputs.param_file }}
+    outputs:
+      function_app_name: ${{ steps.save-outputs.outputs.function_app_name }}
+      storage_account_name: ${{ steps.save-outputs.outputs.storage_account_name }}
+      swa_hostname: ${{ steps.save-outputs.outputs.swa_hostname }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Azure Login (OIDC)
+        uses: azure/login@v2
+        with:
+          client-id: ${{ secrets.AZURE_CLIENT_ID }}
+          tenant-id: ${{ secrets.AZURE_TENANT_ID }}
+          subscription-id: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
+
+      - name: Deploy Bicep
+        id: bicep-deploy
+        run: |
+          az deployment group create \
+            --resource-group "$RESOURCE_GROUP" \
+            --template-file outputs/bicep-templates/main.bicep \
+            --parameters "$PARAM_FILE" \
+            --name "infra-${{ github.run_number }}" \
+            --rollback-on-error \
+            --query "properties.outputs" \
+            --output json | tee bicep-outputs.json
+
+      - name: Save deployment outputs
+        id: save-outputs
+        run: |
+          FUNC_APP_NAME=$(jq -r '.functionAppName.value // empty' bicep-outputs.json)
+          STORAGE_NAME=$(jq -r '.storageAccountName.value // empty' bicep-outputs.json)
+          SWA_HOSTNAME=$(jq -r '.staticWebAppHostname.value // empty' bicep-outputs.json)
+          echo "function_app_name=${FUNC_APP_NAME}" >> "$GITHUB_OUTPUT"
+          echo "storage_account_name=${STORAGE_NAME}" >> "$GITHUB_OUTPUT"
+          echo "swa_hostname=${SWA_HOSTNAME}" >> "$GITHUB_OUTPUT"
+          echo "Function App: ${FUNC_APP_NAME}"
+          echo "Storage Account: ${STORAGE_NAME}"
+          echo "SWA Hostname: ${SWA_HOSTNAME}"
+
+      - name: Upload deployment outputs artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: bicep-outputs-${{ needs.determine-env.outputs.env_name }}-${{ github.run_number }}
+          path: bicep-outputs.json
+          retention-days: 7
+
+  # ---------------------------------------------------------------------------
+  # Job 4: Rollback on failure (triggered only if deploy job fails)
+  # ---------------------------------------------------------------------------
+  rollback-on-failure:
+    name: Rollback on Failure
+    needs: [determine-env, deploy]
+    if: failure()
+    runs-on: ubuntu-latest
+    environment: ${{ needs.determine-env.outputs.env_name }}
+    env:
+      ENV_NAME: ${{ needs.determine-env.outputs.env_name }}
+      RESOURCE_GROUP: ${{ needs.determine-env.outputs.resource_group }}
+    steps:
+      - name: Azure Login (OIDC)
+        uses: azure/login@v2
+        with:
+          client-id: ${{ secrets.AZURE_CLIENT_ID }}
+          tenant-id: ${{ secrets.AZURE_TENANT_ID }}
+          subscription-id: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
+
+      - name: Log rollback notice
+        run: |
+          echo "Deployment infra-${{ github.run_number }} failed."
+          echo "The --rollback-on-error flag on az deployment group create has already"
+          echo "triggered Azure-side rollback to the last successful deployment state."
+          echo "Resource group: ${RESOURCE_GROUP} / Environment: ${ENV_NAME}"
+          az deployment group list \
+            --resource-group "$RESOURCE_GROUP" \
+            --query "[?properties.provisioningState=='Succeeded'].{name:name,time:properties.timestamp}|[:3]" \
+            --output table || true

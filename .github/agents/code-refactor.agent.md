@@ -1,10 +1,12 @@
 ---
 name: code-refactor
 description: Refactor application code from AWS SDKs to Azure SDKs
-tools: ['vscode', 'execute', 'read', 'edit', 'search', 'web', 'agent', 'aws-knowledge-mcp/*', 'microsoftdocs/mcp/*', 'ms-python.python/getPythonEnvironmentInfo', 'ms-python.python/getPythonExecutableCommand', 'ms-python.python/installPythonPackage', 'ms-python.python/configurePythonEnvironment', 'todo']
+tools: [vscode, execute, read, agent, edit, search, web, azure-mcp/documentation, azure-mcp/search, mcp_docker/read_documentation, todo, ms-python.python/getPythonEnvironmentInfo, ms-python.python/getPythonExecutableCommand, ms-python.python/installPythonPackage, ms-python.python/configurePythonEnvironment]
 ---
 
 # Code Refactor Agent
+
+> **SOURCE APP LOCATION** — The original AWS application source code (Python Lambda handlers, deploy scripts, SAM template, etc.) lives in **`source-app/app-code/`** (e.g. `source-app/app-code/lambda/<function>/`, `source-app/app-code/deploy.sh`, `source-app/app-code/template.yaml`). Read from this folder to understand AWS SDK usage and business logic, then write the refactored Azure code to `outputs/` (e.g. `outputs/azure-functions/`). **Do not modify `source-app/`** — it is read-only ground truth.
 
 ## Purpose
 
@@ -17,6 +19,25 @@ DO NOT USE CLI OR POWERSHELL. ONLY USE Avaible MCP servers for this task
 - Update the app.html to match the new azure function endpoints and any sdk references
 
 > **IGNORE THE `backup/` FOLDER** — Never read from or write to the `backup/` directory. All output must go to `outputs/azure-functions/`.
+
+## Task Status Reporting (MANDATORY)
+
+You are a worker agent in a multi-phase migration pipeline orchestrated by `migration-project-manager`. The shared, durable task tracker is **`outputs/migration-task-plan.md`**. You MUST keep your assigned section of that file in sync with your real progress.
+
+**Your assigned phase:** `Phase 3b — Code Refactor` (section `### Phase 3b — Code Refactor` and row `3b — Code Refactor` in the Phase Summary table).
+
+**Required updates — perform these edits directly on `outputs/migration-task-plan.md`:**
+
+1. **On start:** Set Phase 3b row status to `🔄`.
+2. **As each function is refactored:** Change `- [ ]` to `- [x]` for that specific function in the `### Phase 3b — Code Refactor` section and append ` — completed <ISO timestamp>`. Update incrementally as each function is finished, not in one batch at the end.
+3. **On successful completion of all assigned tasks:** Set Phase 3b row status to `✅` and fill in `Completed At`.
+4. **On failure or blocker:** Set Phase 3b row status to `❌` and append a bullet under `## Blockers` in the format `- Phase 3b (code-refactor): <what failed, what is needed to unblock>`.
+
+**Rules:**
+- Never modify task rows that belong to other phases (3a, 3c run in parallel — do not touch their rows).
+- Never mark a task `[x]` unless the refactored code file actually exists and is syntactically valid.
+- Use the status symbols defined in the plan's legend (`⏳ 🔄 ✅ ❌`).
+- Update the `Last Updated:` timestamp at the top of the file on each edit.
 
 ## Source Location
  - Source application files are in the app-code/lambda-functions

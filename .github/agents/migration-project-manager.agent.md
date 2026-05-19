@@ -15,6 +15,8 @@ tools: ['read', 'edit', 'agent', 'search', 'todo']
 
 # Migration Project Manager Agent
 
+> **SOURCE APP LOCATION** — The original AWS application source code lives in **`source-app/`** (e.g. `source-app/app-code/`, `source-app/app-code/lambda/`, `source-app/app-code/template.yaml`, `source-app/doc/`). This is the **read-only ground truth** for the workload being migrated. All worker agents have been instructed to read from `source-app/` and write transformed Azure artifacts to `outputs/`. Never modify `source-app/` and never delegate work that would modify it.
+
 ## Purpose
 
 Coordinate the full AWS-to-Azure migration by delegating work to specialist agents in the correct
@@ -54,6 +56,12 @@ artifact check.
 ### Layer 2 — Persistent Task Plan File
 Maintain `outputs/migration-task-plan.md` as the durable record of all tasks, their status, owner
 agent, and artifacts. This file is the source of truth across sessions. Update it after every phase.
+
+> **Shared file \u2014 worker agents also write to this file.** Each worker agent (aws-discovery, azure-architect, iac-transformation, code-refactor, pipeline-builder-agent, deployment-validation) is instructed to update its OWN phase row and task checkboxes incrementally as it works. As the PM you MUST:
+> - Re-read the file before each edit so you do not overwrite a worker's in-progress updates.
+> - Only edit the Phase Summary rows and task sections for phases you are responsible for transitioning (Phase 0 initialization, post-verification confirmation, and final completion report).
+> - When a worker reports completion, verify artifacts AND read the worker's updated rows; only correct the row if the worker failed to update it.
+> - Never revert a worker's `\u274c` status to `\u2705` without re-running the phase.
 
 **Initial task plan structure** (written at Phase 0 before any agent is invoked):
 
@@ -219,11 +227,27 @@ rewrite. Section 11 must specify every GitHub Actions workflow, OIDC config, and
 
 ---
 
-## Phase 3 — Parallel Execution
+## Phase 3 — Parallel Execution (MANDATORY)
 
-Invoke all three agents as **separate parallel sessions**. Do not wait for one before starting the
-others. Add all three sets of todo items before invoking, then collect completion checks once all
-three agents have responded.
+**CRITICAL:** Phases 3a, 3b, and 3c MUST run in parallel. They have no dependencies on each
+other — all three consume the Phase 2 design document and write to different output folders.
+
+**How to invoke in parallel:**
+1. Add all three sets of todo items to the session todo list FIRST, before any agent invocation.
+2. Issue all three `@iac-transformation`, `@code-refactor`, and `@pipeline-builder-agent`
+   subagent calls in a **single batched tool-call block** (one assistant turn, three parallel
+   `runSubagent` calls). Do NOT wait for one agent's response before starting the next.
+3. Only after all three subagent sessions return, perform the artifact completion checks for
+   3a, 3b, and 3c together.
+
+**Forbidden patterns:**
+- ❌ Invoking 3a, awaiting its result, then invoking 3b, then 3c (sequential).
+- ❌ Invoking 3a and 3b in parallel but deferring 3c.
+- ❌ Verifying 3a artifacts before 3b and 3c have been launched.
+
+**Required pattern:**
+- ✅ Single assistant turn containing three parallel subagent calls for 3a + 3b + 3c.
+- ✅ Wait for all three to complete, then verify all three artifact sets together.
 
 ### Phase 3a — IaC Transformation
 
@@ -310,13 +334,44 @@ the report.
 ## Orchestration Rules
 
 1. **Sequential between phases** — never invoke Phase N+1 until Phase N passes its artifact check.
-2. **Parallel within Phase 3** — invoke 3a, 3b, 3c simultaneously as separate sessions; do not serialize.
+2. **Parallel within Phase 3 is MANDATORY** — invoke 3a (iac-transformation), 3b (code-refactor), and 3c (pipeline-builder-agent) in a single batched tool-call block as three concurrent subagent sessions. Never serialize these three. Verification of all three artifact sets happens only after all three have returned.
 3. **Verify artifacts, not words** — always read the output file after an agent finishes; never assume success from the agent's text response.
 4. **Two-layer task tracking** — keep the session `todo` list AND `migration-task-plan.md` in sync at every phase boundary.
 5. **Enrich the plan after Phase 2** — the task plan must be updated with per-module, per-function, and per-workflow tasks before Phase 3 starts.
 6. **Stop on failure** — on any failed artifact check, stop, mark the task plan, and report clearly: what failed, why, and what the user's options are.
 7. **Resumability** — if the user asks to resume from a phase, verify prerequisite artifacts exist, load the current task plan, and continue from there.
 8. **Progress updates** — after each phase boundary, print the updated Phase Summary table from `migration-task-plan.md`.
+9. **Per-phase metrics (MANDATORY)** — every phase prompt you send to a subagent MUST end with the following block, and every per-phase status update you print MUST include the resulting metrics table:
+
+   **Required subagent prompt suffix (append verbatim to every Phase 1–4 prompt):**
+   ```
+   METRICS REPORTING (MANDATORY):
+   Before you start work, record an ISO 8601 wall-clock start time.
+   When you finish, record the wall-clock end time.
+   The final line of your response MUST be a single fenced code block in this exact format:
+   ```
+   ```
+   ---METRICS---
+   start: <ISO 8601 UTC, e.g. 2026-05-18T03:00:00Z>
+   end:   <ISO 8601 UTC>
+   duration_seconds: <integer>
+   tool_calls: <integer — your best count of tool invocations you made>
+   files_written: <integer — count of distinct files you created or modified>
+   notes: <one short line; optional>
+   ---END METRICS---
+   ```
+
+   **PM responsibilities for metrics:**
+   - Parse the `---METRICS---` block from every subagent response.
+   - Maintain a running table in your in-chat output and append the final aggregate to `outputs/migration-task-plan.md` under a `## Phase Metrics` section (create if missing).
+   - After each phase, print:
+
+     | Phase | Agent | Duration | Tool Calls | Files Written |
+     |---|---|---|---|---|
+     | <n> | <agent> | <Hh Mm Ss> | <n> | <n> |
+
+   - **Token usage is NOT available to you programmatically.** In every per-phase metrics print AND in the Final Completion Report, append this exact line:
+     > _Token usage per phase is not exposed to the agent runtime. View per-request token counts in VS Code: Command Palette → “Chat: Show Usage”, or check the session debug log under `~/.config/Code/User/workspaceStorage/<workspace-id>/GitHub.copilot-chat/debug-logs/`._
 
 ---
 
@@ -343,6 +398,20 @@ After Phase 4 passes, print:
 - Azure Functions: outputs/azure-functions/
 - CI/CD Pipelines: .github/workflows/
 - Validation Report: outputs/validation-report.md
+
+### Phase Metrics (wall-clock)
+
+| Phase | Agent | Duration | Tool Calls | Files Written |
+|---|---|---|---|---|
+| 1 — Discovery | aws-discovery | <Hh Mm Ss> | <n> | <n> |
+| 2 — Architecture | azure-architect | <Hh Mm Ss> | <n> | <n> |
+| 3a — IaC Transformation | iac-transformation | <Hh Mm Ss> | <n> | <n> |
+| 3b — Code Refactor | code-refactor | <Hh Mm Ss> | <n> | <n> |
+| 3c — Pipeline Build | pipeline-builder-agent | <Hh Mm Ss> | <n> | <n> |
+| 4 — Validation | deployment-validation | <Hh Mm Ss> | <n> | <n> |
+| **Total wall-clock** | | **<Hh Mm Ss>** | **<sum>** | **<sum>** |
+
+_Token usage per phase is not exposed to the agent runtime. View per-request token counts in VS Code: Command Palette → “Chat: Show Usage”, or check the session debug log under `~/.config/Code/User/workspaceStorage/<workspace-id>/GitHub.copilot-chat/debug-logs/`._
 
 ### Next Steps
 Review outputs/validation-report.md for warnings, then merge the pipeline branch to

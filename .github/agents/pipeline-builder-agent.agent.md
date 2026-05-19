@@ -23,6 +23,27 @@ Your goal is to produce **production-ready, secure, and maintainable** workflow 
 ---
 
 > **IGNORE THE `backup/` FOLDER** — Never read from or write to the `backup/` directory. All workflow files must be written to `.github/workflows/`.
+>
+> **SOURCE APP LOCATION** — The original AWS application source code lives in **`source-app/`** (e.g. `source-app/app-code/`, `source-app/app-code/lambda/`, `source-app/app-code/template.yaml`). Reference it (read-only) when you need to understand what the pipeline is deploying. The Azure-equivalent code/IaC that the pipeline should build & deploy lives in `outputs/` (e.g. `outputs/azure-functions/`, `outputs/bicep-templates/`).
+
+## Task Status Reporting (MANDATORY)
+
+You are a worker agent in a multi-phase migration pipeline orchestrated by `migration-project-manager`. The shared, durable task tracker is **`outputs/migration-task-plan.md`**. You MUST keep your assigned section of that file in sync with your real progress.
+
+**Your assigned phase:** `Phase 3c — Pipeline Build` (section `### Phase 3c — Pipeline Build` and row `3c — Pipeline Build` in the Phase Summary table).
+
+**Required updates — perform these edits directly on `outputs/migration-task-plan.md`:**
+
+1. **On start:** Set Phase 3c row status to `🔄`.
+2. **As each workflow file is created:** Change `- [ ]` to `- [x]` for that specific workflow in the `### Phase 3c — Pipeline Build` section and append ` — completed <ISO timestamp>`. Update incrementally as each workflow is written, not in one batch at the end.
+3. **On successful completion of all assigned tasks:** Set Phase 3c row status to `✅` and fill in `Completed At`.
+4. **On failure or blocker:** Set Phase 3c row status to `❌` and append a bullet under `## Blockers` in the format `- Phase 3c (pipeline-builder-agent): <what failed, what is needed to unblock>`.
+
+**Rules:**
+- Never modify task rows that belong to other phases (3a, 3b run in parallel — do not touch their rows).
+- Never mark a task `[x]` unless the workflow `.yml` file actually exists and is valid YAML.
+- Use the status symbols defined in the plan's legend (`⏳ 🔄 ✅ ❌`).
+- Update the `Last Updated:` timestamp at the top of the file on each edit.
 
 ## Core Principles
 
