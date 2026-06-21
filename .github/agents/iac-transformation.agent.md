@@ -59,34 +59,11 @@ Follow the `task-tracking` skill: `.github/skills/agents/shared/task-tracking.md
 
 1. Analyze azure-architecture-summary.md for required resources
 2. Map AWS resources to Azure equivalents using service-mapping.md
-3. Resolve AVM module paths and versions (via SKILLS.MD Step 3–4 or `resolve-avm-version.sh`) — do NOT copy or vendor local modules
+3. Resolve AVM module paths and versions (via `module-organization` skill — do NOT copy or vendor local modules)
 4. Write Bicep templates referencing AVM modules via `br/public:avm/...`
 5. Update Buildkite pipeline for Azure
 6. Create deployment validation scripts
 
-## Local Skills Library (MANDATORY)
-
-A curated AVM-Bicep skill lives under **`.github/skills/iac-transformation/`**. It is the authoritative guide for picking, versioning, and writing AVM module references in this project. **You MUST read it before writing or modifying any Bicep file** — do not rely on general AVM knowledge from training, which is frequently out of date.
-
-**Available skill files:**
-
-| File | Path | Purpose |
-|---|---|---|
-| AVM Bicep Skill | `.github/skills/iac-transformation/SKILLS.MD` | Primary decision guide. Contains: `bicepconfig.json` template (Step 1), module selection decision tree (Step 2), AWS→Azure→AVM mapping table (Step 3), version resolution (Step 4), module declaration patterns (Step 5), restore/validate (Step 6), common pitfalls, pattern-module catalog, full module quick reference, and output checklist. |
-| Version Resolver | `.github/skills/iac-transformation/scripts/resolve-avm-version.sh` | Helper script — use to resolve the latest valid AVM module version when the skill's pinned versions are stale. |
-| Scenarios | `.github/skills/iac-transformation/scenarios/` | Reserved for future end-to-end Bicep scenario examples (currently empty). |
-
-**Mandatory workflow:**
-
-1. **Before writing the first line of Bicep**, read `.github/skills/iac-transformation/SKILLS.MD` end-to-end. Use its Step 1 to create/verify `bicepconfig.json` — `modulePath` MUST be `"bicep"` (not `"bicep/public"`).
-2. **For every Azure resource to provision**, follow the Step 2 decision tree: prefer `ptn/` pattern modules over `res/` resource modules; only write raw resource declarations when no AVM module exists.
-3. **Use the Step 3 AWS→Azure→AVM mapping table** to translate each AWS resource in `outputs/aws-migration-artifacts/cloudformation-template.yaml` into the correct AVM module path.
-4. **Resolve module versions** via the Step 4 procedure (or `scripts/resolve-avm-version.sh`) — never invent versions.
-5. **Run through the "Common Pitfalls" section** before declaring the Bicep complete (modulePath, role assignments, private endpoints, identity wiring, etc.).
-6. **Cite the skill** in `outputs/bicep-templates/README.md` (or equivalent) — one line per module noting "Selected per SKILLS.MD §Step 3 — <service>".
-7. **Use the Step 6 restore/validate sequence** (`az bicep restore`, `az bicep build`, `az deployment ... what-if`) before handing off to the deployment-validation phase.
-
-The skill is **read-only reference material** — never modify files under `.github/skills/`.
 
 ## Module Development Workflow
 Before starting module development follow this workflow: 
@@ -110,7 +87,7 @@ After this step, seek confirmation before progressing to the next step
 4. Implementation Plan - Create a detailed implementation plan for how this module will be implemented break down tasks into manageable steps. These steps will be used for future development so keep each task group focused and have clear objectives. Include acceptance criteria and dependencies.
 
 
-> For CloudFormation→Bicep type mappings, conversion examples, and all Bicep pitfalls — read the `iac-transformation` skill (`SKILLS.MD`).
+> For CloudFormation→Bicep type mappings, AVM module selection, version resolution, and common pitfalls — read the `module-organization` skill: `.github/skills/agents/iac-transformation/module-organization.md`.
 
 ## Buildkite Pipeline Updates
 
@@ -386,7 +363,7 @@ param subnetCidr string = '10.0.1.0/24'
 - [ ] Consistent naming conventions
 - [ ] Proper parameter types and constraints
 - [ ] Clear module organization
-- [ ] Documentation in place (README.md cites module path per SKILLS.MD §Step 3)
+- [ ] Documentation in place (README.md cites AVM module path per `module-organization` skill)
 
 ✅ **Pipeline Updates:**
 - [ ] Validation step added
@@ -421,4 +398,4 @@ IaC transformation is complete when:
 9. ✅ Rollback procedures documented
 10. ✅ Resource naming consistent
 11. ✅ All configurations equivalent
-12. ✅ Conversion report provided (README.md cites AVM module per SKILLS.MD §Step 3)
+12. ✅ Conversion report provided (README.md cites AVM module path per `module-organization` skill)

@@ -37,7 +37,7 @@ Follow the `task-tracking` skill: `.github/skills/agents/shared/task-tracking.md
 
 ## Design Constraints
 
-> Read the `azure-architecture/design-guide` skill before making any service selection or SKU decisions. It contains all mandatory design constraints (APIM prohibition, serverless-first, single-region default, cost rules) and the complete AWS→Azure service mapping tables for all service categories.
+> Read the `architecture-design`, `aws-to-azure-mapping`, and `cost-analysis` skills before making any service selection or SKU decisions. They contain all mandatory design constraints and complete AWS→Azure service mapping tables.
 ## Folders
  - outputs/aws-migration-artifacts use this folder to read the AWS discovery output files including architecture diagrams, service inventory, and configurations. 
 - outputs/azure-architecture-output use this folder to write the generated architecture diagrams, cost comparison reports, and service mapping documents.
@@ -71,39 +71,6 @@ Follow the `task-tracking` skill: `.github/skills/agents/shared/task-tracking.md
   - levereage the aws-inventory.json and migration-assessment.md files to understand the AWS services in use and their configurations. And create a detailed mapping of AWS services to Azure equivalents, including configuration differences and migration consideration and number of instances or services to be deployed
   - particulary use the ## Service Complexity Matrix section of migration-assessment.md to identify complex services that may require special handling during migration.
 
-## Local Skills Library (MANDATORY)
-
-A curated set of Azure design skills lives under **`.github/skills/azure-architecture/`**. Each subfolder contains a `SKILL.md` with category indexes, line ranges, reference architectures, design patterns, anti-patterns, and links to authoritative Microsoft docs. **You MUST consult the relevant skill(s) BEFORE making a service or design decision** — do not rely on general training knowledge when a matching skill exists locally.
-
-**Available skills:**
-
-| Skill | Path | Use When |
-|---|---|---|
-| `azure-architecture` | `.github/skills/azure-architecture/azure-architecture/SKILL.md` | Overall design — reference architectures, solution ideas, design patterns, technology choices, architecture styles, WAF, anti-patterns, migration guides. **Always read first.** |
-| `azure-functions` | `.github/skills/azure-architecture/azure-functions/SKILL.md` | Designing serverless compute (replacing Lambda, HTTP APIs, event-driven workloads). |
-| `azure-container-apps` | `.github/skills/azure-architecture/azure-container-apps/SKILL.md` | Containerized workloads, microservices, replacing ECS/Fargate/EKS workloads that don't fit Functions. |
-| `azure-container-registry` | `.github/skills/azure-architecture/azure-container-registry/SKILL.md` | Container image hosting (replacing ECR). |
-| `azure-static-web-apps` | `.github/skills/azure-architecture/azure-static-web-apps/SKILL.md` | SPA / static site hosting (replacing S3 static-site, CloudFront for static). |
-| `azure-blob-storage` | `.github/skills/azure-architecture/azure-blob-storage/SKILL.md` | Object storage (replacing S3 — tiers, lifecycle, versioning, SAS, immutability). |
-| `azure-files` | `.github/skills/azure-architecture/azure-files/SKILL.md` | SMB/NFS shared file storage (replacing EFS / FSx). |
-| `azure-key-vault` | `.github/skills/azure-architecture/azure-key-vault/SKILL.md` | Secrets / keys / certs (replacing Secrets Manager, KMS, ACM). |
-| `azure-automation` | `.github/skills/azure-architecture/azure-automation/SKILL.md` | Runbooks, scheduled ops, DSC (replacing Systems Manager, scheduled Lambdas). |
-| `azure-cost-management` | `.github/skills/azure-architecture/azure-cost-management/SKILL.md` | **Always read** when producing `cost-comparison.md` — pricing tiers, savings plans, budgets, anomaly detection. |
-| `products/<service>/report.md` | `.github/skills/azure-architecture/products/` | Deep per-product reports (e.g. Front Door, Application Gateway, Traffic Manager, App Service, Foundry). Browse this folder for the specific Azure product you're evaluating. |
-
-**Mandatory workflow:**
-
-1. **Always start by reading** `.github/skills/azure-architecture/azure-architecture/SKILL.md` to get the index of reference architectures and design patterns relevant to the workload.
-2. **For every Azure service you propose in the design document**, read the matching skill's `SKILL.md` (use its Category Index to jump to the right section via `read_file` with line ranges) and incorporate its guidance on:
-   - SKU/tier selection (validate your cost-effectiveness choice)
-   - Configuration defaults and recommended settings
-   - Security & WAF alignment
-   - Anti-patterns to avoid
-3. **Before recommending a product not listed above**, check `.github/skills/azure-architecture/products/` for a matching `report.md` and read it.
-4. **Cite the skill(s) you consulted** in Section 3 (Azure Service Mapping) of `design-document.md` — one short line per service noting which skill informed the choice. Example: `> Consulted: azure-functions/SKILL.md §Compute Plans, products/azure-front-door/report.md`.
-5. **If a needed skill is missing**, note it as a gap in the design document under "Open Questions / Gaps" and proceed using `microsoftdocs/mcp` and `azure-mcp/documentation` as a fallback.
-
-These skills are **read-only reference material** — never modify files under `.github/skills/`.
 
 ## Responsibilities
 
@@ -150,7 +117,7 @@ For each recommendation:
 - **Microservices and container strategies** on Azure
 
 
-> For the full AWS→Azure service mapping tables (Compute, Storage, Database, Messaging, Networking, Security, Monitoring), WAF cost optimisation principles, and the `cost-comparison.md` output template — refer to the `azure-architecture/design-guide` skill.
+> For the full AWS→Azure service mapping tables, WAF cost optimisation principles, and the `cost-comparison.md` template — refer to the skills in the `## Skills` table above.
 ## Primary Deliverable: Design Document
 
 Before writing any Bicep or diagram files, produce a single markdown design document at:
