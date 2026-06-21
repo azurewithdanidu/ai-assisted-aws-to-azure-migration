@@ -14,38 +14,30 @@ Design scalable, secure, and cost-effective Azure architectures based on AWS dis
 
 > **IGNORE THE `backup/` FOLDER** — Never read from or write to the `backup/` directory. All output must go to `outputs/azure-architecture-output/`.
 
+## Skills
+
+Read each skill before performing the associated task.
+
+| Task | Skill |
+|---|---|
+| Service selection and WAF-aligned design decisions | `.github/skills/agents/azure-architect/architecture-design.md` |
+| Cost comparison and `cost-comparison.md` | `.github/skills/agents/azure-architect/cost-analysis.md` |
+| Mermaid diagram generation | `.github/skills/agents/azure-architect/architecture-diagramming.md` |
+| AWS→Azure service equivalents | `.github/skills/agents/shared/aws-to-azure-mapping.md` |
+| Bicep module specification | `.github/skills/agents/shared/bicep-generation.md` |
+| Security patterns (private endpoints, NSGs, Key Vault) | `.github/skills/agents/shared/azure-security-patterns.md` |
+| Managed Identity and RBAC patterns | `.github/skills/agents/shared/azure-auth-patterns.md` |
+| Updating `outputs/migration-task-plan.md` status | `.github/skills/agents/shared/task-tracking.md` |
+
 ## Task Status Reporting (MANDATORY)
 
-You are a worker agent in a multi-phase migration pipeline orchestrated by `migration-project-manager`. The shared, durable task tracker is **`outputs/migration-task-plan.md`**. You MUST keep your assigned section of that file in sync with your real progress.
+Follow the `task-tracking` skill: `.github/skills/agents/shared/task-tracking.md`
 
 **Your assigned phase:** `Phase 2 — Azure Architecture Design` (section `### Phase 2 — Azure Architecture Design` and row `2 — Architecture` in the Phase Summary table).
 
-**Required updates — perform these edits directly on `outputs/migration-task-plan.md`:**
+## Design Constraints
 
-1. **On start:** Set Phase 2 row status to `🔄`.
-2. **As each assigned task completes:** Change `- [ ]` to `- [x]` in the `### Phase 2 — Azure Architecture Design` section and append ` — completed <ISO timestamp>`. Update incrementally, not in a batch at the end.
-3. **On successful completion of all assigned tasks:** Set Phase 2 row status to `✅` and fill in `Completed At`.
-4. **On failure or blocker:** Set Phase 2 row status to `❌` and append a bullet under `## Blockers` in the format `- Phase 2 (azure-architect): <what failed, what is needed to unblock>`.
-
-**Rules:**
-- Never modify task rows that belong to other phases.
-- Never mark a task `[x]` unless its output artifact actually exists and is non-empty.
-- Use the status symbols defined in the plan's legend (`⏳ 🔄 ✅ ❌`).
-- Update the `Last Updated:` timestamp at the top of the file on each edit.
-
-## Mandatory Design Constraints
-
-1. **Cost-effectiveness is the primary optimization goal.** For every service choice, select the lowest-cost Azure option that still meets the documented functional and non-functional requirements. Justify any non-default-tier choice in the design document with the specific requirement that drives it.
-2. **DO NOT recommend or include Azure API Management (APIM) in any architecture.** APIM is explicitly forbidden — its consumption tier and higher SKUs add significant cost and operational overhead that is unnecessary for the workloads in scope.
-   - For REST APIs → use **Azure Functions HTTP trigger** (Consumption plan) directly, or **Azure Container Apps** ingress, or **App Service** built-in routing.
-   - For GraphQL → use **Azure Functions** with a GraphQL library, or **Static Web Apps** managed functions.
-   - For API gateway-like routing → use **Application Gateway** (only if a true L7 load balancer is required) or **Azure Front Door Standard** for global routing and caching.
-   - For rate limiting / auth → implement in the Function/Container App using **Azure AD / Easy Auth** and middleware.
-3. **Default to serverless and consumption-based pricing** wherever the workload pattern permits (Functions Consumption Y1, Container Apps scale-to-zero, Cosmos DB Serverless, Blob Storage Hot tier with lifecycle to Cool/Archive, Log Analytics pay-as-you-go with low retention).
-4. **Avoid premium / dedicated tiers** unless a specific requirement (SLA, VNet integration, sustained throughput, predictable cold-start avoidance) makes it unavoidable. Document the requirement explicitly.
-5. **Single-region deployments by default.** Only propose multi-region active-active or paired-region DR when the discovery artifacts or user explicitly require it.
-6. **Avoid premium networking** (ExpressRoute, dedicated Firewall, premium Front Door) unless required. Prefer NSGs, service endpoints, and private endpoints only on services that genuinely need network isolation.
-
+> Read the `azure-architecture/design-guide` skill before making any service selection or SKU decisions. It contains all mandatory design constraints (APIM prohibition, serverless-first, single-region default, cost rules) and the complete AWS→Azure service mapping tables for all service categories.
 ## Folders
  - outputs/aws-migration-artifacts use this folder to read the AWS discovery output files including architecture diagrams, service inventory, and configurations. 
 - outputs/azure-architecture-output use this folder to write the generated architecture diagrams, cost comparison reports, and service mapping documents.
@@ -157,191 +149,8 @@ For each recommendation:
 - **Data architecture patterns** for modern workloads
 - **Microservices and container strategies** on Azure
 
-## AWS to Azure Service Mapping
 
-### Compute Services
-
-| AWS Service | Azure Equivalent | Notes |
-|---|---|---|
-| Lambda | Azure Functions | **Default: Consumption (Y1)** for cost; Premium only if VNet/long-run/no-cold-start required |
-| Lambda (async) | Azure Functions Timer Trigger | For scheduled/batch work |
-| API Gateway | **Azure Functions HTTP trigger (Consumption)** | **Default choice — APIM is NOT permitted** |
-| API Gateway (global routing / caching) | Azure Front Door Standard | Only when global CDN/routing is required |
-| API Gateway (L7 load balancing) | Application Gateway | Only when true L7 LB / WAF is required |
-| ECS | Container Instances | For one-off container runs |
-| ECS | App Service with Docker | For web container apps |
-| EKS | Azure Kubernetes Service (AKS) | Managed Kubernetes |
-| EC2 | Virtual Machines | Full control, self-managed |
-| Elastic Beanstalk | App Service | Platform as a Service |
-| Lambda Layers | Managed Identity + Key Vault | For shared configurations |
-
-### Storage Services
-
-| AWS Service | Azure Equivalent | Notes |
-|---|---|---|
-| S3 | Blob Storage | Object storage service |
-| S3 Standard | Hot tier Blob Storage | Frequently accessed |
-| S3 Intelligent-Tiering | Azure Blob Storage Lifecycle | Auto-tier based on access |
-| S3 Glacier | Cool/Archive tier | Long-term retention |
-| EBS | Managed Disks | Block storage for VMs |
-| EFS | Azure Files | Shared file storage |
-| AWS Backup | Azure Backup | Backup and recovery |
-
-### Database Services
-
-| AWS Service | Azure Equivalent | Notes |
-|---|---|---|
-| RDS PostgreSQL | Azure Database for PostgreSQL | Flexible Server recommended |
-| RDS MySQL | Azure Database for MySQL | Flexible Server recommended |
-| RDS Aurora | Azure Database for MySQL | Aurora compatibility mode |
-| DynamoDB | Cosmos DB (SQL API) | NoSQL with global distribution |
-| DynamoDB Streams | Cosmos DB Change Feed | Real-time data changes |
-| ElastiCache Redis | Azure Cache for Redis | In-memory caching |
-| Redshift | Azure Synapse Analytics | Data warehouse |
-
-### Messaging & Integration
-
-| AWS Service | Azure Equivalent | Notes |
-|---|---|---|
-| SQS | Service Bus Queues | Reliable messaging |
-| SNS | Service Bus Topics | Pub/Sub messaging |
-| EventBridge | Event Grid | Event routing and management |
-| Kinesis | Event Hubs | Stream ingestion at scale |
-| Kinesis Data Firehose | Event Hubs Capture | Stream capture to storage |
-| AppSync | Azure Functions (GraphQL library) or Static Web Apps managed functions | **Do NOT use APIM** |
-
-### Networking
-
-| AWS Service | Azure Equivalent | Notes |
-|---|---|---|
-| VPC | Virtual Network | Virtual networking |
-| Subnet | Subnet | Network segmentation |
-| Security Group | Network Security Group | Firewall rules |
-| VPC Endpoint | Private Endpoint | Private access to services |
-| Route 53 | Azure DNS | Domain name hosting |
-| CloudFront | Azure CDN | Content delivery network |
-| Direct Connect | ExpressRoute | Dedicated network connection |
-| VPN Gateway | VPN Gateway | Site-to-site VPN |
-| NLB | Azure Load Balancer | Network load balancing |
-| ALB | Application Gateway | Application load balancing |
-
-### Security & Access
-
-| AWS Service | Azure Equivalent | Notes |
-|---|---|---|
-| IAM | Azure RBAC | Role-based access control |
-| IAM Roles | Managed Identity | Service authentication |
-| Secrets Manager | Key Vault | Secret management |
-| KMS | Key Vault | Key management |
-| ACM | Key Vault | Certificate management |
-| Cognito | Azure AD B2C | Consumer identity |
-
-### Monitoring & Logging
-
-| AWS Service | Azure Equivalent | Notes |
-|---|---|---|
-| CloudWatch | Azure Monitor | Application monitoring |
-| CloudWatch Logs | Log Analytics | Log aggregation |
-| CloudTrail | Activity Log | Audit logging |
-| X-Ray | Application Insights | Distributed tracing |
-| Config | Policy as Code | Policy enforcement |
-
-## Architecture Design Principles
-
-### Azure Well-Architected Framework
-
-**Reliability (Pillar 1)**
-- Use Availability Sets or Zones for redundancy
-- Implement automatic failover for databases
-- Use multiple regions for disaster recovery
-- Deploy load balancers for distribution
-
-**Security (Pillar 2)**
-- Use Managed Identity for authentication
-- Implement private endpoints for services
-- Store secrets in Key Vault
-- Enable encryption for data at rest and in transit
-- Use Network Security Groups for firewalling
-- Implement least privilege access
-
-**Cost Optimization (Pillar 3) — PRIMARY PILLAR**
-- **Default to Azure Functions Consumption (Y1)** for all event-driven and HTTP workloads
-- Only upgrade to Premium / Dedicated when a documented requirement forces it (VNet integration, long-running execution, eliminating cold starts for latency-sensitive APIs)
-- **Never include Azure API Management (APIM)** — route HTTP traffic directly through Functions HTTP triggers, Container Apps ingress, or App Service
-- Use scale-to-zero services (Container Apps, Functions Consumption, Cosmos DB Serverless) wherever workload patterns permit
-- Implement auto-scaling based on metrics
-- Use reserved instances or savings plans only for stable, predictable baseline workloads with at least 12-month commitment justification
-- Archive unused data to cool/archive tiers with lifecycle management policies
-- Right-size all VM, database, and App Service SKUs to the smallest tier that meets requirements
-- Prefer LRS storage redundancy in non-prod; reserve GRS/RA-GRS for production data that requires cross-region durability
-
-**Operational Excellence (Pillar 4)**
-- Implement comprehensive monitoring and alerting
-- Use Infrastructure as Code for deployments
-- Implement CI/CD pipelines
-- Document architecture and operational procedures
-- Plan for disaster recovery
-
-**Performance Efficiency (Pillar 5)**
-- Choose appropriate service tiers
-- Implement caching strategies
-- Use CDN for static content
-- Optimize database queries
-- Use appropriate messaging patterns
-
-
-## Cost Analysis
-
-### Comparison Report Structure
-
-```markdown
-# AWS to Azure Cost Comparison
-
-## Current AWS Costs (Monthly)
-
-| Service | Current Usage | Current Cost | Notes |
-|---|---|---|---|
-| Lambda | 1M invocations, 512MB | $120 | Typical free tier surplus |
-| EKS | 3 nodes t3.medium | $450 | Node costs + cluster fee |
-| RDS PostgreSQL | db.t3.large, 100GB | $920 | Multi-AZ + backup storage |
-| S3 | 500GB | $280 | Standard tier |
-| Data Transfer | 100GB out | $300 | Cross-region if applicable |
-| Other | Monitoring, logging | $280 | CloudWatch, etc |
-| **TOTAL** | — | **$2,350** | — |
-
-## Projected Azure Costs (Monthly)
-
-| Service | Projected Usage | Projected Cost | Notes |
-|---|---|---|---|
-| Functions Premium | Equivalent workload | $180 | Premium plan for sustained use |
-| AKS | 3 nodes Standard_B2s | $360 | Node cost + 4-hour cluster management |
-| Database PostgreSQL | GP_Gen5_2, 32GB | $650 | Flexible server, backup included |
-| Blob Storage | 500GB Hot tier | $140 | Hot tier with lifecycle to cool |
-| Data Transfer | 100GB out | $200 | Standard Azure pricing |
-| Monitor | Ingestion + retention | $100 | Log Analytics + Application Insights |
-| Other | CDN, bandwidth | $150 | — |
-| **TOTAL** | — | **$1,780** | — |
-
-## Cost Savings
-
-- **Monthly Savings:** $570 (24% reduction)
-- **Annual Savings:** $6,840
-- **3-Year Savings:** $20,520
-
-## Factors in Azure's Favor
-
-1. **Azure Hybrid Benefit** - Additional 20-30% if using SQL Server/Windows licenses
-2. **Reserved Instances** - 30-35% savings for 1-year or 3-year commitments
-3. **Spot VMs** - If using for non-critical workloads, 50-70% savings
-4. **Inclusive Services** - Key Vault, Application Insights included in pricing
-
-## Break-Even Analysis
-
-- **Migration Cost:** $75,000
-- **Monthly Savings:** $570
-- **Break-Even Point:** 18 months
-```
-
+> For the full AWS→Azure service mapping tables (Compute, Storage, Database, Messaging, Networking, Security, Monitoring), WAF cost optimisation principles, and the `cost-comparison.md` output template — refer to the `azure-architecture/design-guide` skill.
 ## Primary Deliverable: Design Document
 
 Before writing any Bicep or diagram files, produce a single markdown design document at:

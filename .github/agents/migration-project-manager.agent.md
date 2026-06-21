@@ -28,6 +28,16 @@ agents, reads artifacts to verify completion, and keeps `outputs/migration-task-
 
 > **IGNORE THE `backup/` FOLDER** — Never read from or write to the `backup/` directory. All task tracking and artifact verification uses the `outputs/` folder only.
 
+## Skills
+
+Read each skill before performing the associated task.
+
+| Task | Skill |
+|---|---|
+| Coordinating phase sequence and artifact verification | `.github/skills/agents/migration-pm/orchestration.md` |
+| Delegating to worker agents (exact prompts + artifact checks) | `.github/skills/agents/migration-pm/phase-delegation.md` |
+| Updating `outputs/migration-task-plan.md` | `.github/skills/agents/shared/task-tracking.md` |
+
 ---
 
 ## Pipeline Overview

@@ -24,24 +24,24 @@ Do not use powershell or cli commands, only use MCP servers only
 
 > **IGNORE THE `backup/` FOLDER** — Never read from or write to the `backup/` directory. All output must go to `outputs/bicep-templates/`.
 
+## Skills
+
+Read each skill before performing the associated task.
+
+| Task | Skill |
+|---|---|
+| Organising Bicep into modules (networking/storage/security/compute/messaging/monitoring) | `.github/skills/agents/iac-transformation/module-organization.md` |
+| Creating dev/staging/prod `.bicepparam` files with correct SKU and replication rules | `.github/skills/agents/iac-transformation/parameter-management.md` |
+| Bicep naming conventions, parameter decorators, and required outputs | `.github/skills/agents/shared/bicep-generation.md` |
+| Private endpoints, NSGs, Key Vault hardening | `.github/skills/agents/shared/azure-security-patterns.md` |
+| System-assigned Managed Identity and RBAC role assignments in Bicep | `.github/skills/agents/shared/azure-auth-patterns.md` |
+| Updating `outputs/migration-task-plan.md` status | `.github/skills/agents/shared/task-tracking.md` |
+
 ## Task Status Reporting (MANDATORY)
 
-You are a worker agent in a multi-phase migration pipeline orchestrated by `migration-project-manager`. The shared, durable task tracker is **`outputs/migration-task-plan.md`**. You MUST keep your assigned section of that file in sync with your real progress.
+Follow the `task-tracking` skill: `.github/skills/agents/shared/task-tracking.md`
 
 **Your assigned phase:** `Phase 3a — IaC Transformation` (section `### Phase 3a — IaC Transformation` and row `3a — IaC Transformation` in the Phase Summary table).
-
-**Required updates — perform these edits directly on `outputs/migration-task-plan.md`:**
-
-1. **On start:** Set Phase 3a row status to `🔄`.
-2. **As each Bicep module / parameter file is generated:** Change `- [ ]` to `- [x]` for that specific task in the `### Phase 3a — IaC Transformation` section and append ` — completed <ISO timestamp>`. Update incrementally as each file is written, not in a single batch at the end.
-3. **On successful completion of all assigned tasks:** Set Phase 3a row status to `✅` and fill in `Completed At`.
-4. **On failure or blocker:** Set Phase 3a row status to `❌` and append a bullet under `## Blockers` in the format `- Phase 3a (iac-transformation): <what failed, what is needed to unblock>`.
-
-**Rules:**
-- Never modify task rows that belong to other phases (3b, 3c run in parallel — do not touch their rows).
-- Never mark a task `[x]` unless its output Bicep file actually exists and parses without errors.
-- Use the status symbols defined in the plan's legend (`⏳ 🔄 ✅ ❌`).
-- Update the `Last Updated:` timestamp at the top of the file on each edit.
 
 # Source Location
  - Build the IAC templates based on the architecture defined in the outputs/azure-architecture-output/azure-architecture-summary.md and the architecture diagram in outputs/azure-architecture-output/architecture-diagram-azure.mmd
@@ -109,258 +109,8 @@ After this step, seek confirmation before progressing to the next step
 
 4. Implementation Plan - Create a detailed implementation plan for how this module will be implemented break down tasks into manageable steps. These steps will be used for future development so keep each task group focused and have clear objectives. Include acceptance criteria and dependencies.
 
-## CloudFormation to Bicep Conversion Patterns
 
-### Resource Type Mapping
-
-**VPC/Networking Resources**
-```yaml
-# CloudFormation
-Resources:
-  MyVPC:
-    Type: AWS::EC2::VPC
-    Properties:
-      CidrBlock: 10.0.0.0/16
-      EnableDnsHostnames: true
-      EnableDnsSupport: true
-
-  MySubnet:
-    Type: AWS::EC2::Subnet
-    Properties:
-      VpcId: !Ref MyVPC
-      CidrBlock: 10.0.1.0/24
-      AvailabilityZone: us-east-1a
-
-  MySecurityGroup:
-    Type: AWS::EC2::SecurityGroup
-    Properties:
-      GroupDescription: Security group
-      VpcId: !Ref MyVPC
-      SecurityGroupIngress:
-        - IpProtocol: tcp
-          FromPort: 443
-          ToPort: 443
-          CidrIp: 0.0.0.0/0
-```
-
-Converts to (AVM modules — `br/public:avm/res/...`):
-
-```bicep
-param location string = 'eastus'
-
-// NSG — must be deployed before subnet references it
-module nsg 'br/public:avm/res/network/network-security-group:<version>' = {
-  name: 'nsgDeployment'
-  params: {
-    name: 'myNSG'
-    location: location
-    securityRules: [
-      {
-        name: 'AllowHttpsInbound'
-        properties: {
-          protocol: 'Tcp'
-          sourcePortRange: '*'
-          destinationPortRange: '443'
-          sourceAddressPrefix: 'Internet'
-          destinationAddressPrefix: '*'
-          access: 'Allow'
-          priority: 100
-          direction: 'Inbound'
-        }
-      }
-    ]
-  }
-}
-
-module vnet 'br/public:avm/res/network/virtual-network:<version>' = {
-  name: 'vnetDeployment'
-  params: {
-    name: 'myVNet'
-    location: location
-    addressPrefixes: [
-      '10.0.0.0/16'
-    ]
-    subnets: [
-      {
-        name: 'mySubnet'
-        addressPrefix: '10.0.1.0/24'
-        networkSecurityGroupResourceId: nsg.outputs.resourceId
-      }
-    ]
-  }
-}
-```
-
-> Replace `<version>` with the version resolved from SKILLS.MD Step 4 or `resolve-avm-version.sh`.
-
-**Database Resources**
-```yaml
-# CloudFormation - RDS PostgreSQL
-Resources:
-  MyDatabase:
-    Type: AWS::RDS::DBInstance
-    Properties:
-      DBInstanceIdentifier: mydb
-      Engine: postgres
-      EngineVersion: '15.4'
-      DBInstanceClass: db.t3.medium
-      AllocatedStorage: 100
-      MasterUsername: admin
-      MasterUserPassword: !Sub '{{resolve:secretsmanager:${DBSecret}:SecretString:password}}'
-      VPCSecurityGroups:
-        - sg-12345
-      DBSubnetGroupName: default
-```
-
-Converts to (AVM module — `br/public:avm/res/db-for-postgre-sql/flexible-server:<version>`):
-
-```bicep
-param location string = 'eastus'
-param administratorLogin string
-@secure()
-param administratorPassword string
-
-module postgresqlServer 'br/public:avm/res/db-for-postgre-sql/flexible-server:<version>' = {
-  name: 'postgresqlDeployment'
-  params: {
-    name: 'mydb'
-    location: location
-    administratorLogin: administratorLogin
-    administratorLoginPassword: administratorPassword
-    skuName: 'Standard_B2s'
-    tier: 'Burstable'
-    storageSizeGB: 100
-    backupRetentionDays: 7
-    geoRedundantBackup: 'Disabled'
-    delegatedSubnetResourceId: vnet.outputs.subnetResourceIds[0]
-    privateDnsZoneArmResourceId: privateDnsZone.outputs.resourceId
-  }
-}
-```
-
-> Replace `<version>` with the version resolved from SKILLS.MD Step 4 or `resolve-avm-version.sh`.
-
-**Compute Resources (Lambda/ECS)**
-```yaml
-# CloudFormation - Lambda Function
-Resources:
-  MyFunction:
-    Type: AWS::Lambda::Function
-    Properties:
-      FunctionName: my-function
-      Runtime: nodejs18.x
-      Handler: index.handler
-      Role: !GetAtt LambdaRole.Arn
-      Environment:
-        Variables:
-          DB_HOST: !GetAtt MyDatabase.Endpoint.Address
-          S3_BUCKET: !Ref MyBucket
-      VpcConfig:
-        SecurityGroupIds:
-          - sg-12345
-        SubnetIds:
-          - subnet-12345
-```
-
-Converts to (AVM modules — `br/public:avm/res/web/...`):
-
-```bicep
-param location string = 'eastus'
-
-module appServicePlan 'br/public:avm/res/web/serverfarm:<version>' = {
-  name: 'appServicePlanDeployment'
-  params: {
-    name: 'myPlan'
-    location: location
-    skuName: 'EP1'
-    skuTier: 'ElasticPremium'
-  }
-}
-
-module functionApp 'br/public:avm/res/web/site:<version>' = {
-  name: 'functionAppDeployment'
-  params: {
-    name: 'myFunction'
-    location: location
-    kind: 'functionapp'
-    serverFarmResourceId: appServicePlan.outputs.resourceId
-    managedIdentities: {
-      systemAssigned: true
-    }
-    appSettingsKeyValuePairs: {
-      DB_HOST: postgresqlServer.outputs.fqdn
-      AZURE_STORAGE_ACCOUNT_NAME: storageAccount.outputs.name
-    }
-    virtualNetworkSubnetId: vnet.outputs.subnetResourceIds[0]
-    vnetRouteAllEnabled: true
-  }
-}
-```
-
-> Replace `<version>` with the version resolved from SKILLS.MD Step 4 or `resolve-avm-version.sh`.
-
-**Storage Resources**
-```yaml
-# CloudFormation - S3 Bucket
-Resources:
-  MyBucket:
-    Type: AWS::S3::Bucket
-    Properties:
-      BucketName: my-bucket-name
-      VersioningConfiguration:
-        Status: Enabled
-      LifecycleConfiguration:
-        Rules:
-          - Id: DeleteOldVersions
-            Status: Enabled
-            NoncurrentVersionTransitions:
-              - TransitionInDays: 30
-                StorageClass: GLACIER
-```
-
-Converts to (AVM module — `br/public:avm/res/storage/storage-account:<version>`):
-
-```bicep
-param location string = 'eastus'
-param environment string = 'prod'
-
-module storageAccount 'br/public:avm/res/storage/storage-account:<version>' = {
-  name: 'storageAccountDeployment'
-  params: {
-    name: '${environment}storage${uniqueString(resourceGroup().id)}'
-    location: location
-    kind: 'StorageV2'
-    skuName: 'Standard_LRS'
-    accessTier: 'Hot'
-    blobServices: {
-      versioning: {
-        enabled: true
-      }
-      managementPolicyRules: [
-        {
-          name: 'archiveOldVersions'
-          enabled: true
-          type: 'Lifecycle'
-          definition: {
-            filters: {
-              blobTypes: [ 'blockBlob' ]
-            }
-            actions: {
-              version: {
-                tierToCool: { daysAfterCreationGreaterThan: 30 }
-                tierToArchive: { daysAfterCreationGreaterThan: 90 }
-                delete: { daysAfterCreationGreaterThan: 365 }
-              }
-            }
-          }
-        }
-      ]
-    }
-  }
-}
-```
-
-> Replace `<version>` with the version resolved from SKILLS.MD Step 4 or `resolve-avm-version.sh`.
+> For CloudFormation→Bicep type mappings, conversion examples, and all Bicep pitfalls — read the `iac-transformation` skill (`SKILLS.MD`).
 
 ## Buildkite Pipeline Updates
 
