@@ -374,3 +374,48 @@ Write `outputs/validation-report.md` using this structure:
 
 - `outputs/deployment-validation/what-if-report.md` — what-if results per environment (PASS/BLOCKED)
 - `outputs/validation-report.md` — full validation report using the template above
+
+---
+
+## Companion Scripts
+
+| Script | Purpose |
+|---|---|
+| `scripts/run-what-if.ps1` | Full pre-deployment validation gate: syntax → ARM validate → what-if → policy → quota |
+
+Run before every environment deployment:
+
+```powershell
+./.github/skills/agents/deployment-validation/scripts/run-what-if.ps1 \
+    -ResourceGroup "rg-dev-migration" -Environment dev
+```
+
+The script blocks on destructive what-if changes (deletes of data resources, `publicNetworkAccess` re-enabled).  It writes `outputs/deployment-validation/what-if-<env>.json` and `what-if-report.md`.
+
+---
+
+## References
+
+### Microsoft / Azure Documentation
+
+| Topic | Link |
+|---|---|
+| Bicep what-if overview | https://learn.microsoft.com/en-us/azure/azure-resource-manager/bicep/deploy-what-if |
+| `az deployment group what-if` CLI | https://learn.microsoft.com/en-us/cli/azure/deployment/group#az-deployment-group-what-if |
+| `az deployment group validate` CLI | https://learn.microsoft.com/en-us/cli/azure/deployment/group#az-deployment-group-validate |
+| `az bicep build` CLI | https://learn.microsoft.com/en-us/cli/azure/bicep#az-bicep-build |
+| Azure Policy overview | https://learn.microsoft.com/en-us/azure/governance/policy/overview |
+| `az policy state summarize` CLI | https://learn.microsoft.com/en-us/cli/azure/policy/state#az-policy-state-summarize |
+| Azure subscription limits and quotas | https://learn.microsoft.com/en-us/azure/azure-resource-manager/management/azure-subscription-service-limits |
+| Azure Monitor Activity Log | https://learn.microsoft.com/en-us/azure/azure-monitor/essentials/activity-log |
+| Azure Security Benchmark | https://learn.microsoft.com/en-us/security/benchmark/azure/introduction |
+| Azure Advisor cost recommendations | https://learn.microsoft.com/en-us/azure/advisor/advisor-cost-recommendations |
+| `az consumption usage list` CLI | https://learn.microsoft.com/en-us/cli/azure/consumption/usage#az-consumption-usage-list |
+| ARM Incremental vs Complete mode | https://learn.microsoft.com/en-us/azure/azure-resource-manager/templates/deployment-modes |
+
+### Best Practices
+
+- **Always use `--mode Incremental`** in what-if and deployment commands — Complete mode deletes any resource in the resource group that is not in the template, which can cause catastrophic data loss.
+- **Block on `changeType: Delete` for data resources** — accidental deletion of storage accounts, Key Vaults, or databases is not easily recoverable even with soft-delete enabled.
+- **What-if is not a guarantee:** ARM what-if output can differ from actual deployment results in edge cases (e.g., resource provider bugs, concurrent changes). Always review what-if output before approving.
+- **Policy compliance must be checked pre-deployment:** Deploying a non-compliant resource in `Deny` policy mode causes a 403 error mid-deployment and leaves the stack in a partial state.

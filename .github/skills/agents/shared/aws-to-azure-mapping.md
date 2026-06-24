@@ -118,6 +118,47 @@ Provide the authoritative mapping from every AWS service encountered in this mig
 - **Never use Azure API Management** as the primary ingress router — prohibited by this project's design constraints.
 - **Always default to single-region** unless `migration-assessment.md` explicitly flags multi-region requirements.
 - **Serverless-first:** Functions → Container Apps → AKS. Document the reason if deviating from this order.
+
+---
+
+## References
+
+### Microsoft / Azure Documentation
+
+| Topic | Link |
+|---|---|
+| Azure for AWS professionals (overview) | https://learn.microsoft.com/en-us/azure/architecture/aws-professional/ |
+| AWS-to-Azure service comparison table | https://learn.microsoft.com/en-us/azure/architecture/aws-professional/services |
+| Azure Functions overview | https://learn.microsoft.com/en-us/azure/azure-functions/functions-overview |
+| Azure Container Apps overview | https://learn.microsoft.com/en-us/azure/container-apps/overview |
+| Azure Kubernetes Service (AKS) | https://learn.microsoft.com/en-us/azure/aks/intro-kubernetes |
+| Azure Blob Storage overview | https://learn.microsoft.com/en-us/azure/storage/blobs/storage-blobs-introduction |
+| Azure Cosmos DB for NoSQL | https://learn.microsoft.com/en-us/azure/cosmos-db/nosql/introduction |
+| Azure Service Bus overview | https://learn.microsoft.com/en-us/azure/service-bus-messaging/service-bus-messaging-overview |
+| Azure Event Grid overview | https://learn.microsoft.com/en-us/azure/event-grid/overview |
+| Azure Event Hubs overview | https://learn.microsoft.com/en-us/azure/event-hubs/event-hubs-about |
+| Azure Virtual Network | https://learn.microsoft.com/en-us/azure/virtual-network/virtual-networks-overview |
+| Azure Application Gateway | https://learn.microsoft.com/en-us/azure/application-gateway/overview |
+| Azure Front Door | https://learn.microsoft.com/en-us/azure/frontdoor/front-door-overview |
+| Microsoft Entra Managed Identity | https://learn.microsoft.com/en-us/entra/identity/managed-identities-azure-resources/overview |
+| Azure Key Vault overview | https://learn.microsoft.com/en-us/azure/key-vault/general/overview |
+| Microsoft Defender for Cloud | https://learn.microsoft.com/en-us/azure/defender-for-cloud/defender-for-cloud-introduction |
+| Azure Monitor Logs (Log Analytics) | https://learn.microsoft.com/en-us/azure/azure-monitor/logs/log-analytics-overview |
+| Azure Application Insights | https://learn.microsoft.com/en-us/azure/azure-monitor/app/app-insights-overview |
+| Azure Bicep overview | https://learn.microsoft.com/en-us/azure/azure-resource-manager/bicep/overview |
+
+### AWS Documentation
+
+| Topic | Link |
+|---|---|
+| AWS Lambda developer guide | https://docs.aws.amazon.com/lambda/latest/dg/welcome.html |
+| Amazon S3 developer guide | https://docs.aws.amazon.com/AmazonS3/latest/userguide/Welcome.html |
+| Amazon DynamoDB developer guide | https://docs.aws.amazon.com/amazondynamodb/latest/developerguide/Introduction.html |
+| Amazon SQS developer guide | https://docs.aws.amazon.com/AWSSimpleQueueService/latest/SQSDeveloperGuide/welcome.html |
+| Amazon EventBridge user guide | https://docs.aws.amazon.com/eventbridge/latest/userguide/eb-what-is.html |
+| Amazon Kinesis Data Streams | https://docs.aws.amazon.com/streams/latest/dev/introduction.html |
+| AWS IAM user guide | https://docs.aws.amazon.com/IAM/latest/UserGuide/introduction.html |
+| AWS Secrets Manager | https://docs.aws.amazon.com/secretsmanager/latest/userguide/intro.html |
 - **For any service not in these tables**, document it as a gap in `design-document.md` under "Open Questions / Gaps" and look it up via `azure-mcp/documentation`.
 
 ## Output

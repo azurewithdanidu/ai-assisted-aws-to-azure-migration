@@ -15,12 +15,15 @@ As the first action in Phase 1, before any other discovery work.
 
 ## Process
 
-1. Read `source-app/app-code/template.yaml` (SAM/CloudFormation) — primary source of truth for deployed resources.
-2. Read all Lambda function source files under `source-app/app-code/lambda/` — note any AWS SDK (boto3) calls that reveal implicit service dependencies not declared in the template.
-3. Read `source-app/doc/` for architecture documentation and supplementary context.
-4. For each resource, capture every attribute in the **Key Attributes** section below.
-5. Write the four output files using the schemas in this skill.
-6. Run the **Validation Checklist** before marking Phase 1 complete.
+**Primary source: live AWS environment via AWS MCP Server.** Local files in `source-app/` are supplementary — use them to enrich Lambda source paths and confirm implicit SDK dependencies, not as a substitute for live data.
+
+1. **Authenticate & orient** — Use the AWS MCP Server to call `sts:GetCallerIdentity` and obtain the AWS account ID and active regions. Record the account ID in `aws-inventory.json`.
+2. **Live resource enumeration** — For each region, use the AWS MCP Server to enumerate all resources across every service category in the **AWS Services Catalogue** section. Use `resourcegroupstaggingapi:GetResources` first to get a broad tagged-resource baseline, then make service-specific API calls (e.g., `lambda:ListFunctions`, `s3:ListBuckets`, `dynamodb:ListTables`, `iam:ListRoles`, `apigateway:GetRestApis`, `cloudformation:DescribeStacks`) to fill in untagged resources and full configuration details.
+3. **Supplement with local source** — Read `source-app/app-code/template.yaml` to cross-check deployed resource names, verify SAM/CloudFormation-declared resources are present in the live inventory, and catch any resources not yet deployed. Read Lambda source files under `source-app/app-code/lambda/` to identify implicit boto3 SDK calls that reveal service dependencies not declared in the template. Read `source-app/doc/` for architectural context.
+4. **Capture attributes** — For each discovered resource, capture every attribute defined in the **Key Attributes** section using live API response data as the authoritative value.
+5. **Map dependencies** — Use the live IAM role-to-resource bindings, environment variable references, and event source mappings returned by the AWS MCP Server to build the dependency graph. Supplement with boto3 call analysis from step 3.
+6. **Write output files** — Write the four output files using the schemas in this skill.
+7. **Run the Validation Checklist** before marking Phase 1 complete.
 
 ---
 
@@ -98,6 +101,34 @@ For EVERY discovered resource capture these attributes without exception:
 | `compliance` | Compliance tags or requirements (PCI, HIPAA, SOC2) |
 | `monthly_cost_usd` | Estimated monthly cost from Cost Explorer if available |
 | `source_path` | For Lambda: path to source files under `source-app/` |
+
+---
+
+## References
+
+### AWS Documentation
+
+| Topic | Link |
+|---|---|
+| AWS Lambda developer guide | https://docs.aws.amazon.com/lambda/latest/dg/welcome.html |
+| AWS SAM template specification | https://docs.aws.amazon.com/serverless-application-model/latest/developerguide/sam-specification.html |
+| CloudFormation resource type reference | https://docs.aws.amazon.com/AWSCloudFormation/latest/UserGuide/aws-template-resource-type-ref.html |
+| boto3 SDK reference | https://boto3.amazonaws.com/v1/documentation/api/latest/index.html |
+| AWS Cost Explorer | https://docs.aws.amazon.com/cost-management/latest/userguide/ce-what-is.html |
+| Amazon S3 developer guide | https://docs.aws.amazon.com/AmazonS3/latest/userguide/Welcome.html |
+| Amazon DynamoDB developer guide | https://docs.aws.amazon.com/amazondynamodb/latest/developerguide/Introduction.html |
+| Amazon EKS user guide | https://docs.aws.amazon.com/eks/latest/userguide/what-is-eks.html |
+| Amazon EventBridge user guide | https://docs.aws.amazon.com/eventbridge/latest/userguide/eb-what-is.html |
+| AWS IAM user guide | https://docs.aws.amazon.com/IAM/latest/UserGuide/introduction.html |
+| AWS Secrets Manager user guide | https://docs.aws.amazon.com/secretsmanager/latest/userguide/intro.html |
+| Amazon API Gateway developer guide | https://docs.aws.amazon.com/apigateway/latest/developerguide/welcome.html |
+
+### Best Practices
+
+- **Always scan implicit dependencies** — boto3 calls in Lambda code often reveal service usage not declared in CloudFormation/SAM templates.
+- **Tag-based discovery:** Use `aws resourcegroupstaggingapi get-resources` to find all tagged resources across services before relying on template parsing alone.
+- **Multi-region awareness:** Run inventory scans in every region the account is active in — not just `us-east-1`.
+- **AWS Well-Architected Tool:** Cross-reference findings against the Well-Architected review at https://docs.aws.amazon.com/wellarchitected/latest/framework/welcome.html
 
 For Lambda specifically also capture: `runtime`, `memory_mb`, `timeout_s`, `handler`, `environment_variables`, `layers`, `triggers`, `vpc_config`.
 For RDS also capture: `engine`, `engine_version`, `instance_class`, `allocated_storage_gb`, `multi_az`, `backup_retention_days`, `encryption_enabled`.

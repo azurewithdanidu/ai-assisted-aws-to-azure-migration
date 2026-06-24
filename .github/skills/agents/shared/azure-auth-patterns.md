@@ -98,4 +98,52 @@ Replace all AWS IAM-based authentication patterns with Azure Managed Identity an
 - Bicep files with `identity: { type: 'SystemAssigned' }` on all compute resources
 - Bicep `roleAssignment` resources for every service-to-service access requirement
 - Python files importing `DefaultAzureCredential` with no boto3 credential patterns
+
+---
+
+## Companion Scripts
+
+| Script | Purpose |
+|---|---|
+| `scripts/assign-rbac.ps1` | Idempotent RBAC role assignment with pre-populated built-in role GUIDs |
+
+Use to assign any built-in role to a managed identity:
+
+```powershell
+./.github/skills/agents/shared/scripts/assign-rbac.ps1 \
+    -PrincipalId "<managed-identity-object-id>" \
+    -Scope "/subscriptions/<sub>/resourceGroups/<rg>" \
+    -Role "StorageBlobDataContributor"
+```
+
+Pre-defined role shortcuts: `StorageBlobDataContributor`, `StorageBlobDataReader`, `KeyVaultSecretsUser`, `KeyVaultSecretsOfficer`, `ServiceBusDataSender`, `ServiceBusDataReceiver`, `CosmosDBDataContributor`, `Contributor`, `Reader`.
+
+---
+
+## References
+
+### Microsoft / Azure Documentation
+
+| Topic | Link |
+|---|---|
+| Managed identities overview | https://learn.microsoft.com/en-us/entra/identity/managed-identities-azure-resources/overview |
+| System-assigned vs user-assigned identity | https://learn.microsoft.com/en-us/entra/identity/managed-identities-azure-resources/managed-identity-best-practice-recommendations |
+| Azure RBAC overview | https://learn.microsoft.com/en-us/azure/role-based-access-control/overview |
+| Azure built-in roles reference | https://learn.microsoft.com/en-us/azure/role-based-access-control/built-in-roles |
+| Storage built-in roles | https://learn.microsoft.com/en-us/azure/storage/blobs/authorize-access-azure-active-directory |
+| Key Vault RBAC roles | https://learn.microsoft.com/en-us/azure/key-vault/general/rbac-guide |
+| Service Bus RBAC roles | https://learn.microsoft.com/en-us/azure/service-bus-messaging/authenticate-application |
+| Cosmos DB RBAC (built-in data roles) | https://learn.microsoft.com/en-us/azure/cosmos-db/how-to-setup-rbac |
+| DefaultAzureCredential (Python) | https://learn.microsoft.com/en-us/python/api/azure-identity/azure.identity.defaultazurecredential |
+| DefaultAzureCredential (JS/TS) | https://learn.microsoft.com/en-us/javascript/api/@azure/identity/defaultazurecredential |
+| DefaultAzureCredential (Java) | https://learn.microsoft.com/en-us/java/api/com.azure.identity.defaultazurecredential |
+| Key Vault references in App Service | https://learn.microsoft.com/en-us/azure/app-service/app-service-key-vault-references |
+| Bicep role assignment resource | https://learn.microsoft.com/en-us/azure/templates/microsoft.authorization/roleassignments |
+
+### Best Practices
+
+- **Principle of least privilege:** Always assign the most specific built-in role — never `Contributor` or `Owner` when a data-plane role (`Storage Blob Data Contributor`, `Key Vault Secrets User`) is available.
+- **System-assigned vs user-assigned:** Prefer system-assigned for 1:1 resource-to-identity mapping. Use user-assigned when the same identity must be shared by multiple resources (e.g., a fleet of Container App replicas).
+- **`DefaultAzureCredential` chain:** Works seamlessly across `az login` (dev), Managed Identity (Azure), and environment variables (CI). Never switch to `ManagedIdentityCredential` directly — it breaks local development.
+- **RBAC over access policies:** For Key Vault, always enable `enableRbacAuthorization: true` — access policies are a legacy mechanism that cannot be audited via Azure Policy.
 - App settings using `@Microsoft.KeyVault(...)` references, not plain secret values

@@ -148,6 +148,38 @@ Use this block for each resource in `migration-assessment.md`:
 **Used By:**
 - [resource name] — [relationship verb]
 
+---
+
+## References
+
+### AWS Documentation
+
+| Topic | Link |
+|---|---|
+| AWS Migration Hub | https://docs.aws.amazon.com/migrationhub/latest/ug/whatishub.html |
+| AWS Application Discovery Service | https://docs.aws.amazon.com/application-discovery/latest/userguide/what-is-appdiscovery.html |
+| AWS Well-Architected Framework | https://docs.aws.amazon.com/wellarchitected/latest/framework/welcome.html |
+| AWS Lambda pricing | https://aws.amazon.com/lambda/pricing/ |
+| Amazon RDS pricing | https://aws.amazon.com/rds/pricing/ |
+| Amazon EKS pricing | https://aws.amazon.com/eks/pricing/ |
+| Amazon S3 pricing | https://aws.amazon.com/s3/pricing/ |
+
+### Microsoft / Azure Documentation
+
+| Topic | Link |
+|---|---|
+| Azure Migrate overview | https://learn.microsoft.com/en-us/azure/migrate/migrate-services-overview |
+| Azure Well-Architected Framework | https://learn.microsoft.com/en-us/azure/well-architected/ |
+| AWS-to-Azure service comparison | https://learn.microsoft.com/en-us/azure/architecture/aws-professional/services |
+| Azure architecture center — migration | https://learn.microsoft.com/en-us/azure/architecture/aws-professional/ |
+
+### Best Practices
+
+- **Use AWS Migration Hub** to import discovery data and track migration status across tools.
+- **Dependency mapping is mandatory** before scoring complexity — an apparently simple Lambda may depend on 10 services.
+- **Always document IAM Permission Boundaries and custom VPC configurations** separately — they are the highest-risk migration blockers.
+- **DynamoDB Streams → Cosmos DB Change Feed** is not a 1:1 migration — always flag this as HIGH complexity.
+
 ### Security
 - IAM Role: [role name]
 - VPC: [VPC ID] / None

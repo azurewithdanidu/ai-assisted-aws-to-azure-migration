@@ -50,3 +50,31 @@ Phase 1 (Discovery) → Phase 2 (Architecture) → Phase 3a + 3b + 3c (parallel)
 ## Output
 
 All phases `✅` in `migration-task-plan.md`, or a clear blocker report identifying which phase failed and what is needed to unblock.
+
+---
+
+## References
+
+### Microsoft / Azure Documentation
+
+| Topic | Link |
+|---|---|
+| Azure Migrate overview | https://learn.microsoft.com/en-us/azure/migrate/migrate-services-overview |
+| Cloud Adoption Framework — migrate | https://learn.microsoft.com/en-us/azure/cloud-adoption-framework/migrate/ |
+| Cloud Adoption Framework — migration landing zone | https://learn.microsoft.com/en-us/azure/cloud-adoption-framework/migrate/azure-migration-guide/ |
+| Azure DevOps migration guide | https://learn.microsoft.com/en-us/azure/devops/migrate/migration-overview |
+
+### AWS Documentation
+
+| Topic | Link |
+|---|---|
+| AWS Migration Hub | https://docs.aws.amazon.com/migrationhub/latest/ug/whatishub.html |
+| AWS Migration Acceleration Program | https://aws.amazon.com/migration-acceleration-program/ |
+| AWS 7 Rs migration strategies | https://docs.aws.amazon.com/prescriptive-guidance/latest/migration-retiring-applications/apg-gloss.html |
+
+### Best Practices
+
+- **Phase 3 parallelism is mandatory, not optional** — IaC transformation, code refactoring, and pipeline building have no inter-dependencies. Serializing them doubles the time for no benefit.
+- **Always verify artifacts by reading files, not by trusting agent text** — agents can hallucinate success. The only reliable signal is the artifact file existing and being non-empty.
+- **Blockers must surface immediately** — never proceed past a `❌` phase. Downstream agents depend on correct artifacts from upstream phases; proceeding with corrupt inputs compounds failures.
+- **AWS 7 Rs mapping:** Most resources in this pipeline follow the "Replatform" strategy (lift-and-modify to managed services). Some may be "Rearchitect" (Lambda → Durable Functions, DynamoDB Streams → Cosmos DB Change Feed). Document the R-strategy for each service in the design document.

@@ -74,3 +74,32 @@ graph TD
 ## Output
 
 `outputs/azure-architecture-output/architecture-diagram-azure.mmd` — valid Mermaid syntax that passes validator, with all resources and all edges labelled.
+
+---
+
+## References
+
+### Microsoft / Azure Documentation
+
+| Topic | Link |
+|---|---|
+| Azure architecture icons | https://learn.microsoft.com/en-us/azure/architecture/icons/ |
+| Azure architecture diagrams guidance | https://learn.microsoft.com/en-us/azure/architecture/guide/design-principles/ |
+| Azure Virtual Network topology | https://learn.microsoft.com/en-us/azure/virtual-network/virtual-networks-overview |
+| Hub-spoke network topology | https://learn.microsoft.com/en-us/azure/architecture/networking/architecture/hub-spoke |
+| Private endpoint network topology | https://learn.microsoft.com/en-us/azure/private-link/private-endpoint-overview |
+
+### Mermaid Documentation
+
+| Topic | Link |
+|---|---|
+| Mermaid graph diagrams | https://mermaid.js.org/syntax/flowchart.html |
+| Mermaid subgraphs | https://mermaid.js.org/syntax/flowchart.html#subgraphs |
+| Mermaid live editor (for validation) | https://mermaid.live |
+
+### Best Practices
+
+- **Validate with Mermaid live editor** before committing — syntax errors in `.mmd` files cause silent failures when the diagram is rendered in GitHub or the visualizer.
+- **One subgraph per network boundary** — Internet, DMZ (Front Door/App Gateway), App Subnet, Data Subnet, and Management Subnet (if used).
+- **Label every edge with auth method** — reviewers and auditors need to verify that no connection uses keys or passwords. Managed Identity must be visible on every edge to a data service.
+- **Private endpoints must appear as distinct nodes**, not just implied — show `STORAGE_PE["Blob Storage\nPrivate Endpoint"]` inside the Data Subnet, connected to the storage account outside.

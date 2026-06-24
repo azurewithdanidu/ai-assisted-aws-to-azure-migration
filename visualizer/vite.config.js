@@ -5,6 +5,7 @@ import { fileURLToPath } from 'node:url'
 
 const __dirname = dirname(fileURLToPath(import.meta.url))
 const OUTPUTS   = resolve(__dirname, '../outputs')
+const PHASE_DELEGATION = resolve(__dirname, '../.github/skills/agents/migration-pm/phase-delegation.md')
 
 // Allowlist of artifact paths (relative to OUTPUTS) that can be served
 const ALLOWED_ARTIFACTS = new Set([
@@ -60,10 +61,65 @@ export default defineConfig({
           res.setHeader('Content-Type', 'application/json')
           res.end(JSON.stringify(list))
         })
+
+        // GET /api/agent-token-usage  — estimated input token usage from phase prompts
+        server.middlewares.use('/api/agent-token-usage', (_req, res) => {
+          try {
+            const text = readFileSync(PHASE_DELEGATION, 'utf-8')
+            const phases = parseDelegationPrompts(text)
+            const totals = phases.reduce((acc, p) => {
+              acc.chars += p.promptChars
+              acc.words += p.promptWords
+              acc.tokens += p.estimatedPromptTokens
+              return acc
+            }, { chars: 0, words: 0, tokens: 0 })
+
+            res.setHeader('Content-Type', 'application/json')
+            res.end(JSON.stringify({
+              source: '.github/skills/agents/migration-pm/phase-delegation.md',
+              generatedAt: new Date().toISOString(),
+              tokenRule: '~1 token per 4 chars',
+              phases,
+              totals,
+            }))
+          } catch (err) {
+            res.statusCode = 500
+            res.setHeader('Content-Type', 'application/json')
+            res.end(JSON.stringify({ error: err.message }))
+          }
+        })
       }
     }
   ]
 })
+
+function parseDelegationPrompts(text) {
+  const rows = []
+  const re = /###\s+Phase\s+(.+?)\s+[—-]\s+.+?`@([^`]+)`[\s\S]*?\*\*Prompt:\*\*[\s\S]*?```([\s\S]*?)```/g
+  let m
+  while ((m = re.exec(text)) !== null) {
+    const phaseLabel = m[1].trim()
+    const agent = m[2].trim()
+    const prompt = m[3].trim()
+    const promptChars = prompt.length
+    const promptWords = prompt.split(/\s+/).filter(Boolean).length
+
+    rows.push({
+      phase: phaseLabel,
+      agent,
+      prompt,
+      promptChars,
+      promptWords,
+      estimatedPromptTokens: estimateTokens(prompt),
+    })
+  }
+  return rows
+}
+
+function estimateTokens(text) {
+  // Heuristic for GPT-family tokenization in mixed natural language prompts.
+  return Math.max(1, Math.ceil(text.length / 4))
+}
 
 function serveFile(absPath, res) {
   try {

@@ -60,3 +60,41 @@ When generating `outputs/azure-architecture-output/cost-comparison.md` (after de
 ## Output
 
 `outputs/azure-architecture-output/cost-comparison.md` — non-empty, contains Monthly Cost Summary table, Annual Savings, Break-even months, ROI %, and Assumptions section.
+
+---
+
+## References
+
+### Microsoft / Azure Documentation
+
+| Topic | Link |
+|---|---|
+| Azure Pricing Calculator | https://azure.microsoft.com/en-us/pricing/calculator/ |
+| Azure Retail Prices API | https://learn.microsoft.com/en-us/rest/api/cost-management/retail-prices/azure-retail-prices |
+| Azure Functions pricing | https://azure.microsoft.com/en-us/pricing/details/functions/ |
+| Azure Blob Storage pricing | https://azure.microsoft.com/en-us/pricing/details/storage/blobs/ |
+| Azure Service Bus pricing | https://azure.microsoft.com/en-us/pricing/details/service-bus/ |
+| Azure Database for PostgreSQL pricing | https://azure.microsoft.com/en-us/pricing/details/postgresql/flexible-server/ |
+| Azure Cosmos DB pricing | https://azure.microsoft.com/en-us/pricing/details/cosmos-db/autoscale-provisioned/ |
+| Azure Front Door pricing | https://azure.microsoft.com/en-us/pricing/details/frontdoor/ |
+| Azure DNS pricing | https://azure.microsoft.com/en-us/pricing/details/dns/ |
+| Azure Cost Management overview | https://learn.microsoft.com/en-us/azure/cost-management-billing/costs/overview-cost-management |
+| Azure Reservations (savings vs pay-as-you-go) | https://learn.microsoft.com/en-us/azure/cost-management-billing/reservations/save-compute-costs-reservations |
+
+### AWS Documentation
+
+| Topic | Link |
+|---|---|
+| AWS Pricing Calculator | https://calculator.aws/pricing/2/home |
+| AWS Lambda pricing | https://aws.amazon.com/lambda/pricing/ |
+| Amazon S3 pricing | https://aws.amazon.com/s3/pricing/ |
+| Amazon RDS pricing | https://aws.amazon.com/rds/pricing/ |
+| Amazon DynamoDB pricing | https://aws.amazon.com/dynamodb/pricing/ |
+| AWS Cost Explorer | https://aws.amazon.com/aws-cost-management/aws-cost-explorer/ |
+
+### Best Practices
+
+- **Use the Azure Retail Prices API for Azure costs** (see `cost-estimator` skill) — never use memory-embedded pricing; prices change monthly.
+- **Always include data egress costs** — for workloads that serve data to users, outbound data transfer can exceed compute costs. AWS charges for outbound data; Azure charges are similar.
+- **Show both p50 and p95 scenarios** for Consumption plan Functions — the cost difference can be 5–10× depending on traffic spikiness.
+- **Azure Reservations** can reduce compute costs by 30–60% compared to pay-as-you-go for predictable workloads — always show the reservation option if the workload has stable baseline traffic.

@@ -75,3 +75,34 @@ When structuring GitHub Actions workflows that target multiple environments.
 
 - A `setup-environments.md` in `outputs/pipeline/` documenting the environment configuration a human must create in GitHub Settings
 - Every workflow job targeting a specific environment has `environment: <name>` set
+
+---
+
+## References
+
+### GitHub Documentation
+
+| Topic | Link |
+|---|---|
+| GitHub Environments overview | https://docs.github.com/en/actions/deployment/targeting-different-environments/using-environments-for-deployment |
+| Environment protection rules | https://docs.github.com/en/actions/deployment/targeting-different-environments/using-environments-for-deployment#environment-protection-rules |
+| Required reviewers | https://docs.github.com/en/actions/deployment/targeting-different-environments/using-environments-for-deployment#required-reviewers |
+| Wait timer | https://docs.github.com/en/actions/deployment/targeting-different-environments/using-environments-for-deployment#wait-timer |
+| Environment secrets and variables | https://docs.github.com/en/actions/deployment/targeting-different-environments/using-environments-for-deployment#environment-secrets |
+| Using secrets in GitHub Actions | https://docs.github.com/en/actions/security-for-github-actions/security-guides/using-secrets-in-github-actions |
+| `workflow_dispatch` inputs | https://docs.github.com/en/actions/using-workflows/events-that-trigger-workflows#workflow_dispatch |
+
+### Microsoft / Azure Documentation
+
+| Topic | Link |
+|---|---|
+| Azure deployment environments | https://learn.microsoft.com/en-us/azure/deployment-environments/overview-what-is-azure-deployment-environments |
+| Azure resource group naming best practices | https://learn.microsoft.com/en-us/azure/cloud-adoption-framework/ready/azure-best-practices/resource-naming |
+| Azure landing zone naming conventions | https://learn.microsoft.com/en-us/azure/cloud-adoption-framework/ready/azure-best-practices/resource-abbreviations |
+
+### Best Practices
+
+- **Never auto-deploy to prod from any push trigger** — production deployments must always require a human reviewer via GitHub Environment protection rules and `workflow_dispatch`.
+- **Environment secrets over repo secrets for per-environment values** — this prevents a dev deployment from accidentally using prod credentials or resource group names.
+- **Add a 10-minute wait timer to prod** — this provides a short window to cancel an approved deployment if a mistake is noticed after approval.
+- **Separate reviewer teams for staging vs prod** — staging approval can be any team member; prod approval should require a lead engineer or ops team member.

@@ -154,3 +154,41 @@ jobs:
 - `.github/workflows/deploy-infra.yml` — IaC deployment workflow
 - `.github/workflows/deploy-functions.yml` — Function App deployment workflow
 - Additional workflows as specified in `design-document.md` Section 11.1
+
+---
+
+## References
+
+### GitHub Documentation
+
+| Topic | Link |
+|---|---|
+| GitHub Actions workflow syntax | https://docs.github.com/en/actions/using-workflows/workflow-syntax-for-github-actions |
+| GitHub Actions trigger events | https://docs.github.com/en/actions/using-workflows/events-that-trigger-workflows |
+| GitHub Actions path filters | https://docs.github.com/en/actions/using-workflows/workflow-syntax-for-github-actions#onpushpull_requestpull_request_targetpathspaths-ignore |
+| GitHub Actions concurrency control | https://docs.github.com/en/actions/using-workflows/workflow-syntax-for-github-actions#concurrency |
+| `actions/checkout` | https://github.com/actions/checkout |
+| `actions/setup-python` | https://github.com/actions/setup-python |
+| `actions/upload-artifact` | https://github.com/actions/upload-artifact |
+| `actions/github-script` | https://github.com/actions/github-script |
+
+### Microsoft / Azure Documentation
+
+| Topic | Link |
+|---|---|
+| Deploy Azure Functions with GitHub Actions | https://learn.microsoft.com/en-us/azure/azure-functions/functions-how-to-github-actions |
+| `Azure/functions-action` | https://github.com/Azure/functions-action |
+| Deploy Static Web Apps with GitHub Actions | https://learn.microsoft.com/en-us/azure/static-web-apps/github-actions-workflow |
+| `Azure/static-web-apps-deploy` | https://github.com/Azure/static-web-apps-deploy |
+| Bicep CI/CD with GitHub Actions | https://learn.microsoft.com/en-us/azure/azure-resource-manager/bicep/deploy-github-actions |
+| `azure/login` action | https://github.com/Azure/login |
+| Azure Function App deployment slots | https://learn.microsoft.com/en-us/azure/azure-functions/functions-deployment-slots |
+| Static Web Apps — index.html requirement | https://learn.microsoft.com/en-us/azure/static-web-apps/configuration |
+
+### Best Practices
+
+- **Use `paths:` filters** to avoid triggering infra deployments when only app code changes and vice versa — this reduces unnecessary deployments and pipeline minutes.
+- **`cancel-in-progress: false` for deployments** — cancelling a running deployment can leave resources in a partially-provisioned state. Always let in-flight deploys finish.
+- **Tag every deployment with `github.run_id`** — this makes it easy to correlate a deployment failure in Azure with the specific GitHub Actions run that caused it.
+- **Rollback is not automatic rollback:** `az functionapp deployment slot swap` reverts app code but not infrastructure. If Bicep changes were part of the same deployment, a separate template rollback is needed.
+- **SWA deployment token rotation:** The Static Web Apps deployment token does not expire but should be rotated if a team member with access leaves. Regenerate from the Azure portal and update the GitHub secret.

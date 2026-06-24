@@ -84,3 +84,34 @@ Produce valid, secure, and maintainable Azure Bicep templates that follow Azure 
 - `.bicepparam` files under `outputs/bicep-templates/parameters/` for each environment (dev, staging, prod)
 - `az bicep build` exits with code 0 for every file
 - `az deployment group what-if` produces no blocking errors
+
+---
+
+## References
+
+### Microsoft / Azure Documentation
+
+| Topic | Link |
+|---|---|
+| Bicep overview | https://learn.microsoft.com/en-us/azure/azure-resource-manager/bicep/overview |
+| Bicep best practices | https://learn.microsoft.com/en-us/azure/azure-resource-manager/bicep/best-practices |
+| Bicep parameters | https://learn.microsoft.com/en-us/azure/azure-resource-manager/bicep/parameters |
+| Bicep variables | https://learn.microsoft.com/en-us/azure/azure-resource-manager/bicep/variables |
+| Bicep modules | https://learn.microsoft.com/en-us/azure/azure-resource-manager/bicep/modules |
+| Bicep outputs | https://learn.microsoft.com/en-us/azure/azure-resource-manager/bicep/outputs |
+| Bicep decorators | https://learn.microsoft.com/en-us/azure/azure-resource-manager/bicep/parameters#parameter-decorators |
+| bicepconfig.json reference | https://learn.microsoft.com/en-us/azure/azure-resource-manager/bicep/bicep-config |
+| `az bicep build` CLI reference | https://learn.microsoft.com/en-us/cli/azure/bicep#az-bicep-build |
+| `az deployment group what-if` | https://learn.microsoft.com/en-us/azure/azure-resource-manager/bicep/deploy-what-if |
+| `uniqueString()` function | https://learn.microsoft.com/en-us/azure/azure-resource-manager/bicep/bicep-functions-string#uniquestring |
+| Azure Verified Modules (AVM) | https://azure.github.io/Azure-Verified-Modules/ |
+| AVM Bicep resource modules index | https://azure.github.io/Azure-Verified-Modules/indexes/bicep/bicep-resource-modules/ |
+| AVM Bicep pattern modules index | https://azure.github.io/Azure-Verified-Modules/indexes/bicep/bicep-pattern-modules/ |
+| ARM API versions per resource type | https://learn.microsoft.com/en-us/azure/templates/ |
+
+### Best Practices
+
+- **Always pin API versions:** The Azure resource provider API surface changes frequently. Unpinned versions silently break after provider upgrades. Cross-reference https://learn.microsoft.com/en-us/azure/templates/ for each resource type.
+- **`@secure()` on all secret params:** Even if the value is passed from a `.bicepparam` file, decorate the param with `@secure()` so ARM masks it in deployment logs and the Activity Log.
+- **`uniqueString()` is deterministic per scope:** `uniqueString(resourceGroup().id)` always returns the same suffix for the same RG — safe for idempotent resource naming across re-deployments.
+- **AVM module first:** Before writing a raw `resource` declaration, check the AVM registry. AVM modules bundle private endpoints, diagnostic settings, RBAC assignments, and naming conventions that would take 100+ lines to replicate manually.

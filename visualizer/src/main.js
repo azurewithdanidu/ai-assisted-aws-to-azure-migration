@@ -26,6 +26,7 @@ const PHASE_ARTIFACTS = {
 let countdown = REFRESH_INTERVAL
 let countdownTimer = null
 let availableArtifacts = new Set()   // paths that actually exist on disk
+let tokenUsageData = null
 
 // Load artifact availability once at boot
 async function loadArtifactAvailability() {
@@ -34,6 +35,16 @@ async function loadArtifactAvailability() {
     const list = await res.json()
     availableArtifacts = new Set(list.filter(a => a.exists).map(a => a.path))
   } catch { /* silently ignore — chips just won't show */ }
+}
+
+async function loadTokenUsageData() {
+  try {
+    const res = await fetch('/api/agent-token-usage')
+    if (!res.ok) throw new Error(`HTTP ${res.status}`)
+    tokenUsageData = await res.json()
+  } catch {
+    tokenUsageData = null
+  }
 }
 
 // ── Status metadata ─────────────────────────────────────────────
@@ -201,6 +212,61 @@ function renderOverview(stats, phases) {
   </section>`
 }
 
+function renderTokenUsage(data) {
+  if (!data || !Array.isArray(data.phases) || data.phases.length === 0) return ''
+
+  const rows = data.phases.map((p, i) => {
+    const preview = escHtml(p.prompt.slice(0, 105).replace(/\s+/g, ' ') + (p.prompt.length > 105 ? '…' : ''))
+    return `
+      <tr>
+        <td><span class="token-phase">${escHtml(p.phase)}</span></td>
+        <td><code>${escHtml(p.agent)}</code></td>
+        <td class="num">${p.promptWords}</td>
+        <td class="num">${p.estimatedPromptTokens}</td>
+        <td><input class="run-input" type="number" min="0" value="1" data-row="${i}" /></td>
+        <td class="num row-total" id="rowTotal${i}">${p.estimatedPromptTokens}</td>
+        <td title="${escHtml(p.prompt)}"><span class="prompt-preview">${preview}</span></td>
+      </tr>`
+  }).join('')
+
+  return `
+  <section class="section">
+    <p class="section-title">Agent Prompt Token Usage (Estimated)</p>
+    <div class="token-summary">
+      <div class="token-kpi">
+        <span class="kpi-label">Base Prompt Tokens</span>
+        <span class="kpi-val" id="basePromptTokens">${data.totals.tokens}</span>
+      </div>
+      <div class="token-kpi">
+        <span class="kpi-label">Projected Run Tokens</span>
+        <span class="kpi-val" id="projectedPromptTokens">${data.totals.tokens}</span>
+      </div>
+      <div class="token-kpi">
+        <span class="kpi-label">Rule</span>
+        <span class="kpi-val small">${escHtml(data.tokenRule)}</span>
+      </div>
+    </div>
+    <div class="token-table-wrap">
+      <table class="token-table">
+        <thead>
+          <tr>
+            <th>Phase</th>
+            <th>Agent</th>
+            <th>Words</th>
+            <th>Prompt Tokens</th>
+            <th>Runs</th>
+            <th>Total</th>
+            <th>Prompt Preview</th>
+          </tr>
+        </thead>
+        <tbody>
+          ${rows}
+        </tbody>
+      </table>
+    </div>
+  </section>`
+}
+
 // ── Render: Phase card ────────────────────────────────────────────
 function renderPhaseCard(phase) {
   const s      = getStatus(phase.statusEmoji)
@@ -345,6 +411,7 @@ function render(plan) {
     ${renderHeader(plan, stats)}
     <main class="main">
       ${renderOverview(stats, plan.phases)}
+      ${renderTokenUsage(tokenUsageData)}
       ${renderPhaseGrid(plan.phases)}
       ${renderBlockers(plan.blockers)}
     </main>
@@ -368,6 +435,35 @@ function render(plan) {
   document.querySelectorAll('.artifact-chip').forEach(btn => {
     btn.addEventListener('click', () => openViewer(btn.dataset.path, btn.dataset.label))
   })
+
+  wireTokenUsageInputs()
+}
+
+function wireTokenUsageInputs() {
+  if (!tokenUsageData || !Array.isArray(tokenUsageData.phases)) return
+  const inputs = [...document.querySelectorAll('.run-input')]
+  if (inputs.length === 0) return
+
+  const refreshTotals = () => {
+    let total = 0
+    for (const input of inputs) {
+      const idx = Number(input.dataset.row)
+      const phase = tokenUsageData.phases[idx]
+      if (!phase) continue
+      const runs = Math.max(0, Number(input.value || 0))
+      const rowTotal = runs * phase.estimatedPromptTokens
+      const rowCell = document.getElementById(`rowTotal${idx}`)
+      if (rowCell) rowCell.textContent = String(rowTotal)
+      total += rowTotal
+    }
+    const projected = document.getElementById('projectedPromptTokens')
+    if (projected) projected.textContent = String(total)
+  }
+
+  for (const input of inputs) {
+    input.addEventListener('input', refreshTotals)
+  }
+  refreshTotals()
 }
 
 // ── Fetch + refresh cycle ──────────────────────────────────────────
@@ -482,6 +578,7 @@ function fileIcon(path) {
 // ── Boot ──────────────────────────────────────────────────────────
 async function boot() {
   await loadArtifactAvailability()
+  await loadTokenUsageData()
   load()
 }
 boot()

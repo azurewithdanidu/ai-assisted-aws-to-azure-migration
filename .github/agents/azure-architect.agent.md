@@ -21,7 +21,8 @@ Read each skill before performing the associated task.
 | Task | Skill |
 |---|---|
 | Service selection and WAF-aligned design decisions | `.github/skills/agents/azure-architect/architecture-design.md` |
-| Cost comparison and `cost-comparison.md` | `.github/skills/agents/azure-architect/cost-analysis.md` |
+| Cost comparison and `cost-comparison.md` (hand-estimated rules) | `.github/skills/agents/azure-architect/cost-analysis.md` |
+| **Live SKU prices from Azure Retail Prices API → `cost-comparison.md`** | **`.github/skills/agents/azure-architect/cost-estimator.md`** |
 | Mermaid diagram generation | `.github/skills/agents/azure-architect/architecture-diagramming.md` |
 | AWS→Azure service equivalents | `.github/skills/agents/shared/aws-to-azure-mapping.md` |
 | Bicep module specification | `.github/skills/agents/shared/bicep-generation.md` |

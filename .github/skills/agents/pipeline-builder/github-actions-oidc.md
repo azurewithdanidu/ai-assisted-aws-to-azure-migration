@@ -316,3 +316,60 @@ uses: azure/login@6c251865b4e6290e7b78be643ea2d005bc51f69a       # v2.1.1
 - `outputs/pipeline/setup-environments.md` — GitHub Environment protection rules to configure
 - Every workflow file uses `azure/login@v2` with OIDC parameters
 - GitHub secrets documented in `design-document.md` Section 11.2
+
+---
+
+## Companion Scripts
+
+| Script | Purpose |
+|---|---|
+| `scripts/setup-oidc.ps1` | Creates App Registration, Service Principal, federated credential, and RBAC assignments |
+| `scripts/setup-oidc.sh` | Bash equivalent of the above |
+
+Run once per environment before creating GitHub workflows:
+
+```powershell
+./.github/skills/agents/pipeline-builder/scripts/setup-oidc.ps1 \
+    -GitHubOrg "azurewithdanidu" \
+    -GitHubRepo "ai-assisted-aws-to-azure-migration" \
+    -Environment prod \
+    -Subscription "<subscription-id>" \
+    -ResourceGroup "rg-prod-migration"
+```
+
+The script prints the three GitHub Secrets values (`AZURE_CLIENT_ID`, `AZURE_TENANT_ID`, `AZURE_SUBSCRIPTION_ID`) and writes `outputs/pipeline/setup-oidc.md`.
+
+---
+
+## References
+
+### GitHub Documentation
+
+| Topic | Link |
+|---|---|
+| About OIDC security hardening | https://docs.github.com/en/actions/security-for-github-actions/security-hardening-your-deployments/about-security-hardening-with-openid-connect |
+| Configuring OIDC in Azure | https://docs.github.com/en/actions/security-for-github-actions/security-hardening-your-deployments/configuring-openid-connect-in-azure |
+| GitHub Actions permissions | https://docs.github.com/en/actions/using-workflows/workflow-syntax-for-github-actions#permissions |
+| GitHub Actions concurrency | https://docs.github.com/en/actions/using-workflows/workflow-syntax-for-github-actions#concurrency |
+| Encrypted secrets in GitHub Actions | https://docs.github.com/en/actions/security-for-github-actions/security-guides/using-secrets-in-github-actions |
+| GitHub Actions OIDC subject claims | https://docs.github.com/en/actions/security-for-github-actions/security-hardening-your-deployments/about-security-hardening-with-openid-connect#understanding-the-oidc-token |
+
+### Microsoft / Azure Documentation
+
+| Topic | Link |
+|---|---|
+| Azure Workload Identity Federation | https://learn.microsoft.com/en-us/entra/workload-id/workload-identity-federation |
+| Configure federated identity credential | https://learn.microsoft.com/en-us/entra/workload-id/workload-identity-federation-create-trust |
+| `azure/login` GitHub Action | https://github.com/Azure/login |
+| `Azure/functions-action` | https://github.com/Azure/functions-action |
+| `Azure/static-web-apps-deploy` | https://github.com/Azure/static-web-apps-deploy |
+| Least-privilege OIDC setup | https://learn.microsoft.com/en-us/azure/developer/github/connect-from-azure-openid-connect |
+| `az ad app federated-credential` CLI | https://learn.microsoft.com/en-us/cli/azure/ad/app/federated-credential |
+| GitHub Actions OIDC with Azure tutorial | https://learn.microsoft.com/en-us/azure/developer/github/connect-from-azure |
+
+### Best Practices
+
+- **One federated credential per branch/environment** — never use a wildcard subject like `repo:*:*`. Scope to `environment:prod` or `ref:refs/heads/main` to limit blast radius.
+- **Scope role assignments to resource group, not subscription** — `Contributor` at subscription scope grants access to all resources in the subscription. Scope to `rg-<env>-migration` only.
+- **`User Access Administrator` is required when Bicep creates role assignments** — this allows the pipeline to assign RBAC roles to managed identities as part of IaC deployment.
+- **Pin action versions to full SHA for highest security** — tag-based pinning (`@v2`) is vulnerable to tag mutation attacks. Use commit SHA pinning in production pipelines.

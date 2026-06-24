@@ -122,3 +122,28 @@ Validate the full Azure migration using the checklist in Section 10 of outputs/a
 ## Output
 
 Completed artifact checks for the delegated phase; updated `migration-task-plan.md` with phase status.
+
+---
+
+## References
+
+### Microsoft / Azure Documentation
+
+| Topic | Link |
+|---|---|
+| Azure Migrate — migration execution guide | https://learn.microsoft.com/en-us/azure/migrate/migrate-services-overview |
+| Cloud Adoption Framework — migration checklist | https://learn.microsoft.com/en-us/azure/cloud-adoption-framework/migrate/azure-migration-guide/migrate |
+| Cloud Adoption Framework — validate and promote | https://learn.microsoft.com/en-us/azure/cloud-adoption-framework/migrate/azure-migration-guide/optimize-and-transform |
+
+### AWS Documentation
+
+| Topic | Link |
+|---|---|
+| AWS Migration Hub — tracking migrations | https://docs.aws.amazon.com/migrationhub/latest/ug/tracking-migration-tasks.html |
+| AWS Migration Evaluator | https://aws.amazon.com/migration-evaluator/ |
+
+### Best Practices
+
+- **Always send the exact delegation prompt** — paraphrasing causes agents to omit required sections or use incorrect file paths.
+- **Artifact verification is non-negotiable** — a non-empty file with the correct name is the minimum acceptance criterion. Read the first 10 lines to confirm the file has meaningful content (not just whitespace or a header).
+- **Phase 3 prompts must reference specific design document sections** — agents that receive generic prompts produce generic output. Section references force them to read the specific content relevant to this migration.

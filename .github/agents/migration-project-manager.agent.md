@@ -17,6 +17,22 @@ tools: ['read', 'edit', 'agent', 'search', 'todo']
 
 > **SOURCE APP LOCATION** — The original AWS application source code lives in **`source-app/`** (e.g. `source-app/app-code/`, `source-app/app-code/lambda/`, `source-app/app-code/template.yaml`, `source-app/doc/`). This is the **read-only ground truth** for the workload being migrated. All worker agents have been instructed to read from `source-app/` and write transformed Azure artifacts to `outputs/`. Never modify `source-app/` and never delegate work that would modify it.
 
+## Required Inputs — Collect Before Starting
+
+At the very start of any run (except `status`), confirm you have the following two values. If they were not supplied by the user, ask for them before invoking any worker agent:
+
+| Input | Description | Default |
+|---|---|---|
+| `aws_account_id` | 12-digit AWS account number to migrate from | *(required — no default)* |
+| `aws_region` | Primary AWS region where resources are deployed | `ap-southeast-2` (Sydney) |
+
+Record both values at the top of `outputs/migration-task-plan.md` under a **Migration Scope** heading when you initialise the file. Pass them explicitly in every worker agent prompt using the format:
+
+```
+AWS Account ID: <aws_account_id>
+AWS Region: <aws_region>
+```
+
 ## Purpose
 
 Coordinate the full AWS-to-Azure migration by delegating work to specialist agents in the correct
@@ -44,15 +60,16 @@ Read each skill before performing the associated task.
 
 ```
 Phase 1 ──► Phase 2 ──► Phase 3a ─┐
-Discovery   Architecture  IaC      ├──► Phase 4
-                         Phase 3b ─┤   Validation
+Discovery   Architecture  IaC      ├──► Phase 3d ──► Phase 4
+                         Phase 3b ─┤   Deploy        Validation
                          Refactor  │
                          Phase 3c ─┘
                          Pipeline
 ```
 
 Phases 3a, 3b, and 3c are independent of each other and run as parallel agent sessions.
-All three must pass their completion checks before Phase 4 starts.
+All three must pass their completion checks before Phase 3d starts.
+Phase 3d (Deployment) must complete successfully before Phase 4 (Validation) starts.
 
 ---
 
@@ -67,7 +84,7 @@ artifact check.
 Maintain `outputs/migration-task-plan.md` as the durable record of all tasks, their status, owner
 agent, and artifacts. This file is the source of truth across sessions. Update it after every phase.
 
-> **Shared file \u2014 worker agents also write to this file.** Each worker agent (aws-discovery, azure-architect, iac-transformation, code-refactor, pipeline-builder-agent, deployment-validation) is instructed to update its OWN phase row and task checkboxes incrementally as it works. As the PM you MUST:
+> **Shared file — worker agents also write to this file.** Each worker agent (aws-discovery, azure-architect, iac-transformation, code-refactor, pipeline-builder-agent, azure-deployer, deployment-validation) is instructed to update its OWN phase row and task checkboxes incrementally as it works. As the PM you MUST:
 > - Re-read the file before each edit so you do not overwrite a worker's in-progress updates.
 > - Only edit the Phase Summary rows and task sections for phases you are responsible for transitioning (Phase 0 initialization, post-verification confirmation, and final completion report).
 > - When a worker reports completion, verify artifacts AND read the worker's updated rows; only correct the row if the worker failed to update it.
@@ -79,6 +96,13 @@ agent, and artifacts. This file is the source of truth across sessions. Update i
 # Migration Task Plan
 Generated: <timestamp>
 Last Updated: <timestamp>
+
+## Migration Scope
+
+| Field | Value |
+|---|---|
+| AWS Account ID | <aws_account_id> |
+| AWS Region | <aws_region> |
 
 ## Status Legend
 | Symbol | Meaning |
@@ -97,6 +121,7 @@ Last Updated: <timestamp>
 | 3a — IaC Transformation | iac-transformation | ⏳ | — |
 | 3b — Code Refactor | code-refactor | ⏳ | — |
 | 3c — Pipeline Build | pipeline-builder-agent | ⏳ | — |
+| 3d — Deployment | azure-deployer | ⏳ | — |
 | 4 — Validation | deployment-validation | ⏳ | — |
 
 ## Detailed Task List

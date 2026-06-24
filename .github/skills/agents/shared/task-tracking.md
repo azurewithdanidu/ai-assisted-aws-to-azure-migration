@@ -56,3 +56,28 @@ Updated `outputs/migration-task-plan.md` with:
 - Individual task checkboxes checked with timestamps
 - Blockers section populated if applicable
 - `Last Updated:` timestamp current
+
+---
+
+## References
+
+### Microsoft / Azure Documentation
+
+| Topic | Link |
+|---|---|
+| Cloud Adoption Framework — project management | https://learn.microsoft.com/en-us/azure/cloud-adoption-framework/manage/ |
+| Azure DevOps work items | https://learn.microsoft.com/en-us/azure/devops/boards/work-items/about-work-items |
+
+### GitHub Documentation
+
+| Topic | Link |
+|---|---|
+| GitHub Projects — project tracking | https://docs.github.com/en/issues/planning-and-tracking-with-projects/learning-about-projects/about-projects |
+| GitHub Issues | https://docs.github.com/en/issues/tracking-your-work-with-issues/about-issues |
+
+### Best Practices
+
+- **Incremental updates, not batch updates** — mark each task `[x]` the moment it completes. Batch-updating at phase end means the plan is out of sync with reality for the entire duration of the phase.
+- **Timestamp every completion** in ISO 8601 UTC (`2026-06-24T10:30:00Z`) — this creates an audit trail that can be used to calculate actual phase durations vs estimates.
+- **Re-read before every write** — in parallel phase execution, multiple agents write to the same file concurrently. Always read the latest version before editing to avoid overwriting another agent's updates.
+- **Never mark `[x]` without verifying the artifact** — the task plan is only useful if it reflects reality. An artifact that exists but is empty (e.g., `echo '' > file.json`) must be treated as incomplete.

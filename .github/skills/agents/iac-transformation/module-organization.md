@@ -385,3 +385,62 @@ Every module `name:` is an ARM nested deployment ID. If the name in `main.bicep`
 - `outputs/bicep-templates/modules/*.bicep` — one file per logical resource group, each under ~150 lines
 - `az bicep restore --file outputs/bicep-templates/main.bicep --force` exits 0
 - `az bicep build --file outputs/bicep-templates/main.bicep` exits 0
+
+---
+
+## Companion Scripts
+
+| Script | Purpose |
+|---|---|
+| `scripts/resolve-avm-version.ps1` | Resolves the latest published version tag for any AVM module from its CHANGELOG |
+| `scripts/resolve-avm-version.sh` | Bash equivalent of the above |
+| `scripts/validate-bicep.ps1` | Runs `az bicep restore` + `az bicep build` on every `.bicep` file; optionally runs what-if per environment |
+
+Agents should run `validate-bicep.ps1` immediately after generating or modifying any Bicep file:
+
+```powershell
+./.github/skills/agents/iac-transformation/scripts/validate-bicep.ps1 \
+    -ResourceGroup "rg-dev-migration" -Environment dev
+```
+
+Look up the correct AVM module version before pinning it in a `.bicepparam`:
+
+```powershell
+./.github/skills/agents/iac-transformation/scripts/resolve-avm-version.ps1 \
+    -ModulePath "storage/storage-account"
+```
+
+---
+
+## References
+
+### Microsoft / Azure Documentation
+
+| Topic | Link |
+|---|---|
+| Azure Verified Modules (AVM) home | https://azure.github.io/Azure-Verified-Modules/ |
+| AVM Bicep resource modules index | https://azure.github.io/Azure-Verified-Modules/indexes/bicep/bicep-resource-modules/ |
+| AVM Bicep pattern modules index | https://azure.github.io/Azure-Verified-Modules/indexes/bicep/bicep-pattern-modules/ |
+| AVM versioning and changelog guidance | https://azure.github.io/Azure-Verified-Modules/specs/shared/versioning/ |
+| Bicep modules documentation | https://learn.microsoft.com/en-us/azure/azure-resource-manager/bicep/modules |
+| bicepconfig.json module aliases | https://learn.microsoft.com/en-us/azure/azure-resource-manager/bicep/bicep-config-modules |
+| `az bicep restore` command | https://learn.microsoft.com/en-us/cli/azure/bicep#az-bicep-restore |
+| ARM role assignment resource | https://learn.microsoft.com/en-us/azure/templates/microsoft.authorization/roleassignments |
+| CloudFormation to Bicep migration | https://learn.microsoft.com/en-us/azure/azure-resource-manager/bicep/migrate-template |
+| Bicep dependency management | https://learn.microsoft.com/en-us/azure/azure-resource-manager/bicep/resource-dependencies |
+| Azure deployment scopes | https://learn.microsoft.com/en-us/azure/azure-resource-manager/bicep/deploy-to-subscription |
+
+### AWS Documentation
+
+| Topic | Link |
+|---|---|
+| CloudFormation resource type reference | https://docs.aws.amazon.com/AWSCloudFormation/latest/UserGuide/aws-template-resource-type-ref.html |
+| CloudFormation intrinsic function reference | https://docs.aws.amazon.com/AWSCloudFormation/latest/UserGuide/intrinsic-function-reference.html |
+| SAM resource and property reference | https://docs.aws.amazon.com/serverless-application-model/latest/developerguide/sam-specification-resources-and-properties.html |
+
+### Best Practices
+
+- **Always run `az bicep restore --force` before `az bicep build`** — AVM module references require the cache to be populated first; the build will fail with `artifact does not exist` if the cache is stale.
+- **`modulePath: "bicep"` in bicepconfig.json is the only correct value** — `"bicep/public"` does not exist in MCR and causes a confusing registry error.
+- **Append `Avm` to all inner AVM module `name:` values** — duplicate deployment IDs cause ARM 409 conflicts when the same name is used at both the outer and inner module level.
+- **Always validate breaking changes** between AVM versions before upgrading — check the CHANGELOG at `https://raw.githubusercontent.com/Azure/bicep-registry-modules/main/avm/res/<module>/CHANGELOG.md`.

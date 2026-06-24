@@ -161,6 +161,103 @@ code {
   letter-spacing: .08em; margin-bottom: 16px;
 }
 
+/* ─── Token Usage ─────────────────────────────────────────────── */
+.token-summary {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 10px;
+  margin-bottom: 12px;
+}
+
+.token-kpi {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--r-sm);
+  padding: 12px 14px;
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+}
+
+.kpi-label {
+  font-size: .72rem;
+  color: var(--text-muted);
+  text-transform: uppercase;
+  letter-spacing: .07em;
+}
+
+.kpi-val {
+  font-size: 1.3rem;
+  font-weight: 800;
+  color: var(--text);
+}
+
+.kpi-val.small {
+  font-size: .82rem;
+  font-weight: 600;
+  color: var(--text-muted);
+}
+
+.token-table-wrap {
+  overflow-x: auto;
+  border: 1px solid var(--border);
+  border-radius: var(--r-sm);
+}
+
+.token-table {
+  width: 100%;
+  border-collapse: collapse;
+  background: var(--surface);
+}
+
+.token-table th,
+.token-table td {
+  border-bottom: 1px solid var(--border);
+  text-align: left;
+  padding: 10px 12px;
+  font-size: .8rem;
+}
+
+.token-table th {
+  background: var(--surface-2);
+  color: var(--text);
+  font-weight: 700;
+  white-space: nowrap;
+}
+
+.token-table tbody tr:hover td {
+  background: var(--surface-2);
+}
+
+.token-table td.num {
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+}
+
+.token-phase {
+  font-weight: 600;
+  color: var(--text);
+}
+
+.prompt-preview {
+  color: var(--text-muted);
+}
+
+.run-input {
+  width: 70px;
+  background: var(--surface-2);
+  border: 1px solid var(--border);
+  color: var(--text);
+  border-radius: var(--r-xs);
+  padding: 5px 7px;
+  font-family: inherit;
+}
+
+.run-input:focus {
+  outline: none;
+  border-color: var(--progress);
+}
+
 /* ─── Overview panel ──────────────────────────────────────────── */
 .progress-overview {
   display: grid;
@@ -397,6 +494,10 @@ code {
 
 /* ─── Responsive ──────────────────────────────────────────────── */
 @media (max-width: 900px) {
+  .token-summary {
+    grid-template-columns: 1fr;
+  }
+
   .progress-overview {
     grid-template-columns: 1fr;
   }

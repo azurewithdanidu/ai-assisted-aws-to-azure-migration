@@ -45,3 +45,40 @@ As the primary workflow for Phase 2, before writing any Bicep, diagrams, or cost
 ## Output
 
 `outputs/azure-architecture-output/design-document.md` with all 11 sections populated — the authoritative handoff artifact for iac-transformation, code-refactor, deployment-validation, and pipeline-builder agents.
+
+---
+
+## References
+
+### Microsoft / Azure Documentation
+
+| Topic | Link |
+|---|---|
+| Azure Well-Architected Framework | https://learn.microsoft.com/en-us/azure/well-architected/ |
+| WAF Reliability pillar | https://learn.microsoft.com/en-us/azure/well-architected/reliability/ |
+| WAF Security pillar | https://learn.microsoft.com/en-us/azure/well-architected/security/ |
+| WAF Cost Optimization pillar | https://learn.microsoft.com/en-us/azure/well-architected/cost-optimization/ |
+| WAF Operational Excellence pillar | https://learn.microsoft.com/en-us/azure/well-architected/operational-excellence/ |
+| WAF Performance Efficiency pillar | https://learn.microsoft.com/en-us/azure/well-architected/performance-efficiency/ |
+| Azure Architecture Center | https://learn.microsoft.com/en-us/azure/architecture/ |
+| Cloud design patterns | https://learn.microsoft.com/en-us/azure/architecture/patterns/ |
+| Azure for AWS professionals | https://learn.microsoft.com/en-us/azure/architecture/aws-professional/ |
+| Azure Functions hosting options | https://learn.microsoft.com/en-us/azure/azure-functions/functions-scale |
+| Azure Container Apps vs AKS decision guide | https://learn.microsoft.com/en-us/azure/container-apps/compare-options |
+| Azure regions availability | https://azure.microsoft.com/en-us/explore/global-infrastructure/products-by-region/ |
+| Azure availability zones | https://learn.microsoft.com/en-us/azure/reliability/availability-zones-overview |
+
+### AWS Documentation
+
+| Topic | Link |
+|---|---|
+| AWS Well-Architected Framework | https://docs.aws.amazon.com/wellarchitected/latest/framework/welcome.html |
+| AWS Architecture Center | https://aws.amazon.com/architecture/ |
+| AWS Migration whitepaper | https://docs.aws.amazon.com/whitepapers/latest/aws-migration-whitepaper/welcome.html |
+
+### Best Practices
+
+- **WAF Security is always Pillar 1** — a design that is cheap but insecure is not a valid design. Security trade-offs require explicit stakeholder sign-off.
+- **Single-region by default:** Multi-region adds 2× infrastructure cost and significant operational complexity. Only add it if `migration-assessment.md` documents a sub-1-hour RTO requirement that cannot be met with Availability Zones.
+- **Read the service-specific knowledge skill before finalizing** — SKU defaults and anti-patterns in memory may be outdated. The knowledge skills contain verified current guidance.
+- **Always specify Section 5 fully:** Downstream iac-transformation, code-refactor, and pipeline-builder agents receive Section 5 (Bicep modules), 6 (Function rewrites), and 11 (CI/CD spec) as their primary inputs. Incomplete sections cause cascading failures.

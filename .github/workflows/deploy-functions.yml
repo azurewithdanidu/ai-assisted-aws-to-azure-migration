@@ -1,15 +1,11 @@
-# deploy-functions.yml
-# Builds the Python Azure Functions package and deploys it to the target
-# Function App via OIDC Workload Identity Federation (no long-lived secrets).
-# Prerequisite (Section 11.5): deploy-infra.yml must succeed first so that
-# the Function App resource exists before this workflow runs.
-# Python version pinned to 3.11 — Azure Functions v4 constraint.
-
 name: Deploy Azure Functions
 
 on:
   push:
-    branches: [main, staging, dev]
+    branches:
+      - dev
+      - staging
+      - main
     paths:
       - 'outputs/azure-functions/**'
       - '.github/workflows/deploy-functions.yml'
@@ -17,177 +13,150 @@ on:
     inputs:
       environment:
         description: 'Target environment'
-        type: choice
-        options: [dev, staging, prod]
         required: true
+        type: choice
+        options:
+          - dev
+          - staging
+          - prod
       functionAppName:
-        description: 'Override Function App name (leave blank to use env default)'
-        type: string
+        description: 'Optional override for the Function App name'
         required: false
+        type: string
 
 permissions:
-  id-token: write   # Required for OIDC token exchange
+  id-token: write
   contents: read
 
-# ─────────────────────────────────────────────────────────────────────────────
-jobs:
-# ─────────────────────────────────────────────────────────────────────────────
+concurrency:
+  group: deploy-functions-${{ github.ref_name }}-${{ inputs.environment || 'auto' }}
+  cancel-in-progress: false
 
-  # ---------------------------------------------------------------------------
-  # Job 1: Determine target environment and Function App name
-  # ---------------------------------------------------------------------------
-  determine-env:
-    name: Determine Environment
+jobs:
+  determine-environment:
+    name: Determine environment and app name
     runs-on: ubuntu-latest
     outputs:
-      env_name: ${{ steps.set-env.outputs.env_name }}
-      resource_group: ${{ steps.set-env.outputs.resource_group }}
-      func_app_name: ${{ steps.set-env.outputs.func_app_name }}
+      environment: ${{ steps.resolve.outputs.environment }}
+      resource_group: ${{ steps.resolve.outputs.resource_group }}
+      function_app_name: ${{ steps.resolve.outputs.function_app_name }}
     steps:
       - name: Derive environment and Function App name
-        id: set-env
+        id: resolve
         run: |
           if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
-            ENV_NAME="${{ github.event.inputs.environment }}"
-            FUNC_APP_OVERRIDE="${{ github.event.inputs.functionAppName }}"
+            environment="${{ inputs.environment }}"
+            override_name="${{ inputs.functionAppName }}"
           else
             case "${{ github.ref_name }}" in
-              main)    ENV_NAME="prod"    ;;
-              staging) ENV_NAME="staging" ;;
-              dev)     ENV_NAME="dev"     ;;
-              *)       echo "Unknown branch: ${{ github.ref_name }}" && exit 1 ;;
+              dev) environment="dev" ;;
+              staging) environment="staging" ;;
+              main) environment="prod" ;;
+              *)
+                echo "Unsupported branch: ${{ github.ref_name }}" >&2
+                exit 1
+                ;;
             esac
-            FUNC_APP_OVERRIDE=""
+            override_name=""
           fi
 
-          RG="rg-photo-gallery-${ENV_NAME}"
+          function_app_name="${override_name:-photo-gallery-func-${environment}}"
 
-          # Function App name: use override if provided, else derive convention name
-          if [ -n "${FUNC_APP_OVERRIDE}" ]; then
-            FUNC_APP_NAME="${FUNC_APP_OVERRIDE}"
-          else
-            # Convention: photo-gallery-func-<env> (must match Bicep functionAppName output)
-            FUNC_APP_NAME="photo-gallery-func-${ENV_NAME}"
-          fi
+          echo "environment=${environment}" >> "$GITHUB_OUTPUT"
+          echo "resource_group=rg-photo-gallery-${environment}" >> "$GITHUB_OUTPUT"
+          echo "function_app_name=${function_app_name}" >> "$GITHUB_OUTPUT"
 
-          echo "env_name=${ENV_NAME}" >> "$GITHUB_OUTPUT"
-          echo "resource_group=${RG}" >> "$GITHUB_OUTPUT"
-          echo "func_app_name=${FUNC_APP_NAME}" >> "$GITHUB_OUTPUT"
-          echo "Resolved environment: ${ENV_NAME}, Function App: ${FUNC_APP_NAME}"
-
-  # ---------------------------------------------------------------------------
-  # Job 2: Build, package, deploy, and verify
-  # ---------------------------------------------------------------------------
   build-and-deploy:
-    name: Build & Deploy → ${{ needs.determine-env.outputs.env_name }}
-    needs: determine-env
+    name: Package and deploy Function App
     runs-on: ubuntu-latest
-    # GitHub Environment object provides approval gate for prod
-    environment: ${{ needs.determine-env.outputs.env_name }}
+    needs: determine-environment
+    environment: ${{ needs.determine-environment.outputs.environment }}
     env:
-      ENV_NAME: ${{ needs.determine-env.outputs.env_name }}
-      RESOURCE_GROUP: ${{ needs.determine-env.outputs.resource_group }}
-      FUNC_APP_NAME: ${{ needs.determine-env.outputs.func_app_name }}
+      RESOURCE_GROUP: ${{ needs.determine-environment.outputs.resource_group }}
+      FUNCTION_APP_NAME: ${{ needs.determine-environment.outputs.function_app_name }}
     steps:
-      - name: Checkout
+      - name: Checkout repository
         uses: actions/checkout@v4
-
-      # ── Build ──────────────────────────────────────────────────────────────
 
       - name: Set up Python 3.11
         uses: actions/setup-python@v5
         with:
-          # Azure Functions v4 supports 3.9–3.11 only; 3.12+ causes worker crash.
           python-version: '3.11'
 
-      - name: Cache pip dependencies
+      - name: Cache pip downloads
         uses: actions/cache@v4
         with:
           path: ~/.cache/pip
           key: ${{ runner.os }}-pip-${{ hashFiles('outputs/azure-functions/requirements.txt') }}
-          restore-keys: ${{ runner.os }}-pip-
+          restore-keys: |
+            ${{ runner.os }}-pip-
 
-      - name: Install dependencies into package directory
+      - name: Install requirements into .python_packages/lib/site-packages
         working-directory: outputs/azure-functions
         run: |
-          pip install --upgrade pip
-          pip install -r requirements.txt --target .python_packages/lib/site-packages
+          if [ ! -f requirements.txt ]; then
+            echo "Missing outputs/azure-functions/requirements.txt" >&2
+            exit 1
+          fi
+          python -m pip install --upgrade pip
+          python -m pip install -r requirements.txt --target .python_packages/lib/site-packages
 
-      - name: Create deployment zip
-        id: package
+      - name: Zip the Function App payload
         working-directory: outputs/azure-functions
         run: |
-          zip -r ../function-app.zip . \
-            -x "*.git*" \
+          zip -r "$GITHUB_WORKSPACE/function-app.zip" . \
             -x "__pycache__/*" \
             -x "*.pyc" \
             -x ".venv/*" \
             -x "local.settings.json"
-          echo "Package size: $(du -sh ../function-app.zip | cut -f1)"
 
-      # ── Deploy ─────────────────────────────────────────────────────────────
-
-      - name: Azure Login (OIDC)
+      - name: Authenticate with Azure using OIDC
         uses: azure/login@v2
         with:
           client-id: ${{ secrets.AZURE_CLIENT_ID }}
           tenant-id: ${{ secrets.AZURE_TENANT_ID }}
           subscription-id: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
 
-      - name: Deploy to Azure Functions (ZIP deploy)
+      - name: Deploy with config-zip
         run: |
           az functionapp deployment source config-zip \
             --resource-group "$RESOURCE_GROUP" \
-            --name "$FUNC_APP_NAME" \
-            --src function-app.zip \
+            --name "$FUNCTION_APP_NAME" \
+            --src "$GITHUB_WORKSPACE/function-app.zip" \
             --build-remote false
 
-      # ── Verify ─────────────────────────────────────────────────────────────
-
-      - name: Verify Function App is Running
+      - name: Verify the Function App state
         run: |
-          STATE=$(az functionapp show \
+          state=$(az functionapp show \
             --resource-group "$RESOURCE_GROUP" \
-            --name "$FUNC_APP_NAME" \
-            --query "state" \
+            --name "$FUNCTION_APP_NAME" \
+            --query state \
             --output tsv)
-          echo "Function App state: ${STATE}"
-          if [ "${STATE}" != "Running" ]; then
-            echo "ERROR: Function App is not in Running state (got: ${STATE})"
+          if [ "$state" != "Running" ]; then
+            echo "Function App is not running: $state" >&2
             exit 1
           fi
 
-      # ── Artifact (for rollback) ────────────────────────────────────────────
-
-      - name: Upload deployment artifact for rollback
+      - name: Upload ZIP artifact
         uses: actions/upload-artifact@v4
         with:
-          name: function-app-zip-${{ env.ENV_NAME }}-${{ github.run_number }}
+          name: function-app-${{ needs.determine-environment.outputs.environment }}
           path: function-app.zip
-          # 7-day retention allows rollback to a recent known-good build
           retention-days: 7
 
-  # ---------------------------------------------------------------------------
-  # Job 3: Rollback on failure — redeploy previous artifact
-  # ---------------------------------------------------------------------------
-  rollback-on-failure:
-    name: Rollback on Failure
-    needs: [determine-env, build-and-deploy]
-    if: failure()
+  rollback-guidance:
+    name: Document rollback command
     runs-on: ubuntu-latest
-    environment: ${{ needs.determine-env.outputs.env_name }}
+    needs:
+      - determine-environment
+      - build-and-deploy
+    if: failure()
+    environment: ${{ needs.determine-environment.outputs.environment }}
     env:
-      ENV_NAME: ${{ needs.determine-env.outputs.env_name }}
-      RESOURCE_GROUP: ${{ needs.determine-env.outputs.resource_group }}
-      FUNC_APP_NAME: ${{ needs.determine-env.outputs.func_app_name }}
+      RESOURCE_GROUP: ${{ needs.determine-environment.outputs.resource_group }}
+      FUNCTION_APP_NAME: ${{ needs.determine-environment.outputs.function_app_name }}
     steps:
-      - name: Log rollback guidance
+      - name: Report the rollback command
         run: |
-          echo "Deploy job for ${{ github.run_number }} failed."
-          echo "To rollback: manually re-run the last successful workflow run,"
-          echo "or download the previous artifact 'function-app-zip-${ENV_NAME}-<run>',"
-          echo "then run:"
-          echo "  az functionapp deployment source config-zip \\"
-          echo "    --resource-group ${RESOURCE_GROUP} \\"
-          echo "    --name ${FUNC_APP_NAME} \\"
-          echo "    --src <previous-artifact>.zip"
+          echo "Redeploy the most recent known-good function-app.zip artifact with:"
+          echo "az functionapp deployment source config-zip --resource-group \"$RESOURCE_GROUP\" --name \"$FUNCTION_APP_NAME\" --src <known-good-function-app.zip> --build-remote false"

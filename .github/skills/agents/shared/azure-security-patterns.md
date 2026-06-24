@@ -151,3 +151,49 @@ Apply consistent zero-trust security defaults to every Azure resource deployed i
 - Every subnet has an NSG with deny-all-inbound as the lowest-priority rule
 - Key Vault has soft delete + purge protection + RBAC authorization enabled
 - Pre-deployment security checklist passes with no blocking findings
+
+---
+
+## Companion Scripts
+
+| Script | Purpose |
+|---|---|
+| `scripts/verify-security.ps1` | Post-deployment security verification across Storage, Key Vault, Function App, and NSG rules |
+
+Run after every deployment to assert security baselines are met:
+
+```powershell
+./.github/skills/agents/shared/scripts/verify-security.ps1 \
+    -ResourceGroup "rg-prod-migration"
+```
+
+The script auto-discovers resources and exits 1 on any FAIL, making it suitable as a CI gate.  Writes `outputs/deployment-validation/security-report.md`.
+
+---
+
+## References
+
+### Microsoft / Azure Documentation
+
+| Topic | Link |
+|---|---|
+| Azure Security Benchmark | https://learn.microsoft.com/en-us/security/benchmark/azure/introduction |
+| Azure Private Link / Private Endpoints | https://learn.microsoft.com/en-us/azure/private-link/private-endpoint-overview |
+| Private DNS zones for Private Link | https://learn.microsoft.com/en-us/azure/private-link/private-endpoint-dns |
+| NSG overview | https://learn.microsoft.com/en-us/azure/virtual-network/network-security-groups-overview |
+| Azure Key Vault soft-delete | https://learn.microsoft.com/en-us/azure/key-vault/general/soft-delete-overview |
+| Key Vault purge protection | https://learn.microsoft.com/en-us/azure/key-vault/general/soft-delete-overview#purge-protection |
+| Azure Policy for security | https://learn.microsoft.com/en-us/azure/governance/policy/overview |
+| Microsoft Defender for Cloud | https://learn.microsoft.com/en-us/azure/defender-for-cloud/defender-for-cloud-introduction |
+| Azure network security best practices | https://learn.microsoft.com/en-us/azure/security/fundamentals/network-best-practices |
+| Storage security guide | https://learn.microsoft.com/en-us/azure/storage/blobs/security-recommendations |
+| Azure Functions networking overview | https://learn.microsoft.com/en-us/azure/azure-functions/functions-networking-options |
+| TLS policy for App Service | https://learn.microsoft.com/en-us/azure/app-service/configure-ssl-bindings |
+
+### Best Practices
+
+- **Zero-trust networking:** Every PaaS data service must be private-endpoint-only. Disable public network access in Bicep — never rely on firewall rules alone.
+- **Private DNS is mandatory with private endpoints:** Without registering the private DNS zone and linking it to your VNet, private endpoint hostnames resolve to public IPs and traffic exits the VNet.
+- **Key Vault purge protection:** Enable on all environments, not just prod — accidental secret deletion during development causes deployment failures that can take days to recover from without purge protection.
+- **NSG audit rule:** The `DenyAllInbound` rule at priority 4096 is a safety net — never delete it even when adding application-specific allow rules.
+- **Azure Security Benchmark v3** maps every control to specific Bicep/policy configurations — use it as the compliance checklist for all new deployments.
