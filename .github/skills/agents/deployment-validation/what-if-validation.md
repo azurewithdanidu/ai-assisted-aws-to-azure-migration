@@ -111,14 +111,29 @@ az resource list --resource-group $RESOURCE_GROUP \
 # Function App reachable (200 or 401 acceptable; 5xx = fail)
 curl -sf -o /dev/null -w "%{http_code}" "https://<functionapp>.azurewebsites.net/api/health"
 
+# Application API endpoints — /api/files and /api/upload must respond (not 5xx)
+FUNC_HOST="<functionapp>.azurewebsites.net"
+
+FILES_STATUS=$(curl -s -o /dev/null -w "%{http_code}" "https://${FUNC_HOST}/api/files")
+echo "/api/files: $FILES_STATUS"
+[ "$FILES_STATUS" -ne 500 ] && [ "$FILES_STATUS" -ne 502 ] && [ "$FILES_STATUS" -ne 503 ] \
+  || { echo "FAIL: /api/files returned 5xx"; exit 1; }
+
+UPLOAD_STATUS=$(curl -s -o /dev/null -w "%{http_code}" -X HEAD "https://${FUNC_HOST}/api/upload")
+echo "/api/upload (HEAD): $UPLOAD_STATUS"
+[ "$UPLOAD_STATUS" -ne 500 ] && [ "$UPLOAD_STATUS" -ne 502 ] && [ "$UPLOAD_STATUS" -ne 503 ] \
+  || { echo "FAIL: /api/upload returned 5xx"; exit 1; }
+
 # Static Web App reachable
-curl -sf -o /dev/null "https://<swa>.azurestaticapps.net/index.html"
+curl -sf -o /dev/null -w "%{http_code}" "https://<swa>.azurestaticapps.net/index.html"
 
 # Database host resolvable (from within VNet)
 nslookup <postgres>.postgres.database.azure.com
 ```
 
 - [ ] All Function App HTTP endpoints return 200 or 401 (not 5xx)
+- [ ] `/api/files` responds without 5xx error
+- [ ] `/api/upload` responds without 5xx error (HEAD probe)
 - [ ] Static Web App serves index.html (HTTP 200)
 - [ ] Database host resolves and is reachable on the correct port
 - [ ] Blob Storage containers accessible via Function App Managed Identity

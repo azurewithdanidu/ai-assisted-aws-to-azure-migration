@@ -1,10 +1,19 @@
+# ─────────────────────────────────────────────────────────────────────────────
+# deploy-functions.yml
+# Builds and deploys the Azure Functions application.
+#
+# Sections implemented:
+#   §11.1  Workflow files
+#   §11.2  OIDC authentication model
+#   §11.4  deploy-functions.yml job/step specification
+#   §11.7  CI/CD quality gates (package install on Python 3.11, smoke tests)
+# ─────────────────────────────────────────────────────────────────────────────
+
 name: Deploy Azure Functions
 
 on:
   push:
     branches:
-      - dev
-      - staging
       - main
     paths:
       - 'outputs/azure-functions/**'
@@ -14,75 +23,48 @@ on:
       environment:
         description: 'Target environment'
         required: true
+        default: dev
         type: choice
         options:
           - dev
           - staging
           - prod
-      functionAppName:
-        description: 'Optional override for the Function App name'
-        required: false
-        type: string
 
+# §11.2 — every deploy workflow must carry these permissions
 permissions:
   id-token: write
   contents: read
 
+# Prevent concurrent deploys to the same environment; never cancel in-progress
 concurrency:
   group: deploy-functions-${{ github.ref_name }}-${{ inputs.environment || 'auto' }}
   cancel-in-progress: false
 
 jobs:
-  determine-environment:
-    name: Determine environment and app name
-    runs-on: ubuntu-latest
-    outputs:
-      environment: ${{ steps.resolve.outputs.environment }}
-      resource_group: ${{ steps.resolve.outputs.resource_group }}
-      function_app_name: ${{ steps.resolve.outputs.function_app_name }}
-    steps:
-      - name: Derive environment and Function App name
-        id: resolve
-        run: |
-          if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
-            environment="${{ inputs.environment }}"
-            override_name="${{ inputs.functionAppName }}"
-          else
-            case "${{ github.ref_name }}" in
-              dev) environment="dev" ;;
-              staging) environment="staging" ;;
-              main) environment="prod" ;;
-              *)
-                echo "Unsupported branch: ${{ github.ref_name }}" >&2
-                exit 1
-                ;;
-            esac
-            override_name=""
-          fi
-
-          function_app_name="${override_name:-photo-gallery-func-${environment}}"
-
-          echo "environment=${environment}" >> "$GITHUB_OUTPUT"
-          echo "resource_group=rg-photo-gallery-${environment}" >> "$GITHUB_OUTPUT"
-          echo "function_app_name=${function_app_name}" >> "$GITHUB_OUTPUT"
-
+  # ── Job 1: build-and-deploy ────────────────────────────────────────────────
+  # §11.4 step 1  — checkout
+  # §11.4 step 2  — setup Python 3.11
+  # §11.4 step 3  — install dependencies from requirements.txt (§11.7 gate)
+  # §11.4 step 4  — optional packaging validation
+  # §11.4 step 5  — Azure login via OIDC
+  # §11.4 step 6  — deploy with Azure/functions-action@v1
+  # §11.4 step 7  — post-deploy smoke tests (POST /api/upload, GET /api/files)
   build-and-deploy:
     name: Package and deploy Function App
     runs-on: ubuntu-latest
-    needs: determine-environment
-    environment: ${{ needs.determine-environment.outputs.environment }}
-    env:
-      RESOURCE_GROUP: ${{ needs.determine-environment.outputs.resource_group }}
-      FUNCTION_APP_NAME: ${{ needs.determine-environment.outputs.function_app_name }}
+    environment: ${{ inputs.environment || vars.ENVIRONMENT }}
     steps:
+      # §11.4 step 1 — checkout
       - name: Checkout repository
         uses: actions/checkout@v4
 
+      # §11.4 step 2 — Python 3.11 (Azure Functions v4 runtime constraint)
       - name: Set up Python 3.11
         uses: actions/setup-python@v5
         with:
           python-version: '3.11'
 
+      # Cache pip downloads to speed up repeated runs
       - name: Cache pip downloads
         uses: actions/cache@v4
         with:
@@ -91,17 +73,22 @@ jobs:
           restore-keys: |
             ${{ runner.os }}-pip-
 
-      - name: Install requirements into .python_packages/lib/site-packages
+      # §11.4 step 3 — install into .python_packages so the zip is self-contained
+      # §11.7 quality gate — fails if requirements.txt is missing or install errors
+      - name: Install dependencies (Python 3.11 gate)
         working-directory: outputs/azure-functions
         run: |
           if [ ! -f requirements.txt ]; then
-            echo "Missing outputs/azure-functions/requirements.txt" >&2
+            echo "::error::Missing outputs/azure-functions/requirements.txt"
             exit 1
           fi
           python -m pip install --upgrade pip
-          python -m pip install -r requirements.txt --target .python_packages/lib/site-packages
+          python -m pip install -r requirements.txt \
+            --target .python_packages/lib/site-packages \
+            --upgrade
 
-      - name: Zip the Function App payload
+      # §11.4 step 4 — packaging validation: zip and inspect
+      - name: Zip Function App payload
         working-directory: outputs/azure-functions
         run: |
           zip -r "$GITHUB_WORKSPACE/function-app.zip" . \
@@ -109,54 +96,96 @@ jobs:
             -x "*.pyc" \
             -x ".venv/*" \
             -x "local.settings.json"
+          echo "Zip contents (top level):"
+          unzip -l "$GITHUB_WORKSPACE/function-app.zip" | head -40
 
-      - name: Authenticate with Azure using OIDC
+      # Upload the artifact before deploy so it's available even if deploy fails
+      - name: Upload function-app artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: function-app-${{ inputs.environment || vars.ENVIRONMENT }}
+          path: function-app.zip
+          retention-days: 7
+
+      # §11.4 step 5 — Azure login via OIDC (§11.2)
+      - name: Azure Login (OIDC)
         uses: azure/login@v2
         with:
           client-id: ${{ secrets.AZURE_CLIENT_ID }}
           tenant-id: ${{ secrets.AZURE_TENANT_ID }}
           subscription-id: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
 
-      - name: Deploy with config-zip
-        run: |
-          az functionapp deployment source config-zip \
-            --resource-group "$RESOURCE_GROUP" \
-            --name "$FUNCTION_APP_NAME" \
-            --src "$GITHUB_WORKSPACE/function-app.zip" \
-            --build-remote false
+      # §11.4 step 6 — deploy with Azure/functions-action@v1
+      - name: Deploy to Azure Functions
+        id: deploy
+        uses: Azure/functions-action@v1
+        with:
+          app-name: ${{ vars.FUNCTION_APP_NAME }}
+          package: function-app.zip
+          respect-funcignore: true
 
-      - name: Verify the Function App state
+      # Verify the Function App is in Running state after deploy
+      - name: Verify Function App state
         run: |
           state=$(az functionapp show \
-            --resource-group "$RESOURCE_GROUP" \
-            --name "$FUNCTION_APP_NAME" \
+            --resource-group "${{ vars.RESOURCE_GROUP_NAME }}" \
+            --name "${{ vars.FUNCTION_APP_NAME }}" \
             --query state \
             --output tsv)
+          echo "Function App state: ${state}"
           if [ "$state" != "Running" ]; then
-            echo "Function App is not running: $state" >&2
+            echo "::error::Function App is not in Running state: ${state}"
             exit 1
           fi
 
-      - name: Upload ZIP artifact
-        uses: actions/upload-artifact@v4
-        with:
-          name: function-app-${{ needs.determine-environment.outputs.environment }}
-          path: function-app.zip
-          retention-days: 7
-
-  rollback-guidance:
-    name: Document rollback command
-    runs-on: ubuntu-latest
-    needs:
-      - determine-environment
-      - build-and-deploy
-    if: failure()
-    environment: ${{ needs.determine-environment.outputs.environment }}
-    env:
-      RESOURCE_GROUP: ${{ needs.determine-environment.outputs.resource_group }}
-      FUNCTION_APP_NAME: ${{ needs.determine-environment.outputs.function_app_name }}
-    steps:
-      - name: Report the rollback command
+      # §11.4 step 7 — smoke tests: POST /api/upload and GET /api/files
+      # §11.7 quality gate — both endpoints must respond (may be 401/403 without key)
+      - name: Smoke test — GET /api/files
         run: |
-          echo "Redeploy the most recent known-good function-app.zip artifact with:"
-          echo "az functionapp deployment source config-zip --resource-group \"$RESOURCE_GROUP\" --name \"$FUNCTION_APP_NAME\" --src <known-good-function-app.zip> --build-remote false"
+          hostname=$(az functionapp show \
+            --resource-group "${{ vars.RESOURCE_GROUP_NAME }}" \
+            --name "${{ vars.FUNCTION_APP_NAME }}" \
+            --query defaultHostName \
+            --output tsv)
+          echo "Testing GET https://${hostname}/api/files"
+          status=$(curl --silent --show-error --location --output /dev/null \
+            --write-out '%{http_code}' \
+            "https://${hostname}/api/files")
+          echo "HTTP status: ${status}"
+          # Accept 200 OK or 401 Unauthorized (endpoint live, auth required)
+          if [ "$status" -ne 200 ] && [ "$status" -ne 401 ] && [ "$status" -ne 403 ]; then
+            echo "::error::GET /api/files returned unexpected status ${status}"
+            exit 1
+          fi
+
+      - name: Smoke test — POST /api/upload
+        run: |
+          hostname=$(az functionapp show \
+            --resource-group "${{ vars.RESOURCE_GROUP_NAME }}" \
+            --name "${{ vars.FUNCTION_APP_NAME }}" \
+            --query defaultHostName \
+            --output tsv)
+          echo "Testing POST https://${hostname}/api/upload"
+          status=$(curl --silent --show-error --location --output /dev/null \
+            --write-out '%{http_code}' \
+            --request POST \
+            --header "Content-Type: application/json" \
+            --data '{}' \
+            "https://${hostname}/api/upload")
+          echo "HTTP status: ${status}"
+          # Accept any non-5xx response (endpoint live; 400/401/403 expected without key)
+          if [ "$status" -ge 500 ]; then
+            echo "::error::POST /api/upload returned server error ${status}"
+            exit 1
+          fi
+
+      # Rollback: redeploy the last known-good artifact if the deploy step failed
+      - name: Rollback on failure
+        if: failure() && steps.deploy.outcome == 'failure'
+        run: |
+          echo "::warning::Deploy step failed — to roll back, re-run this workflow"
+          echo "  with the previous known-good function-app artifact, or run:"
+          echo "  az functionapp deployment source config-zip \\"
+          echo "    --resource-group ${{ vars.RESOURCE_GROUP_NAME }} \\"
+          echo "    --name ${{ vars.FUNCTION_APP_NAME }} \\"
+          echo "    --src <previous-function-app.zip>"

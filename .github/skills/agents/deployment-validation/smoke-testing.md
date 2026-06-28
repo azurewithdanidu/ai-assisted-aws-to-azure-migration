@@ -149,6 +149,54 @@ URL="https://<app-name>.azurestaticapps.net"
 STATUS=$(curl -s -o /dev/null -w "%{http_code}" "$URL")
 echo "Static Web App root: $STATUS"
 [ "$STATUS" -eq 200 ] || exit 1
+
+# Verify the root page serves real HTML content (not an error page)
+BODY=$(curl -s "$URL")
+echo "$BODY" | grep -qi "<html" || { echo "Root page did not return HTML"; exit 1; }
+```
+
+#### Azure Functions — Application API Endpoints
+
+Run these checks for every migrated workload that exposes file-upload and file-list APIs:
+
+```bash
+FUNC_HOST=$(az functionapp show \
+  --name <functionapp-name> \
+  --resource-group <resource-group> \
+  --query defaultHostName -o tsv)
+
+# /api/files — list endpoint (must return 200 or 401; 5xx = fail)
+FILES_STATUS=$(curl -s -o /dev/null -w "%{http_code}" \
+  "https://${FUNC_HOST}/api/files")
+echo "/api/files: $FILES_STATUS"
+[ "$FILES_STATUS" -eq 200 ] || [ "$FILES_STATUS" -eq 401 ] || \
+  { echo "FAIL: /api/files returned $FILES_STATUS"; exit 1; }
+
+# /api/upload — upload endpoint (GET/HEAD probe; expect 200, 401, or 405)
+UPLOAD_STATUS=$(curl -s -o /dev/null -w "%{http_code}" -X HEAD \
+  "https://${FUNC_HOST}/api/upload")
+echo "/api/upload (HEAD probe): $UPLOAD_STATUS"
+[ "$UPLOAD_STATUS" -eq 200 ] || [ "$UPLOAD_STATUS" -eq 401 ] || \
+  [ "$UPLOAD_STATUS" -eq 405 ] || \
+  { echo "FAIL: /api/upload returned $UPLOAD_STATUS"; exit 1; }
+
+# Full upload smoke test — POST a small test file
+UPLOAD_POST_STATUS=$(curl -s -o /dev/null -w "%{http_code}" \
+  -X POST "https://${FUNC_HOST}/api/upload" \
+  -F "file=@/dev/null;filename=smoke-test.txt;type=text/plain")
+echo "/api/upload (POST): $UPLOAD_POST_STATUS"
+# Accept 200, 201, 401 (auth required), or 415 (wrong content type — endpoint alive)
+[ "$UPLOAD_POST_STATUS" -eq 200 ] || [ "$UPLOAD_POST_STATUS" -eq 201 ] || \
+  [ "$UPLOAD_POST_STATUS" -eq 401 ] || [ "$UPLOAD_POST_STATUS" -eq 415 ] || \
+  { echo "FAIL: /api/upload POST returned $UPLOAD_POST_STATUS"; exit 1; }
+```
+
+Add the following rows to the smoke-test report for these checks:
+
+```markdown
+| /api/files endpoint | PASS/FAIL | HTTP <status> |
+| /api/upload (probe) | PASS/FAIL | HTTP <status> |
+| /api/upload (POST)  | PASS/FAIL | HTTP <status> |
 ```
 
 #### API Management (APIM)

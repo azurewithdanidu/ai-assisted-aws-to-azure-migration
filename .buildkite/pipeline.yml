@@ -1,0 +1,159 @@
+# ============================================================
+# .buildkite/pipeline.yml
+# CI/CD pipeline for the Image Upload Service — Azure Bicep
+# deployment. Converted from AWS CloudFormation deployment.
+#
+# Stages:
+#   1. Validate Bicep templates (all environments)
+#   2. Generate what-if preview (staging)
+#   3. Deploy to staging (after manual gate)
+#   4. Generate what-if preview (prod)
+#   5. Deploy to prod (after manual gate)
+# ============================================================
+
+steps:
+
+  # ──────────────────────────────────────────────────────────
+  # STAGE 1: Validate Bicep (all .bicep files must compile)
+  # Replaces: aws cloudformation validate-template
+  # ──────────────────────────────────────────────────────────
+  - label: ":bicep: Validate Bicep templates"
+    key: validate
+    commands:
+      - echo "--- Restoring AVM modules from MCR registry"
+      - az bicep restore --file outputs/bicep-templates/main.bicep --force
+      - echo "--- Building all Bicep modules"
+      - az bicep build --file outputs/bicep-templates/main.bicep
+      - az bicep build --file outputs/bicep-templates/modules/monitoring.bicep
+      - az bicep build --file outputs/bicep-templates/modules/storage.bicep
+      - az bicep build --file outputs/bicep-templates/modules/function-app.bicep
+      - az bicep build --file outputs/bicep-templates/modules/static-web-app.bicep
+      - az bicep build --file outputs/bicep-templates/modules/rbac.bicep
+      - echo "+++ All Bicep templates compiled successfully"
+    agents:
+      queue: default
+    env:
+      AZURE_SUBSCRIPTION_ID: "${AZURE_SUBSCRIPTION_ID}"
+
+  - wait
+
+  # ──────────────────────────────────────────────────────────
+  # STAGE 2: What-if for staging
+  # Shows resource changes before committing the deployment
+  # ──────────────────────────────────────────────────────────
+  - label: ":mag: What-if — staging"
+    key: whatif-staging
+    depends_on: validate
+    commands:
+      - echo "--- Running deployment what-if for staging"
+      - az deployment group what-if
+          --name "bicep-whatif-stg-${BUILDKITE_BUILD_NUMBER}"
+          --resource-group "${AZURE_RESOURCE_GROUP_STAGING}"
+          --template-file outputs/bicep-templates/main.bicep
+          --parameters outputs/bicep-templates/parameters/staging.bicepparam
+          --mode Incremental
+      - echo "+++ What-if complete — review changes above before approving deploy"
+    agents:
+      queue: default
+    env:
+      AZURE_SUBSCRIPTION_ID: "${AZURE_SUBSCRIPTION_ID}"
+      AZURE_RESOURCE_GROUP_STAGING: "${AZURE_RESOURCE_GROUP_STAGING:-rg-image-upload-stg}"
+
+  # ──────────────────────────────────────────────────────────
+  # STAGE 3: Deploy to staging (manual approval gate)
+  # Replaces: aws cloudformation deploy --stack-name staging-stack
+  # ──────────────────────────────────────────────────────────
+  - block: ":rocket: Approve staging deployment"
+    key: approve-staging
+    depends_on: whatif-staging
+    prompt: "Review the what-if output above and confirm the staging deployment."
+    fields:
+      - text: "Deployment justification"
+        key: "justification"
+        required: true
+
+  - label: ":azure: Deploy to staging"
+    key: deploy-staging
+    depends_on: approve-staging
+    commands:
+      - echo "--- Deploying to staging"
+      - az deployment group create
+          --name "bicep-stg-${BUILDKITE_BUILD_NUMBER}"
+          --resource-group "${AZURE_RESOURCE_GROUP_STAGING}"
+          --template-file outputs/bicep-templates/main.bicep
+          --parameters outputs/bicep-templates/parameters/staging.bicepparam
+          --mode Incremental
+      - echo "+++ Staging deployment complete"
+      - echo "--- Deployment outputs:"
+      - az deployment group show
+          --name "bicep-stg-${BUILDKITE_BUILD_NUMBER}"
+          --resource-group "${AZURE_RESOURCE_GROUP_STAGING}"
+          --query "properties.outputs"
+          --output table
+    agents:
+      queue: default
+    env:
+      AZURE_SUBSCRIPTION_ID: "${AZURE_SUBSCRIPTION_ID}"
+      AZURE_RESOURCE_GROUP_STAGING: "${AZURE_RESOURCE_GROUP_STAGING:-rg-image-upload-stg}"
+
+  - wait
+
+  # ──────────────────────────────────────────────────────────
+  # STAGE 4: What-if for production
+  # ──────────────────────────────────────────────────────────
+  - label: ":mag: What-if — prod"
+    key: whatif-prod
+    depends_on: deploy-staging
+    commands:
+      - echo "--- Running deployment what-if for production"
+      - az deployment group what-if
+          --name "bicep-whatif-prd-${BUILDKITE_BUILD_NUMBER}"
+          --resource-group "${AZURE_RESOURCE_GROUP_PROD}"
+          --template-file outputs/bicep-templates/main.bicep
+          --parameters outputs/bicep-templates/parameters/prod.bicepparam
+          --mode Incremental
+      - echo "+++ What-if complete — review changes above before approving prod deploy"
+    agents:
+      queue: default
+    env:
+      AZURE_SUBSCRIPTION_ID: "${AZURE_SUBSCRIPTION_ID}"
+      AZURE_RESOURCE_GROUP_PROD: "${AZURE_RESOURCE_GROUP_PROD:-rg-image-upload-prd}"
+
+  # ──────────────────────────────────────────────────────────
+  # STAGE 5: Deploy to production (manual approval gate)
+  # ──────────────────────────────────────────────────────────
+  - block: ":lock: Approve production deployment"
+    key: approve-prod
+    depends_on: whatif-prod
+    prompt: "PRODUCTION deployment. Confirm you have reviewed the what-if output and approved this release."
+    fields:
+      - text: "Change request / ticket number"
+        key: "change-request"
+        required: true
+      - text: "Deployment justification"
+        key: "justification"
+        required: true
+
+  - label: ":azure: Deploy to production"
+    key: deploy-prod
+    depends_on: approve-prod
+    commands:
+      - echo "--- Deploying to production"
+      - az deployment group create
+          --name "bicep-prd-${BUILDKITE_BUILD_NUMBER}"
+          --resource-group "${AZURE_RESOURCE_GROUP_PROD}"
+          --template-file outputs/bicep-templates/main.bicep
+          --parameters outputs/bicep-templates/parameters/prod.bicepparam
+          --mode Incremental
+      - echo "+++ Production deployment complete"
+      - echo "--- Deployment outputs:"
+      - az deployment group show
+          --name "bicep-prd-${BUILDKITE_BUILD_NUMBER}"
+          --resource-group "${AZURE_RESOURCE_GROUP_PROD}"
+          --query "properties.outputs"
+          --output table
+    agents:
+      queue: default
+    env:
+      AZURE_SUBSCRIPTION_ID: "${AZURE_SUBSCRIPTION_ID}"
+      AZURE_RESOURCE_GROUP_PROD: "${AZURE_RESOURCE_GROUP_PROD:-rg-image-upload-prd}"

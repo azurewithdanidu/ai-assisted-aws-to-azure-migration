@@ -1,10 +1,24 @@
+# ─────────────────────────────────────────────────────────────────────────────
+# deploy-static-web.yml
+# Deploys the frontend SPA to Azure Static Web Apps.
+#
+# Sections implemented:
+#   §11.1  Workflow files
+#   §11.2  OIDC authentication model
+#   §11.5  deploy-static-web.yml job/step specification
+#   §11.7  CI/CD quality gates (index.html present, HTTP smoke test)
+#
+# §11.5 runtime token retrieval:
+#   The SWA deployment token is fetched at runtime from Azure via CLI.
+#   It is never stored in GitHub Secrets, eliminating the need for token
+#   rotation when team membership changes.
+# ─────────────────────────────────────────────────────────────────────────────
+
 name: Deploy Static Web App
 
 on:
   push:
     branches:
-      - dev
-      - staging
       - main
     paths:
       - 'source-app/app-code/build/**'
@@ -15,176 +29,161 @@ on:
       environment:
         description: 'Target environment'
         required: true
+        default: dev
         type: choice
         options:
           - dev
           - staging
           - prod
 
+# §11.2 — every deploy workflow must carry these permissions
 permissions:
   id-token: write
   contents: read
-  pull-requests: write
 
+# Prevent concurrent deploys to the same environment; never cancel in-progress
 concurrency:
   group: deploy-static-web-${{ github.ref_name }}-${{ inputs.environment || 'auto' }}
   cancel-in-progress: false
 
 jobs:
-  determine-environment:
-    name: Determine environment and secret names
-    runs-on: ubuntu-latest
-    outputs:
-      environment: ${{ steps.resolve.outputs.environment }}
-      resource_group: ${{ steps.resolve.outputs.resource_group }}
-      function_app_name: ${{ steps.resolve.outputs.function_app_name }}
-      static_web_app_name: ${{ steps.resolve.outputs.static_web_app_name }}
-      static_web_app_token_secret: ${{ steps.resolve.outputs.static_web_app_token_secret }}
-      function_key_secret: ${{ steps.resolve.outputs.function_key_secret }}
-    steps:
-      - name: Determine environment and resolve secret names
-        id: resolve
-        run: |
-          if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
-            environment="${{ inputs.environment }}"
-          else
-            case "${{ github.ref_name }}" in
-              dev) environment="dev" ;;
-              staging) environment="staging" ;;
-              main) environment="prod" ;;
-              *)
-                echo "Unsupported branch: ${{ github.ref_name }}" >&2
-                exit 1
-                ;;
-            esac
-          fi
-
-          upper_environment=$(printf '%s' "$environment" | tr '[:lower:]' '[:upper:]')
-
-          echo "environment=${environment}" >> "$GITHUB_OUTPUT"
-          echo "resource_group=rg-photo-gallery-${environment}" >> "$GITHUB_OUTPUT"
-          echo "function_app_name=photo-gallery-func-${environment}" >> "$GITHUB_OUTPUT"
-          echo "static_web_app_name=photo-gallery-swa-${environment}" >> "$GITHUB_OUTPUT"
-          echo "static_web_app_token_secret=STATIC_WEB_APP_TOKEN_${upper_environment}" >> "$GITHUB_OUTPUT"
-          echo "function_key_secret=FUNC_KEY_${upper_environment}" >> "$GITHUB_OUTPUT"
-
+  # ── Job 1: deploy ─────────────────────────────────────────────────────────
+  # §11.5 step 1 — checkout
+  # §11.5 step 2 — Azure login via OIDC
+  # §11.5 step 3 — fetch SWA deployment token at runtime using Azure CLI
+  # §11.5 step 4 — deploy with Azure/static-web-apps-deploy@v1
+  # §11.7 quality gates — index.html present, HTTP smoke test
   deploy:
-    name: Patch and deploy static site
+    name: Deploy static web app
     runs-on: ubuntu-latest
-    needs: determine-environment
-    environment: ${{ needs.determine-environment.outputs.environment }}
-    env:
-      RESOURCE_GROUP: ${{ needs.determine-environment.outputs.resource_group }}
-      FUNCTION_APP_NAME: ${{ needs.determine-environment.outputs.function_app_name }}
-      STATIC_WEB_APP_NAME: ${{ needs.determine-environment.outputs.static_web_app_name }}
-      SWA_TOKEN: ${{ secrets[needs.determine-environment.outputs.static_web_app_token_secret] }}
-      FALLBACK_FUNCTION_KEY: ${{ secrets[needs.determine-environment.outputs.function_key_secret] }}
+    environment: ${{ inputs.environment || vars.ENVIRONMENT }}
     steps:
+      # §11.5 step 1 — checkout
       - name: Checkout repository
         uses: actions/checkout@v4
 
-      - name: Copy app.html to index.html when needed
+      # §11.7 quality gate — SWA requires index.html as the default document
+      # Copy app.html → index.html when the HTML entry point has been renamed
+      - name: Ensure index.html exists (§11.7 gate)
         run: |
           if [ -f source-app/app-code/build/app.html ] && [ ! -f source-app/app-code/build/index.html ]; then
+            echo "Copying app.html → index.html for SWA compatibility."
             cp source-app/app-code/build/app.html source-app/app-code/build/index.html
           fi
-
           if [ ! -f source-app/app-code/build/index.html ]; then
-            echo "Missing source-app/app-code/build/index.html" >&2
+            echo "::error::source-app/app-code/build/index.html not found. SWA requires index.html as the default document."
             exit 1
           fi
 
-      - name: Authenticate with Azure using OIDC
+      # §11.5 precondition — patch API base URL from AWS API Gateway → Azure Functions
+      # Satisfies §11.5 "API base URL must point to the Function App hostname"
+      - name: Resolve Function App hostname
+        id: function-config
+        run: |
+          # Attempt to resolve the live hostname from Azure; fall back to convention
+          function_hostname=$(az functionapp show \
+            --resource-group "${{ vars.RESOURCE_GROUP_NAME }}" \
+            --name "${{ vars.FUNCTION_APP_NAME }}" \
+            --query defaultHostName \
+            --output tsv 2>/dev/null || echo "")
+          if [ -z "$function_hostname" ]; then
+            function_hostname="${{ vars.FUNCTION_APP_NAME }}.azurewebsites.net"
+            echo "::warning::Could not query Function App hostname; using convention: ${function_hostname}"
+          fi
+          echo "function_app_url=https://${function_hostname}/api" >> "$GITHUB_OUTPUT"
+
+      # §11.5 step 2 — Azure Login (OIDC) — must precede the CLI token fetch
+      - name: Azure Login (OIDC)
         uses: azure/login@v2
         with:
           client-id: ${{ secrets.AZURE_CLIENT_ID }}
           tenant-id: ${{ secrets.AZURE_TENANT_ID }}
           subscription-id: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
 
-      - name: Fetch Function host key with secret fallback
-        id: function-config
+      # §11.5 step 3 — fetch SWA deployment token at runtime (no long-lived secret)
+      - name: Fetch SWA deployment token at runtime
+        id: swa-token
         run: |
-          function_host_key=$(az functionapp keys list \
-            --resource-group "$RESOURCE_GROUP" \
-            --name "$FUNCTION_APP_NAME" \
-            --query functionKeys.default \
-            --output tsv 2>/dev/null || true)
-          function_hostname=$(az functionapp show \
-            --resource-group "$RESOURCE_GROUP" \
-            --name "$FUNCTION_APP_NAME" \
-            --query defaultHostName \
-            --output tsv 2>/dev/null || true)
-
-          if [ -z "$function_host_key" ]; then
-            function_host_key="$FALLBACK_FUNCTION_KEY"
-          fi
-
-          if [ -z "$function_hostname" ]; then
-            function_hostname="${FUNCTION_APP_NAME}.azurewebsites.net"
-          fi
-
-          if [ -z "$function_host_key" ]; then
-            echo "Unable to resolve a Function host key from Azure or GitHub secrets." >&2
+          token=$(az staticwebapp secrets list \
+            --name "${{ vars.STATIC_WEB_APP_NAME }}" \
+            --resource-group "${{ vars.RESOURCE_GROUP_NAME }}" \
+            --query "properties.apiKey" \
+            --output tsv)
+          if [ -z "$token" ]; then
+            echo "::error::Could not retrieve SWA deployment token for ${{ vars.STATIC_WEB_APP_NAME }}"
             exit 1
           fi
+          # Mask the token so it never appears in logs
+          echo "::add-mask::${token}"
+          echo "swa_token=${token}" >> "$GITHUB_OUTPUT"
 
-          echo "::add-mask::$function_host_key"
-          echo "function_app_url=https://${function_hostname}/api" >> "$GITHUB_OUTPUT"
-          echo "function_host_key=$function_host_key" >> "$GITHUB_OUTPUT"
-
-      - name: Patch SPA config
+      # Patch AWS API Gateway URLs to Azure Function App URL in the built SPA
+      - name: Patch SPA API base URL
         env:
           FUNCTION_APP_URL: ${{ steps.function-config.outputs.function_app_url }}
-          FUNCTION_HOST_KEY: ${{ steps.function-config.outputs.function_host_key }}
         run: |
           python - <<'PY'
-          import pathlib
-          import re
+          import os, pathlib, re
 
           index_path = pathlib.Path('source-app/app-code/build/index.html')
           html = index_path.read_text(encoding='utf-8')
+          function_app_url = os.environ['FUNCTION_APP_URL']
 
-          html = re.sub(r"https://[a-z0-9]+\.execute-api\.[a-z0-9-]+\.amazonaws\.com/[A-Za-z0-9_/-]+", "${FUNCTION_APP_URL}", html)
-          html = re.sub(r"const API_BASE_URL\s*=\s*'[^']*';", "const API_BASE_URL = '${FUNCTION_APP_URL}';", html)
-
-          if "const FUNCTION_HOST_KEY = '" not in html:
-              html = html.replace(
-                  "const AWS_REGION = 'ap-southeast-2';",
-                  "const FUNCTION_HOST_KEY = '${FUNCTION_HOST_KEY}';"
-              )
-          else:
-              html = re.sub(r"const FUNCTION_HOST_KEY\s*=\s*'[^']*';", "const FUNCTION_HOST_KEY = '${FUNCTION_HOST_KEY}';", html)
-
-          html = re.sub(r"window\.addEventListener\('load',\s*checkCredentials\);", "window.addEventListener('load', showMainApp);", html)
+          # Replace any AWS API Gateway base URLs with the Azure Function App URL
           html = re.sub(
-              r"async function makeSignedRequest\(method, path, body = null\) \{.*?return fetch\(`https://\$\{endpoint\.host\}\$\{request\.path\}`, fetchOptions\);\n        \}",
-              "async function makeSignedRequest(method, path, body = null) {\n            const headers = { 'x-functions-key': FUNCTION_HOST_KEY };\n\n            if (body) {\n                headers['Content-Type'] = 'application/json';\n            }\n\n            const response = await fetch(`${API_BASE_URL}${path}`, {\n                method,\n                headers,\n                body: body ? JSON.stringify(body) : undefined\n            });\n\n            return response;\n        }",
+              r"https://[a-z0-9]+\.execute-api\.[a-z0-9-]+\.amazonaws\.com/[A-Za-z0-9_/-]+",
+              function_app_url,
               html,
-              flags=re.S,
           )
+          # Replace explicit API_BASE_URL constant assignments
+          html = re.sub(
+              r"const API_BASE_URL\s*=\s*'[^']*';",
+              f"const API_BASE_URL = '{function_app_url}';",
+              html,
+          )
+          # Scrub any accidentally included AWS access key literals
           html = re.sub(r"AKIA[0-9A-Z]{16}", "REMOVED_AWS_ACCESS_KEY", html)
 
           index_path.write_text(html, encoding='utf-8')
+          print(f"Patched API base URL → {function_app_url}")
           PY
 
-      - name: Deploy with Azure Static Web Apps action
+      # §11.5 step 4 — deploy with Azure/static-web-apps-deploy@v1
+      - name: Deploy to Azure Static Web Apps
+        id: deploy
         uses: Azure/static-web-apps-deploy@v1
         with:
-          azure_static_web_apps_api_token: ${{ env.SWA_TOKEN }}
+          azure_static_web_apps_api_token: ${{ steps.swa-token.outputs.swa_token }}
           repo_token: ${{ secrets.GITHUB_TOKEN }}
           action: upload
           app_location: source-app/app-code/build
-          skip_app_build: true
+          skip_app_build: true   # Pre-built; do not re-build
 
-      - name: Smoke-test the static web app hostname
+      # §11.7 quality gate — smoke test the live SWA hostname
+      - name: Smoke test SWA hostname
         run: |
           hostname=$(az staticwebapp show \
-            --resource-group "$RESOURCE_GROUP" \
-            --name "$STATIC_WEB_APP_NAME" \
+            --resource-group "${{ vars.RESOURCE_GROUP_NAME }}" \
+            --name "${{ vars.STATIC_WEB_APP_NAME }}" \
             --query defaultHostname \
             --output tsv)
-          http_status=$(curl --silent --show-error --location --output /dev/null --write-out '%{http_code}' "https://${hostname}")
-          if [ "$http_status" -lt 200 ] || [ "$http_status" -ge 400 ]; then
-            echo "Unexpected HTTP status from https://${hostname}: ${http_status}" >&2
+          echo "Testing https://${hostname}"
+          status=$(curl --silent --show-error --location --output /dev/null \
+            --write-out '%{http_code}' \
+            "https://${hostname}")
+          echo "HTTP status: ${status}"
+          if [ "$status" -lt 200 ] || [ "$status" -ge 400 ]; then
+            echo "::error::Unexpected HTTP status from https://${hostname}: ${status}"
             exit 1
           fi
+
+      # Surface the deployed URL for quick access from the Actions summary
+      - name: Print deployed URL
+        if: success()
+        run: |
+          hostname=$(az staticwebapp show \
+            --resource-group "${{ vars.RESOURCE_GROUP_NAME }}" \
+            --name "${{ vars.STATIC_WEB_APP_NAME }}" \
+            --query defaultHostname \
+            --output tsv)
+          echo "::notice::Static Web App deployed → https://${hostname}"
