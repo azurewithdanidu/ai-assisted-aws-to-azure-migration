@@ -1,0 +1,77 @@
+graph TB
+    subgraph "Client / Browser"
+        FE[Static Website SPA<br/>app.html]
+    end
+
+    subgraph "Storage — Frontend"
+        WB["WebsiteBucket<br/>image-upload-websitebucket-vd866vxtcs1z<br/>S3 Static Website"]
+    end
+
+    subgraph "Identity & Access"
+        IAU["IAM User<br/>image-upload-api-user<br/>execute-api:Invoke permission"]
+        LER["IAM Role<br/>LambdaExecutionRole<br/>S3 read/write/delete + CloudWatch Logs"]
+    end
+
+    subgraph "API Layer"
+        AG["API Gateway REST API<br/>image-upload-api (4lrh2l7i86)<br/>Regional • AWS_IAM Auth • Stage: dev"]
+    end
+
+    subgraph "Compute — Lambda Functions (Python 3.11 • 256 MB • 30s)"
+        UF["UploadFunction<br/>POST /upload<br/>generate_presigned_post"]
+        LF["ListFilesFunction<br/>GET /files<br/>list_objects_v2 + presigned URLs"]
+        VF["GetViewUrlFunction<br/>GET /files/{fileId}/view-url<br/>generate_presigned_url"]
+        DF["DeleteFileFunction<br/>DELETE /files/{fileId}<br/>list_objects_v2 + delete_object"]
+    end
+
+    subgraph "Storage — Images"
+        IB["ImageBucket<br/>image-upload-imagebucket-t8isnbr8sswv<br/>S3 • Versioning ON • SSE-AES256<br/>Public Access Blocked • CORS Enabled"]
+    end
+
+    subgraph "Monitoring"
+        CW1["CloudWatch Logs<br/>/aws/lambda/UploadFunction"]
+        CW2["CloudWatch Logs<br/>/aws/lambda/ListFilesFunction"]
+        CW3["CloudWatch Logs<br/>/aws/lambda/GetViewUrlFunction"]
+        CW4["CloudWatch Logs<br/>/aws/lambda/DeleteFileFunction"]
+        CW5["CloudWatch Logs<br/>API-Gateway-Execution-Logs_4lrh2l7i86/dev"]
+        XR["X-Ray Tracing<br/>API Gateway Stage (dev)<br/>Lambda: PassThrough"]
+    end
+
+    subgraph "IaC"
+        CFN["CloudFormation Stack<br/>image-upload<br/>ap-southeast-2 • CREATE_COMPLETE"]
+    end
+
+    FE -->|"hosts static site"| WB
+    FE -->|"authenticates with"| IAU
+    IAU -->|"calls (SigV4 signed)"| AG
+
+    AG -->|"calls (AWS_PROXY)"| UF
+    AG -->|"calls (AWS_PROXY)"| LF
+    AG -->|"calls (AWS_PROXY)"| VF
+    AG -->|"calls (AWS_PROXY)"| DF
+
+    UF -->|"authenticates"| LER
+    LF -->|"authenticates"| LER
+    VF -->|"authenticates"| LER
+    DF -->|"authenticates"| LER
+
+    UF -->|"writes (presigned POST)"| IB
+    LF -->|"reads (list + presigned GET)"| IB
+    VF -->|"reads (presigned GET)"| IB
+    DF -->|"writes/deletes"| IB
+
+    UF -->|"writes logs"| CW1
+    LF -->|"writes logs"| CW2
+    VF -->|"writes logs"| CW3
+    DF -->|"writes logs"| CW4
+    AG -->|"writes logs"| CW5
+    AG -->|"traces"| XR
+
+    CFN -->|"manages"| UF
+    CFN -->|"manages"| LF
+    CFN -->|"manages"| VF
+    CFN -->|"manages"| DF
+    CFN -->|"manages"| IB
+    CFN -->|"manages"| WB
+    CFN -->|"manages"| AG
+    CFN -->|"manages"| LER
+    CFN -->|"manages"| IAU

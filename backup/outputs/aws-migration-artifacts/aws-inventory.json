@@ -1,0 +1,782 @@
+{
+  "account_id": "535002891143",
+  "region": "ap-southeast-2",
+  "discovery_timestamp": "2026-06-24T13:10:00Z",
+  "cloudformation_stack": {
+    "stack_name": "image-upload",
+    "stack_id": "arn:aws:cloudformation:ap-southeast-2:535002891143:stack/image-upload/389861d0-f100-11f0-a749-02cd89cc31e7",
+    "status": "CREATE_COMPLETE",
+    "created": "2026-01-14T04:19:30Z",
+    "environment_parameter": "dev",
+    "outputs": {
+      "ApiUrl": "https://4lrh2l7i86.execute-api.ap-southeast-2.amazonaws.com/dev",
+      "BucketName": "image-upload-imagebucket-t8isnbr8sswv",
+      "WebsiteUrl": "http://image-upload-websitebucket-vd866vxtcs1z.s3-website-ap-southeast-2.amazonaws.com",
+      "WebsiteBucketName": "image-upload-websitebucket-vd866vxtcs1z",
+      "ApiUserName": "image-upload-api-user",
+      "ApiUserAccessKeyId": "AKIAXZEFIIOD2OIWPRPK"
+    }
+  },
+  "summary": {
+    "total_resources": 14,
+    "service_count": 6,
+    "estimated_complexity": "MEDIUM",
+    "estimated_effort_weeks": 3,
+    "services_in_scope": [
+      "lambda",
+      "s3",
+      "apigateway",
+      "iam",
+      "cloudwatch",
+      "xray"
+    ],
+    "services_not_present": [
+      "dynamodb",
+      "rds",
+      "sqs",
+      "sns",
+      "elasticache",
+      "ecs",
+      "eks",
+      "ec2",
+      "secretsmanager",
+      "stepfunctions",
+      "kinesis",
+      "route53",
+      "alb"
+    ]
+  },
+  "services": {
+    "lambda": {
+      "count": 4,
+      "resources": [
+        {
+          "arn": "arn:aws:lambda:ap-southeast-2:535002891143:function:image-upload-UploadFunction-iIIJ7xiZECuB",
+          "name": "image-upload-UploadFunction-iIIJ7xiZECuB",
+          "logical_id": "UploadFunction",
+          "runtime": "python3.11",
+          "memory_mb": 256,
+          "timeout_s": 30,
+          "handler": "upload_handler.lambda_handler",
+          "source_path": "source-app/app-code/lambda/upload/upload_handler.py",
+          "architecture": "x86_64",
+          "package_type": "Zip",
+          "code_size_bytes": 1615,
+          "ephemeral_storage_mb": 512,
+          "last_modified": "2026-01-14T04:20:33Z",
+          "environment_variables": ["BUCKET_NAME", "URL_EXPIRATION"],
+          "layers": [],
+          "triggers": [
+            {
+              "source": "API Gateway",
+              "api_id": "4lrh2l7i86",
+              "api_name": "image-upload-api",
+              "method": "POST",
+              "path": "/upload",
+              "auth": "AWS_IAM",
+              "stage": "dev"
+            }
+          ],
+          "vpc_config": {
+            "subnet_ids": [],
+            "security_group_ids": [],
+            "vpc_id": null
+          },
+          "tracing_mode": "PassThrough",
+          "xray_enabled": false,
+          "snap_start": "None",
+          "log_group": "/aws/lambda/image-upload-UploadFunction-iIIJ7xiZECuB",
+          "log_format": "Text",
+          "dependencies": [
+            "image-upload-imagebucket-t8isnbr8sswv"
+          ],
+          "boto3_sdk_calls": [
+            "s3.generate_presigned_post",
+            "s3 client with s3v4 signature + virtual addressing style"
+          ],
+          "tags": {
+            "aws:cloudformation:logical-id": "UploadFunction",
+            "aws:cloudformation:stack-id": "arn:aws:cloudformation:ap-southeast-2:535002891143:stack/image-upload/389861d0-f100-11f0-a749-02cd89cc31e7",
+            "aws:cloudformation:stack-name": "image-upload"
+          },
+          "criticality": "HIGH",
+          "monthly_cost_usd": 0.50,
+          "iam_role": {
+            "arn": "arn:aws:iam::535002891143:role/image-upload-LambdaExecutionRole-2MhYmRQ3aAnA",
+            "permissions": {
+              "s3": [
+                "PutObject",
+                "PutObjectTagging",
+                "GetObject",
+                "GetObjectTagging",
+                "DeleteObject",
+                "ListBucket"
+              ],
+              "logs": [
+                "CreateLogGroup",
+                "CreateLogStream",
+                "PutLogEvents"
+              ]
+            },
+            "external_account_permissions": [],
+            "cross_service_permissions": []
+          }
+        },
+        {
+          "arn": "arn:aws:lambda:ap-southeast-2:535002891143:function:image-upload-ListFilesFunction-Pb0dKq9dR0Is",
+          "name": "image-upload-ListFilesFunction-Pb0dKq9dR0Is",
+          "logical_id": "ListFilesFunction",
+          "runtime": "python3.11",
+          "memory_mb": 256,
+          "timeout_s": 30,
+          "handler": "list_handler.lambda_handler",
+          "source_path": "source-app/app-code/lambda/list/list_handler.py",
+          "architecture": "x86_64",
+          "package_type": "Zip",
+          "code_size_bytes": 1553,
+          "ephemeral_storage_mb": 512,
+          "last_modified": "2026-01-14T04:20:34Z",
+          "environment_variables": ["BUCKET_NAME", "URL_EXPIRATION"],
+          "layers": [],
+          "triggers": [
+            {
+              "source": "API Gateway",
+              "api_id": "4lrh2l7i86",
+              "api_name": "image-upload-api",
+              "method": "GET",
+              "path": "/files",
+              "auth": "AWS_IAM",
+              "stage": "dev",
+              "query_params": ["prefix", "maxKeys"]
+            }
+          ],
+          "vpc_config": {
+            "subnet_ids": [],
+            "security_group_ids": [],
+            "vpc_id": null
+          },
+          "tracing_mode": "PassThrough",
+          "xray_enabled": false,
+          "snap_start": "None",
+          "log_group": "/aws/lambda/image-upload-ListFilesFunction-Pb0dKq9dR0Is",
+          "log_format": "Text",
+          "dependencies": [
+            "image-upload-imagebucket-t8isnbr8sswv"
+          ],
+          "boto3_sdk_calls": [
+            "s3.list_objects_v2",
+            "s3.head_object",
+            "s3.generate_presigned_url (get_object)",
+            "s3.get_object_tagging"
+          ],
+          "tags": {
+            "aws:cloudformation:logical-id": "ListFilesFunction",
+            "aws:cloudformation:stack-id": "arn:aws:cloudformation:ap-southeast-2:535002891143:stack/image-upload/389861d0-f100-11f0-a749-02cd89cc31e7",
+            "aws:cloudformation:stack-name": "image-upload"
+          },
+          "criticality": "HIGH",
+          "monthly_cost_usd": 0.50,
+          "iam_role": {
+            "arn": "arn:aws:iam::535002891143:role/image-upload-LambdaExecutionRole-2MhYmRQ3aAnA",
+            "permissions": {
+              "s3": [
+                "PutObject",
+                "PutObjectTagging",
+                "GetObject",
+                "GetObjectTagging",
+                "DeleteObject",
+                "ListBucket"
+              ],
+              "logs": [
+                "CreateLogGroup",
+                "CreateLogStream",
+                "PutLogEvents"
+              ]
+            },
+            "external_account_permissions": [],
+            "cross_service_permissions": []
+          }
+        },
+        {
+          "arn": "arn:aws:lambda:ap-southeast-2:535002891143:function:image-upload-GetViewUrlFunction-yMGI9X8Us5Em",
+          "name": "image-upload-GetViewUrlFunction-yMGI9X8Us5Em",
+          "logical_id": "GetViewUrlFunction",
+          "runtime": "python3.11",
+          "memory_mb": 256,
+          "timeout_s": 30,
+          "handler": "view_handler.lambda_handler",
+          "source_path": "source-app/app-code/lambda/view/view_handler.py",
+          "architecture": "x86_64",
+          "package_type": "Zip",
+          "code_size_bytes": 1270,
+          "ephemeral_storage_mb": 512,
+          "last_modified": "2026-01-14T04:20:35Z",
+          "environment_variables": ["BUCKET_NAME", "URL_EXPIRATION"],
+          "layers": [],
+          "triggers": [
+            {
+              "source": "API Gateway",
+              "api_id": "4lrh2l7i86",
+              "api_name": "image-upload-api",
+              "method": "GET",
+              "path": "/files/{fileId}/view-url",
+              "auth": "AWS_IAM",
+              "stage": "dev",
+              "path_params": ["fileId"]
+            }
+          ],
+          "vpc_config": {
+            "subnet_ids": [],
+            "security_group_ids": [],
+            "vpc_id": null
+          },
+          "tracing_mode": "PassThrough",
+          "xray_enabled": false,
+          "snap_start": "None",
+          "log_group": "/aws/lambda/image-upload-GetViewUrlFunction-yMGI9X8Us5Em",
+          "log_format": "Text",
+          "dependencies": [
+            "image-upload-imagebucket-t8isnbr8sswv"
+          ],
+          "boto3_sdk_calls": [
+            "s3.list_objects_v2",
+            "s3.head_object",
+            "s3.generate_presigned_url (get_object)"
+          ],
+          "tags": {
+            "aws:cloudformation:logical-id": "GetViewUrlFunction",
+            "aws:cloudformation:stack-id": "arn:aws:cloudformation:ap-southeast-2:535002891143:stack/image-upload/389861d0-f100-11f0-a749-02cd89cc31e7",
+            "aws:cloudformation:stack-name": "image-upload"
+          },
+          "criticality": "HIGH",
+          "monthly_cost_usd": 0.50,
+          "iam_role": {
+            "arn": "arn:aws:iam::535002891143:role/image-upload-LambdaExecutionRole-2MhYmRQ3aAnA",
+            "permissions": {
+              "s3": [
+                "PutObject",
+                "PutObjectTagging",
+                "GetObject",
+                "GetObjectTagging",
+                "DeleteObject",
+                "ListBucket"
+              ],
+              "logs": [
+                "CreateLogGroup",
+                "CreateLogStream",
+                "PutLogEvents"
+              ]
+            },
+            "external_account_permissions": [],
+            "cross_service_permissions": []
+          }
+        },
+        {
+          "arn": "arn:aws:lambda:ap-southeast-2:535002891143:function:image-upload-DeleteFileFunction-EG7Cfj3m2P6f",
+          "name": "image-upload-DeleteFileFunction-EG7Cfj3m2P6f",
+          "logical_id": "DeleteFileFunction",
+          "runtime": "python3.11",
+          "memory_mb": 256,
+          "timeout_s": 30,
+          "handler": "delete_handler.lambda_handler",
+          "source_path": "source-app/app-code/lambda/delete/delete_handler.py",
+          "architecture": "x86_64",
+          "package_type": "Zip",
+          "code_size_bytes": 1092,
+          "ephemeral_storage_mb": 512,
+          "last_modified": "2026-01-14T04:20:35Z",
+          "environment_variables": ["BUCKET_NAME"],
+          "layers": [],
+          "triggers": [
+            {
+              "source": "API Gateway",
+              "api_id": "4lrh2l7i86",
+              "api_name": "image-upload-api",
+              "method": "DELETE",
+              "path": "/files/{fileId}",
+              "auth": "AWS_IAM",
+              "stage": "dev",
+              "path_params": ["fileId"]
+            }
+          ],
+          "vpc_config": {
+            "subnet_ids": [],
+            "security_group_ids": [],
+            "vpc_id": null
+          },
+          "tracing_mode": "PassThrough",
+          "xray_enabled": false,
+          "snap_start": "None",
+          "log_group": "/aws/lambda/image-upload-DeleteFileFunction-EG7Cfj3m2P6f",
+          "log_format": "Text",
+          "dependencies": [
+            "image-upload-imagebucket-t8isnbr8sswv"
+          ],
+          "boto3_sdk_calls": [
+            "s3.list_objects_v2",
+            "s3.delete_object",
+            "s3 client with s3v4 signature + virtual addressing style"
+          ],
+          "tags": {
+            "aws:cloudformation:logical-id": "DeleteFileFunction",
+            "aws:cloudformation:stack-id": "arn:aws:cloudformation:ap-southeast-2:535002891143:stack/image-upload/389861d0-f100-11f0-a749-02cd89cc31e7",
+            "aws:cloudformation:stack-name": "image-upload"
+          },
+          "criticality": "HIGH",
+          "monthly_cost_usd": 0.30,
+          "iam_role": {
+            "arn": "arn:aws:iam::535002891143:role/image-upload-LambdaExecutionRole-2MhYmRQ3aAnA",
+            "permissions": {
+              "s3": [
+                "PutObject",
+                "PutObjectTagging",
+                "GetObject",
+                "GetObjectTagging",
+                "DeleteObject",
+                "ListBucket"
+              ],
+              "logs": [
+                "CreateLogGroup",
+                "CreateLogStream",
+                "PutLogEvents"
+              ]
+            },
+            "external_account_permissions": [],
+            "cross_service_permissions": []
+          }
+        }
+      ]
+    },
+    "s3": {
+      "count": 2,
+      "resources": [
+        {
+          "arn": "arn:aws:s3:::image-upload-imagebucket-t8isnbr8sswv",
+          "name": "image-upload-imagebucket-t8isnbr8sswv",
+          "logical_id": "ImageBucket",
+          "region": "ap-southeast-2",
+          "created": "2026-04-22T03:18:37Z",
+          "versioning_enabled": true,
+          "public_access_blocked": true,
+          "public_access_block_config": {
+            "block_public_acls": true,
+            "ignore_public_acls": true,
+            "block_public_policy": true,
+            "restrict_public_buckets": true
+          },
+          "static_website_enabled": false,
+          "lifecycle_policies": [],
+          "encryption": {
+            "type": "SSE-S3",
+            "algorithm": "AES256",
+            "bucket_key_enabled": false
+          },
+          "cors_rules": [
+            {
+              "allowed_headers": ["*"],
+              "allowed_methods": ["GET", "PUT", "POST", "HEAD", "DELETE"],
+              "allowed_origins": ["*"],
+              "expose_headers": [
+                "ETag",
+                "Content-Type",
+                "x-amz-server-side-encryption",
+                "x-amz-request-id",
+                "x-amz-id-2"
+              ],
+              "max_age_seconds": 3000
+            }
+          ],
+          "replication_rules": [],
+          "tags": {
+            "aws:cloudformation:logical-id": "ImageBucket",
+            "aws:cloudformation:stack-id": "arn:aws:cloudformation:ap-southeast-2:535002891143:stack/image-upload/389861d0-f100-11f0-a749-02cd89cc31e7",
+            "aws:cloudformation:stack-name": "image-upload"
+          },
+          "dependencies": [],
+          "used_by": [
+            "image-upload-UploadFunction-iIIJ7xiZECuB",
+            "image-upload-ListFilesFunction-Pb0dKq9dR0Is",
+            "image-upload-GetViewUrlFunction-yMGI9X8Us5Em",
+            "image-upload-DeleteFileFunction-EG7Cfj3m2P6f"
+          ],
+          "criticality": "CRITICAL",
+          "monthly_cost_usd": 2.00,
+          "notes": "Primary image storage bucket. All Lambda functions read/write/delete objects here. Presigned URLs (S3v4 signed) are generated for client-side direct upload and object retrieval."
+        },
+        {
+          "arn": "arn:aws:s3:::image-upload-websitebucket-vd866vxtcs1z",
+          "name": "image-upload-websitebucket-vd866vxtcs1z",
+          "logical_id": "WebsiteBucket",
+          "region": "ap-southeast-2",
+          "created": "2026-04-22T03:56:50Z",
+          "versioning_enabled": false,
+          "public_access_blocked": false,
+          "public_access_block_config": {
+            "block_public_acls": false,
+            "ignore_public_acls": false,
+            "block_public_policy": false,
+            "restrict_public_buckets": false
+          },
+          "static_website_enabled": true,
+          "website_config": {
+            "index_document": "app.html",
+            "error_document": "error.html",
+            "website_url": "http://image-upload-websitebucket-vd866vxtcs1z.s3-website-ap-southeast-2.amazonaws.com"
+          },
+          "bucket_policy": {
+            "effect": "Allow",
+            "principal": "*",
+            "action": "s3:GetObject",
+            "resource": "arn:aws:s3:::image-upload-websitebucket-vd866vxtcs1z/*"
+          },
+          "lifecycle_policies": [],
+          "encryption": {
+            "type": "SSE-S3",
+            "algorithm": "AES256",
+            "bucket_key_enabled": false
+          },
+          "cors_rules": [],
+          "replication_rules": [],
+          "tags": {
+            "aws:cloudformation:logical-id": "WebsiteBucket",
+            "aws:cloudformation:stack-id": "arn:aws:cloudformation:ap-southeast-2:535002891143:stack/image-upload/389861d0-f100-11f0-a749-02cd89cc31e7",
+            "aws:cloudformation:stack-name": "image-upload"
+          },
+          "dependencies": [],
+          "used_by": [],
+          "criticality": "MEDIUM",
+          "monthly_cost_usd": 0.50,
+          "notes": "Static website hosting for the frontend SPA (app.html). Publicly readable via bucket policy. No versioning."
+        }
+      ]
+    },
+    "apigateway": {
+      "count": 1,
+      "resources": [
+        {
+          "arn": "arn:aws:apigateway:ap-southeast-2::/restapis/4lrh2l7i86",
+          "id": "4lrh2l7i86",
+          "name": "image-upload-api",
+          "logical_id": "ImageUploadApi",
+          "description": "API for image upload service (IAM Auth)",
+          "type": "REST",
+          "endpoint_type": "REGIONAL",
+          "ip_address_type": "ipv4",
+          "api_key_source": "HEADER",
+          "disable_execute_api_endpoint": false,
+          "created": "2026-01-14T04:19:34Z",
+          "stages": [
+            {
+              "arn": "arn:aws:apigateway:ap-southeast-2::/restapis/4lrh2l7i86/stages/dev",
+              "name": "dev",
+              "logical_id": "ApiStage",
+              "deployment_id": "fayh8p",
+              "tracing_enabled": true,
+              "cache_cluster_enabled": false,
+              "metrics_enabled": true,
+              "logging_level": "INFO",
+              "data_trace_enabled": true,
+              "throttling_burst_limit": 5000,
+              "throttling_rate_limit": 10000,
+              "created": "2026-01-14T04:20:22Z",
+              "tags": {
+                "aws:cloudformation:logical-id": "ApiStage",
+                "aws:cloudformation:stack-id": "arn:aws:cloudformation:ap-southeast-2:535002891143:stack/image-upload/389861d0-f100-11f0-a749-02cd89cc31e7",
+                "aws:cloudformation:stack-name": "image-upload"
+              },
+              "log_group": "API-Gateway-Execution-Logs_4lrh2l7i86/dev"
+            }
+          ],
+          "routes": [
+            {
+              "resource_id": "y0crxr",
+              "path": "/upload",
+              "methods": [
+                {
+                  "http_method": "POST",
+                  "auth": "AWS_IAM",
+                  "integration": "AWS_PROXY",
+                  "lambda_arn": "arn:aws:lambda:ap-southeast-2:535002891143:function:image-upload-UploadFunction-iIIJ7xiZECuB"
+                },
+                {
+                  "http_method": "OPTIONS",
+                  "auth": "NONE",
+                  "integration": "MOCK",
+                  "note": "CORS preflight"
+                }
+              ]
+            },
+            {
+              "resource_id": "fuuio4",
+              "path": "/files",
+              "methods": [
+                {
+                  "http_method": "GET",
+                  "auth": "AWS_IAM",
+                  "integration": "AWS_PROXY",
+                  "lambda_arn": "arn:aws:lambda:ap-southeast-2:535002891143:function:image-upload-ListFilesFunction-Pb0dKq9dR0Is",
+                  "query_params": ["prefix"]
+                },
+                {
+                  "http_method": "OPTIONS",
+                  "auth": "NONE",
+                  "integration": "MOCK",
+                  "note": "CORS preflight"
+                }
+              ]
+            },
+            {
+              "resource_id": "7omfsi",
+              "path": "/files/{fileId}",
+              "methods": [
+                {
+                  "http_method": "DELETE",
+                  "auth": "AWS_IAM",
+                  "integration": "AWS_PROXY",
+                  "lambda_arn": "arn:aws:lambda:ap-southeast-2:535002891143:function:image-upload-DeleteFileFunction-EG7Cfj3m2P6f",
+                  "path_params": ["fileId"]
+                },
+                {
+                  "http_method": "OPTIONS",
+                  "auth": "NONE",
+                  "integration": "MOCK",
+                  "note": "CORS preflight"
+                }
+              ]
+            },
+            {
+              "resource_id": "s953t7",
+              "path": "/files/{fileId}/view-url",
+              "methods": [
+                {
+                  "http_method": "GET",
+                  "auth": "AWS_IAM",
+                  "integration": "AWS_PROXY",
+                  "lambda_arn": "arn:aws:lambda:ap-southeast-2:535002891143:function:image-upload-GetViewUrlFunction-yMGI9X8Us5Em",
+                  "path_params": ["fileId"]
+                },
+                {
+                  "http_method": "OPTIONS",
+                  "auth": "NONE",
+                  "integration": "MOCK",
+                  "note": "CORS preflight"
+                }
+              ]
+            }
+          ],
+          "base_url": "https://4lrh2l7i86.execute-api.ap-southeast-2.amazonaws.com/dev",
+          "dependencies": [
+            "image-upload-UploadFunction-iIIJ7xiZECuB",
+            "image-upload-ListFilesFunction-Pb0dKq9dR0Is",
+            "image-upload-GetViewUrlFunction-yMGI9X8Us5Em",
+            "image-upload-DeleteFileFunction-EG7Cfj3m2P6f"
+          ],
+          "used_by": [
+            "image-upload-api-user"
+          ],
+          "tags": {
+            "aws:cloudformation:logical-id": "ImageUploadApi",
+            "aws:cloudformation:stack-id": "arn:aws:cloudformation:ap-southeast-2:535002891143:stack/image-upload/389861d0-f100-11f0-a749-02cd89cc31e7",
+            "aws:cloudformation:stack-name": "image-upload"
+          },
+          "criticality": "HIGH",
+          "monthly_cost_usd": 1.00
+        }
+      ]
+    },
+    "iam": {
+      "count": 4,
+      "roles": [
+        {
+          "arn": "arn:aws:iam::535002891143:role/image-upload-LambdaExecutionRole-2MhYmRQ3aAnA",
+          "name": "image-upload-LambdaExecutionRole-2MhYmRQ3aAnA",
+          "logical_id": "LambdaExecutionRole",
+          "principal": "lambda.amazonaws.com",
+          "created": "2026-01-14T04:19:50Z",
+          "managed_policies": [
+            "arn:aws:iam::aws:policy/service-role/AWSLambdaBasicExecutionRole"
+          ],
+          "inline_policies": {
+            "S3Access": {
+              "statements": [
+                {
+                  "effect": "Allow",
+                  "actions": [
+                    "s3:PutObject",
+                    "s3:PutObjectTagging",
+                    "s3:GetObject",
+                    "s3:GetObjectTagging",
+                    "s3:DeleteObject"
+                  ],
+                  "resource": "arn:aws:s3:::image-upload-imagebucket-t8isnbr8sswv/*"
+                },
+                {
+                  "effect": "Allow",
+                  "actions": ["s3:ListBucket"],
+                  "resource": "arn:aws:s3:::image-upload-imagebucket-t8isnbr8sswv"
+                }
+              ]
+            }
+          },
+          "used_by": [
+            "image-upload-UploadFunction-iIIJ7xiZECuB",
+            "image-upload-ListFilesFunction-Pb0dKq9dR0Is",
+            "image-upload-GetViewUrlFunction-yMGI9X8Us5Em",
+            "image-upload-DeleteFileFunction-EG7Cfj3m2P6f"
+          ],
+          "criticality": "HIGH"
+        },
+        {
+          "arn": "arn:aws:iam::535002891143:role/image-upload-ApiGatewayCloudWatchLogsRole-YGFCwY9oRVqq",
+          "name": "image-upload-ApiGatewayCloudWatchLogsRole-YGFCwY9oRVqq",
+          "logical_id": "ApiGatewayCloudWatchLogsRole",
+          "principal": "apigateway.amazonaws.com",
+          "created": "2026-01-14T04:19:33Z",
+          "managed_policies": [
+            "arn:aws:iam::aws:policy/service-role/AmazonAPIGatewayPushToCloudWatchLogs"
+          ],
+          "inline_policies": {},
+          "used_by": ["image-upload-api (ApiGatewayAccount)"],
+          "criticality": "LOW"
+        }
+      ],
+      "users": [
+        {
+          "arn": "arn:aws:iam::535002891143:user/image-upload-api-user",
+          "name": "image-upload-api-user",
+          "logical_id": "ApiUser",
+          "created": "2026-01-14T04:19:39Z",
+          "inline_policies": {
+            "ApiGatewayInvokePolicy": {
+              "statements": [
+                {
+                  "effect": "Allow",
+                  "actions": ["execute-api:Invoke"],
+                  "resource": "arn:aws:execute-api:ap-southeast-2:535002891143:4lrh2l7i86/*"
+                }
+              ]
+            }
+          },
+          "access_keys": [
+            {
+              "access_key_id": "AKIAXZEFIIOD2OIWPRPK",
+              "status": "Active",
+              "created": "2026-01-14T04:20:18Z"
+            }
+          ],
+          "used_by": ["Frontend SPA (image-upload-websitebucket-vd866vxtcs1z)"],
+          "criticality": "MEDIUM",
+          "notes": "Service account for the static website frontend to call the API with AWS SigV4 authentication. Long-lived IAM access key — flag for rotation/replacement with federated identity in Azure."
+        }
+      ]
+    },
+    "cloudwatch": {
+      "count": 4,
+      "log_groups": [
+        {
+          "name": "/aws/lambda/image-upload-UploadFunction-iIIJ7xiZECuB",
+          "arn": "arn:aws:logs:ap-southeast-2:535002891143:log-group:/aws/lambda/image-upload-UploadFunction-iIIJ7xiZECuB",
+          "created": "2026-04-18T14:30:04Z",
+          "stored_bytes": 1592,
+          "retention_days": null,
+          "used_by": ["image-upload-UploadFunction-iIIJ7xiZECuB"]
+        },
+        {
+          "name": "/aws/lambda/image-upload-ListFilesFunction-Pb0dKq9dR0Is",
+          "arn": "arn:aws:logs:ap-southeast-2:535002891143:log-group:/aws/lambda/image-upload-ListFilesFunction-Pb0dKq9dR0Is",
+          "created": "2026-04-18T14:14:59Z",
+          "stored_bytes": 1597,
+          "retention_days": null,
+          "used_by": ["image-upload-ListFilesFunction-Pb0dKq9dR0Is"]
+        },
+        {
+          "name": "/aws/lambda/image-upload-GetViewUrlFunction-yMGI9X8Us5Em",
+          "arn": "arn:aws:logs:ap-southeast-2:535002891143:log-group:/aws/lambda/image-upload-GetViewUrlFunction-yMGI9X8Us5Em",
+          "created": "2026-04-22T05:55:21Z",
+          "stored_bytes": 0,
+          "retention_days": null,
+          "note": "Created but not yet populated (log group created at function deploy time)",
+          "used_by": ["image-upload-GetViewUrlFunction-yMGI9X8Us5Em"]
+        },
+        {
+          "name": "/aws/lambda/image-upload-DeleteFileFunction-EG7Cfj3m2P6f",
+          "arn": "arn:aws:logs:ap-southeast-2:535002891143:log-group:/aws/lambda/image-upload-DeleteFileFunction-EG7Cfj3m2P6f",
+          "created": "2026-04-19T06:03:41Z",
+          "stored_bytes": 504,
+          "retention_days": null,
+          "used_by": ["image-upload-DeleteFileFunction-EG7Cfj3m2P6f"]
+        },
+        {
+          "name": "API-Gateway-Execution-Logs_4lrh2l7i86/dev",
+          "arn": "arn:aws:logs:ap-southeast-2:535002891143:log-group:API-Gateway-Execution-Logs_4lrh2l7i86/dev",
+          "created": "2026-03-14T02:00:23Z",
+          "stored_bytes": 33653,
+          "retention_days": null,
+          "used_by": ["image-upload-api (stage: dev)"]
+        }
+      ],
+      "alarms": [],
+      "metric_filters": [],
+      "dashboards": [],
+      "notes": "No CloudWatch Alarms configured for the image-upload application. Two AppStream-related alarms exist in the account but are unrelated to the migration scope. No Lambda error alerting or latency monitoring in place."
+    },
+    "xray": {
+      "enabled_on_api_stage": true,
+      "enabled_on_lambda": false,
+      "sampling_rules": [
+        {
+          "name": "Default",
+          "arn": "arn:aws:xray:ap-southeast-2:535002891143:sampling-rule/Default",
+          "fixed_rate": 0.05,
+          "reservoir_size": 1,
+          "priority": 10000
+        }
+      ],
+      "notes": "X-Ray tracing enabled on API Gateway stage (dev) but Lambda functions have TracingMode=PassThrough — segments are not propagated through Lambda. Only API Gateway traces will be captured."
+    }
+  },
+  "out_of_scope_resources": {
+    "appstream_buckets": [
+      {
+        "name": "appstream-app-settings-ap-southeast-2-535002891143-ar2b5jb0",
+        "arn": "arn:aws:s3:::appstream-app-settings-ap-southeast-2-535002891143-ar2b5jb0",
+        "note": "AWS AppStream 2.0 managed bucket — not part of image-upload stack, not in migration scope"
+      },
+      {
+        "name": "appstream2-36fb080bb8-ap-southeast-2-535002891143-hwzroy6c",
+        "arn": "arn:aws:s3:::appstream2-36fb080bb8-ap-southeast-2-535002891143-hwzroy6c",
+        "note": "AWS AppStream 2.0 managed bucket — not part of image-upload stack, not in migration scope"
+      }
+    ],
+    "ssm_eventbridge_rules": "11 SSM OpsCenter EventBridge rules exist (auto-created by AWS Systems Manager) — not in migration scope",
+    "appstream_cloudwatch_alarms": "2 AppStream scaling alarms (ExampleStack-fleet) — not in migration scope",
+    "iam_human_users": [
+      "aj.bajada@arinco.com.au",
+      "david.lee@arinco.com.au",
+      "scott.aquilina@arinco.com.au",
+      "sinan.nar@arinco.co.nz"
+    ]
+  },
+  "implicit_dependencies": [
+    {
+      "service": "S3 Presigned URLs (SigV4)",
+      "note": "upload_handler.py and delete_handler.py explicitly configure boto3 S3 client with s3v4 signature_version and virtual addressing style. Azure equivalent: SAS tokens — different signature algorithm and URL structure. All clients consuming presigned URLs will need to handle the new SAS URL format."
+    },
+    {
+      "service": "S3 Object Tagging",
+      "note": "upload_handler.py sets x-amz-tagging on presigned POST. list_handler.py calls s3.get_object_tagging per object. Azure Blob Storage uses blob tags (GA) — functionally equivalent but API differs."
+    },
+    {
+      "service": "S3 Object Metadata (x-amz-meta-*)",
+      "note": "upload_handler.py stores uploaddate, originalfilename, and description as S3 custom metadata headers. list_handler.py and view_handler.py read these via head_object. Azure Blob Storage supports user-defined metadata with the same key-value model."
+    },
+    {
+      "service": "AWS SigV4 (execute-api:Invoke)",
+      "note": "API Gateway uses AWS_IAM auth on all resource methods. The frontend SPA authenticates using IAM user access keys (AKIAXZEFIIOD2OIWPRPK) and signs requests with SigV4. Azure equivalent: API Management with managed identity or OAuth2 — requires frontend auth refactor."
+    },
+    {
+      "service": "CORS (S3 + API Gateway)",
+      "note": "Both S3 ImageBucket and API Gateway resources have CORS configured. All four API routes have OPTIONS methods with MOCK integration for preflight. Azure equivalents need matching CORS configuration on Blob Storage and Azure Functions/APIM."
+    }
+  ]
+}

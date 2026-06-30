@@ -1,0 +1,16 @@
+# Azure Functions — Image Upload Application
+# Python 3.11 | Azure Functions v2 programming model
+#
+# Core runtime
+azure-functions
+
+# Azure Identity — DefaultAzureCredential (replaces AWS IAM / boto3 auth)
+azure-identity>=1.16.0
+
+# Azure Blob Storage SDK (replaces boto3 S3 client)
+# Provides: BlobServiceClient, BlobClient, ContainerClient,
+#           generate_blob_sas, BlobSasPermissions
+azure-storage-blob>=12.19.0
+
+# Azure Key Vault Secrets (for reading secrets when Key Vault references are used)
+azure-keyvault-secrets>=4.7.0

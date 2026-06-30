@@ -1,0 +1,92 @@
+graph TB
+    subgraph "End Users"
+        Browser["🌐 Browser\n(Web Client)"]
+    end
+
+    subgraph "Static Hosting"
+        WB["S3 WebsiteBucket\nimage-upload-websitebucket-vd866vxtcs1z\n(Public Static Website)"]
+    end
+
+    subgraph "Identity & Access"
+        IAMUser["IAM User\nimage-upload-api-user\n(SigV4 Client Auth)"]
+        LambdaRole["IAM Role\nLambdaExecutionRole\n(S3 + CloudWatch Logs)"]
+        APIGWROLE["IAM Role\nApiGatewayCloudWatchLogsRole\n(CW Logs Push)"]
+    end
+
+    subgraph "API Layer"
+        APIGW["API Gateway REST\nimage-upload-api (4lrh2l7i86)\nhttps://*.execute-api.ap-southeast-2.amazonaws.com/dev\n[AWS_IAM Auth | Tracing ON | Logging INFO]"]
+    end
+
+    subgraph "Compute — Lambda (python3.11 | 256MB | 30s)"
+        UF["UploadFunction\nimage-upload-UploadFunction-iIIJ7xiZECuB\nPOST /upload → generate_presigned_post"]
+        LF["ListFilesFunction\nimage-upload-ListFilesFunction-Pb0dKq9dR0Is\nGET /files → list_objects_v2 + presigned_url"]
+        VF["GetViewUrlFunction\nimage-upload-GetViewUrlFunction-yMGI9X8Us5Em\nGET /files/{id}/view-url → presigned_url"]
+        DF["DeleteFileFunction\nimage-upload-DeleteFileFunction-EG7Cfj3m2P6f\nDELETE /files/{id} → delete_objects"]
+    end
+
+    subgraph "Storage"
+        IB["S3 ImageBucket\nimage-upload-imagebucket-t8isnbr8sswv\n[Versioning ON | SSE-AES256 | Public Access BLOCKED]\n[CORS: GET,PUT,POST,HEAD,DELETE | Max 10MB upload]"]
+    end
+
+    subgraph "Observability"
+        CWLambda["CloudWatch Logs\n/aws/lambda/* (4 log groups)\n[No retention policy]"]
+        CWApi["CloudWatch Logs\nAPI-Gateway-Execution-Logs_4lrh2l7i86/dev\n[No retention policy]"]
+    end
+
+    subgraph "Infrastructure as Code"
+        CFN["CloudFormation Stack\nimage-upload\n(CREATE_COMPLETE — 31 resources)"]
+    end
+
+    %% User flows
+    Browser -->|"loads app"| WB
+    Browser -->|"SigV4 signed HTTP"| IAMUser
+    IAMUser -->|"authenticates"| APIGW
+
+    %% API Gateway → Lambda
+    APIGW -->|"calls POST /upload"| UF
+    APIGW -->|"calls GET /files"| LF
+    APIGW -->|"calls GET /files/{id}/view-url"| VF
+    APIGW -->|"calls DELETE /files/{id}"| DF
+
+    %% Lambda → S3
+    UF -->|"writes (presigned POST)"| IB
+    LF -->|"reads (list + presigned GET)"| IB
+    VF -->|"reads (presigned GET)"| IB
+    DF -->|"writes (delete)"| IB
+
+    %% IAM
+    UF -->|"authenticates"| LambdaRole
+    LF -->|"authenticates"| LambdaRole
+    VF -->|"authenticates"| LambdaRole
+    DF -->|"authenticates"| LambdaRole
+
+    %% Logging
+    UF -->|"writes logs"| CWLambda
+    LF -->|"writes logs"| CWLambda
+    VF -->|"writes logs"| CWLambda
+    DF -->|"writes logs"| CWLambda
+    APIGW -->|"writes logs"| CWApi
+    APIGW -->|"authenticates"| APIGWROLE
+
+    %% IaC manages all
+    CFN -.->|"manages"| APIGW
+    CFN -.->|"manages"| UF
+    CFN -.->|"manages"| LF
+    CFN -.->|"manages"| VF
+    CFN -.->|"manages"| DF
+    CFN -.->|"manages"| IB
+    CFN -.->|"manages"| WB
+    CFN -.->|"manages"| IAMUser
+    CFN -.->|"manages"| LambdaRole
+
+    %% Styling
+    classDef critical fill:#ff6b6b,stroke:#c0392b,color:#fff
+    classDef high fill:#ffa07a,stroke:#e67e22,color:#000
+    classDef medium fill:#ffd700,stroke:#f39c12,color:#000
+    classDef low fill:#98fb98,stroke:#27ae60,color:#000
+    classDef infra fill:#dfe6e9,stroke:#636e72,color:#000
+
+    class IB,APIGW critical
+    class UF,LF,DF,IAMUser,WB high
+    class VF,LambdaRole medium
+    class CWLambda,CWApi,APIGWROLE,CFN low

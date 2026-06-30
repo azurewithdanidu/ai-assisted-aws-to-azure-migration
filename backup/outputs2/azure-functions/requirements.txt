@@ -1,0 +1,7 @@
+# Azure Functions — Image Upload Service
+# Python runtime: 3.11 (Azure Functions v4)
+# Replaces: boto3, botocore
+
+azure-functions
+azure-storage-blob>=12.19.0
+azure-identity>=1.15.0

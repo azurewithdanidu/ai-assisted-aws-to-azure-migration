@@ -1,0 +1,106 @@
+graph TB
+    subgraph EU["End Users"]
+        Browser["🌐 Browser\n(Web Client)"]
+    end
+
+    subgraph AAD_SG["Azure Active Directory"]
+        AAD["Azure AD\nApp Registration\nimage-upload-app\n(MSAL.js browser flow)\nShort-lived Bearer tokens"]
+    end
+
+    subgraph STATIC["Static Hosting — australiaeast"]
+        SWA["Azure Static Web Apps\n(Free tier dev/staging | Standard prod)\napp.html + JS\nHTTPS + Global CDN\nCI/CD via GitHub Actions"]
+    end
+
+    subgraph COMPUTE["Compute — australiaeast — Consumption Plan"]
+        FA["Azure Function App\ndev-imageupload-func-australiaeast\nPython 3.11 | v2 programming model\nSystem-Assigned Managed Identity\nApplication Insights auto-instrumented\nhttpsOnly: true | TLS 1.2"]
+
+        subgraph FUNCTIONS["HTTP Triggers"]
+            UF["upload_function\nPOST /api/upload\nGenerates Blob SAS token\n(Write | URL_EXPIRATION s)"]
+            LF["list_function\nGET /api/files\nlist_blobs + get_blob_properties\n+ SAS token (Read)"]
+            VF["view_url_function\nGET /api/files/{fileId}/view-url\nlist_blobs by prefix\n+ SAS token (Read)"]
+            DF["delete_function\nDELETE /api/files/{fileId}\nlist_blobs by prefix\n+ delete_blob"]
+        end
+
+        FA --> FUNCTIONS
+    end
+
+    subgraph STORAGE["Storage — australiaeast"]
+        SA["Azure Storage Account\nGPv2 | Standard_LRS dev | Standard_ZRS prod\nSSE Microsoft-managed key\nminTLS 1.2 | allowBlobPublicAccess: false\nBlob versioning ON | Soft delete 7–30 days"]
+        IC["images container\n(Private access — no anonymous read)\nCORS: SWA origin only (staging/prod)\nCORS: * (dev only)"]
+        SA --> IC
+    end
+
+    subgraph SECURITY["Security"]
+        KV["Azure Key Vault\nStandard SKU\nSecret: storage-account-name\nSoft delete enabled\nPurge protection enabled"]
+        MI["System-Assigned\nManaged Identity\n(on Function App)\nStorage Blob Data Contributor\n→ Storage Account\nKey Vault Secrets User\n→ Key Vault"]
+    end
+
+    subgraph OBS["Observability — australiaeast"]
+        LAW["Log Analytics Workspace\nSKU: PerGB2018\nRetention: 30d dev | 90d prod"]
+        AI["Application Insights\nKind: web\nDistributed tracing\nLive metrics\nDependency maps\nSampling enabled"]
+        LAW --> AI
+    end
+
+    subgraph IAC["Infrastructure as Code"]
+        BICEP["Azure Bicep\noutputs/bicep-templates/main.bicep\n├── modules/storage.bicep\n├── modules/function-app.bicep\n├── modules/static-web-app.bicep\n├── modules/monitoring.bicep\n└── modules/rbac.bicep\nparameters/dev.bicepparam\nparameters/staging.bicepparam\nparameters/prod.bicepparam"]
+    end
+
+    subgraph CICD["CI/CD — GitHub Actions (OIDC)"]
+        WF1[".github/workflows/\ndeploy-infra.yml\n(Bicep IaC)"]
+        WF2[".github/workflows/\ndeploy-functions.yml\n(Python Functions)"]
+        WF3[".github/workflows/\ndeploy-static-web.yml\n(Static Web Apps)"]
+    end
+
+    %% User flows
+    Browser -->|"1. loads app (HTTPS + CDN)"| SWA
+    Browser -->|"2. AAD login popup (MSAL.js)"| AAD
+    AAD -->|"3. Bearer token (short-lived)"| Browser
+    Browser -->|"4. HTTP + Bearer token"| FA
+
+    %% Function App → Storage
+    UF -->|"generate_blob_sas (Write)\nuser delegation key"| IC
+    LF -->|"list_blobs + get_blob_properties\ngenerate_blob_sas (Read)"| IC
+    VF -->|"list_blobs name_starts_with\ngenerate_blob_sas (Read)"| IC
+    DF -->|"list_blobs name_starts_with\ndelete_blob"| IC
+
+    %% Client direct upload (SAS)
+    Browser -->|"5. PUT to Blob SAS URL\n(direct upload, no proxy)"| IC
+
+    %% Identity & Key Vault
+    FA -->|"DefaultAzureCredential()\nManaged Identity"| MI
+    MI -->|"Storage Blob Data Contributor"| SA
+    MI -->|"Key Vault Secrets User"| KV
+    FA -->|"Key Vault reference\n@Microsoft.KeyVault(...)"| KV
+
+    %% Observability
+    FA -->|"App Insights SDK\ntelemetry + traces"| AI
+
+    %% IaC deploys
+    BICEP -.->|"deploys"| FA
+    BICEP -.->|"deploys"| SA
+    BICEP -.->|"deploys"| SWA
+    BICEP -.->|"deploys"| KV
+    BICEP -.->|"deploys"| AI
+    BICEP -.->|"deploys"| LAW
+
+    %% CI/CD
+    WF1 -.->|"az deployment group create"| BICEP
+    WF2 -.->|"func azure functionapp publish"| FA
+    WF3 -.->|"swa deploy"| SWA
+
+    %% Styling
+    classDef critical fill:#c0392b,stroke:#922b21,color:#fff
+    classDef high fill:#e67e22,stroke:#ca6f1e,color:#fff
+    classDef azure fill:#0078d4,stroke:#005a9e,color:#fff
+    classDef security fill:#27ae60,stroke:#1e8449,color:#fff
+    classDef obs fill:#8e44ad,stroke:#6c3483,color:#fff
+    classDef iac fill:#636e72,stroke:#2d3436,color:#fff
+    classDef cicd fill:#00b894,stroke:#00a381,color:#fff
+
+    class IC,FA critical
+    class SA,SWA high
+    class UF,LF,VF,DF,AAD,Browser azure
+    class MI,KV security
+    class AI,LAW obs
+    class BICEP iac
+    class WF1,WF2,WF3 cicd

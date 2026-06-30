@@ -1,0 +1,20 @@
+{
+  "version": "2.0",
+  "logging": {
+    "applicationInsights": {
+      "samplingSettings": {
+        "isEnabled": true,
+        "excludedTypes": "Request"
+      }
+    }
+  },
+  "cors": {
+    "allowedOrigins": ["__REPLACED_AT_DEPLOY_TIME__"],
+    "supportCredentials": false
+  },
+  "extensions": {
+    "http": {
+      "routePrefix": "api"
+    }
+  }
+}

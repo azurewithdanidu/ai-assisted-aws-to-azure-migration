@@ -1,0 +1,84 @@
+graph TB
+    subgraph "End Users / Browser"
+        FE["Frontend SPA<br/>app.html"]
+    end
+
+    subgraph "Azure Static Web Apps"
+        SWA["Static Web App<br/>img-upload-swa<br/>Free Tier • HTTPS • Global CDN<br/>australiasoutheast"]
+    end
+
+    subgraph "Identity & Access"
+        MI["System-Assigned Managed Identity<br/>img-upload-func (Function App MI)<br/>Storage Blob Data Contributor"]
+        ENTRA["Microsoft Entra ID<br/>App Registration (SPA)<br/>OAuth2 Implicit / PKCE Flow"]
+    end
+
+    subgraph "Compute — Azure Functions (Consumption Y1 • Python 3.11)"
+        direction TB
+        UF["upload_function<br/>POST /api/upload<br/>generate_blob_sas (BlobSasPermissions.write)"]
+        LF["list_function<br/>GET /api/files<br/>list_blobs + get_blob_properties<br/>+ get_blob_tags + generate_blob_sas"]
+        VF["view_function<br/>GET /api/files/{fileId}/view-url<br/>list_blobs + generate_blob_sas (read)"]
+        DF["delete_function<br/>DELETE /api/files/{fileId}<br/>list_blobs + delete_blob"]
+    end
+
+    subgraph "Function App Host"
+        FA["Function App<br/>img-upload-func<br/>australiasoutheast<br/>Python 3.11 • Consumption Y1<br/>CORS: *"]
+        ASP["App Service Plan<br/>img-upload-plan<br/>Y1 Consumption"]
+    end
+
+    subgraph "Storage"
+        SA["Storage Account<br/>imguploadstore<br/>StorageV2 • LRS • Hot Tier<br/>Blob Versioning: Enabled<br/>Public Access: Disabled<br/>CORS: GET,PUT,POST,HEAD,DELETE from *"]
+        BC["Blob Container<br/>images (private)<br/>Soft Delete: 7 days"]
+    end
+
+    subgraph "Observability"
+        AI["Application Insights<br/>img-upload-ai<br/>Distributed Tracing<br/>Live Metrics • Failures"]
+        LAW["Log Analytics Workspace<br/>img-upload-law<br/>Retention: 30 days"]
+        AM["Azure Monitor<br/>Alerts: Function errors<br/>Alerts: Storage availability"]
+    end
+
+    subgraph "Key Vault (Recommended for Prod)"
+        KV["Azure Key Vault<br/>img-upload-kv<br/>Secret: storage-account-name<br/>Secret: blob-container-name"]
+    end
+
+    subgraph "IaC"
+        BICEP["Bicep Templates<br/>main.bicep<br/>modules/storage.bicep<br/>modules/function-app.bicep<br/>modules/monitoring.bicep<br/>modules/static-web-app.bicep<br/>modules/rbac.bicep"]
+    end
+
+    %% Client flows
+    FE -->|"hosts static SPA (HTTPS)"| SWA
+    FE -->|"authenticates (OAuth2/PKCE)"| ENTRA
+    FE -->|"calls HTTP (Bearer token or anon)"| FA
+
+    %% Function App host contains functions
+    FA -->|"hosts"| UF
+    FA -->|"hosts"| LF
+    FA -->|"hosts"| VF
+    FA -->|"hosts"| DF
+    ASP -->|"hosts"| FA
+
+    %% Identity
+    FA -->|"uses"| MI
+    MI -->|"Storage Blob Data Contributor"| SA
+
+    %% Storage
+    UF -->|"generate SAS write token"| BC
+    LF -->|"list blobs + read metadata + tags + generate SAS read"| BC
+    VF -->|"list blobs + generate SAS read"| BC
+    DF -->|"list + delete blobs"| BC
+    BC -->|"contained in"| SA
+
+    %% Observability
+    FA -->|"streams logs + traces"| AI
+    AI -->|"stores data"| LAW
+    LAW -->|"feeds"| AM
+
+    %% Key Vault (optional prod path)
+    FA -.->|"reads secrets (prod)"| KV
+
+    %% IaC manages everything
+    BICEP -.->|"deploys"| FA
+    BICEP -.->|"deploys"| SA
+    BICEP -.->|"deploys"| SWA
+    BICEP -.->|"deploys"| AI
+    BICEP -.->|"deploys"| LAW
+    BICEP -.->|"deploys"| MI
