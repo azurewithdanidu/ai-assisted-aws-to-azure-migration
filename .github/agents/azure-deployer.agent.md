@@ -443,7 +443,32 @@ curl -I "https://${SWA_HOST}"
 
 ## Step 7 — Post-Deployment Summary
 
-After IaC, Functions, and Static Web App deployments are complete, write `outputs/deployment-log.md` with:
+After IaC, Functions, and Static Web App deployments are complete:
+
+### 7a — Update Migration Task Plan
+
+Read `outputs/migration-task-plan.md` and make the following edits:
+
+1. In the **Phase Summary** table, find the row for `3d — Deployment` and:
+   - Set the **Status** column to `✅` (success) or `❌` (failure).
+   - Set the **Completed At** column to the current ISO 8601 UTC timestamp.
+2. In the **Detailed Task List**, find the `### Phase 3d` section and mark each completed task `[x]` with a timestamp. If the section does not exist, append it:
+   ```
+   ### Phase 3d — Deployment
+   - [x] Deploy Bicep IaC to <resource-group> — completed <ISO 8601 UTC>
+   - [x] Deploy Azure Functions code — completed <ISO 8601 UTC>
+   - [x] Deploy Static Web App content — completed <ISO 8601 UTC>
+   - [x] Smoke-test API endpoints — completed <ISO 8601 UTC>
+   ```
+3. Update the `Last Updated:` timestamp at the top of the file.
+4. In the **Phase Metrics** table, append a row:
+   `| 3d — Deployment | azure-deployer | <duration> | <tool_calls> | <files_written> |`
+
+**Important:** Re-read the file immediately before writing to avoid overwriting concurrent changes.
+
+### 7b — Write Deployment Log
+
+Write `outputs/deployment-log.md` with:
 
 ```markdown
 # Deployment Log

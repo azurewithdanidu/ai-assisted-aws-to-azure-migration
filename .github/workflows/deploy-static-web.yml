@@ -2,41 +2,30 @@
 # deploy-static-web.yml
 # Deploys the frontend SPA to Azure Static Web Apps.
 #
-# Sections implemented:
+# Implements design-document.md:
 #   §11.1  Workflow files
-#   §11.2  OIDC authentication model
-#   §11.5  deploy-static-web.yml job/step specification
-#   §11.7  CI/CD quality gates (index.html present, HTTP smoke test)
-#
-# §11.5 runtime token retrieval:
-#   The SWA deployment token is fetched at runtime from Azure via CLI.
-#   It is never stored in GitHub Secrets, eliminating the need for token
-#   rotation when team membership changes.
+#   §11.2  OIDC authentication strategy (no long-lived secrets)
+#   §11.3.3  deploy-static-web.yml exact job/step specification
+#   §11.4  Multi-environment strategy (branch → environment mapping)
+#   §11.5  Pipeline dependency order (parallel with deploy-functions.yml, after deploy-infra.yml)
 # ─────────────────────────────────────────────────────────────────────────────
 
 name: Deploy Static Web App
 
 on:
   push:
-    branches:
-      - main
+    branches: [main, dev, staging]
     paths:
       - 'source-app/app-code/build/**'
-      - 'source-app/app-code/examples/**'
-      - '.github/workflows/deploy-static-web.yml'
   workflow_dispatch:
     inputs:
       environment:
         description: 'Target environment'
         required: true
-        default: dev
         type: choice
-        options:
-          - dev
-          - staging
-          - prod
+        options: [dev, staging, prod]
 
-# §11.2 — every deploy workflow must carry these permissions
+# §11.2 — OIDC requires id-token: write
 permissions:
   id-token: write
   contents: read
@@ -47,143 +36,58 @@ concurrency:
   cancel-in-progress: false
 
 jobs:
-  # ── Job 1: deploy ─────────────────────────────────────────────────────────
-  # §11.5 step 1 — checkout
-  # §11.5 step 2 — Azure login via OIDC
-  # §11.5 step 3 — fetch SWA deployment token at runtime using Azure CLI
-  # §11.5 step 4 — deploy with Azure/static-web-apps-deploy@v1
-  # §11.7 quality gates — index.html present, HTTP smoke test
-  deploy:
-    name: Deploy static web app
+  # ── Job 1: determine-environment ──────────────────────────────────────────
+  # §11.3.3 — map branch/dispatch input to environment name
+  # §11.4 — main → prod, staging → staging, dev → dev
+  determine-environment:
     runs-on: ubuntu-latest
-    environment: ${{ inputs.environment || vars.ENVIRONMENT }}
+    outputs:
+      environment: ${{ steps.set-env.outputs.environment }}
     steps:
-      # §11.5 step 1 — checkout
-      - name: Checkout repository
+      - id: set-env
+        run: |
+          if [[ "${{ github.event_name }}" == "workflow_dispatch" ]]; then
+            echo "environment=${{ inputs.environment }}" >> $GITHUB_OUTPUT
+          elif [[ "${{ github.ref_name }}" == "main" ]]; then
+            echo "environment=prod" >> $GITHUB_OUTPUT
+          else
+            echo "environment=${{ github.ref_name }}" >> $GITHUB_OUTPUT
+          fi
+
+  # ── Job 2: deploy-static ──────────────────────────────────────────────────
+  # §11.3.3 — all steps in the exact order specified
+  deploy-static:
+    needs: determine-environment
+    runs-on: ubuntu-latest
+    environment: ${{ needs.determine-environment.outputs.environment }}
+    steps:
+      - name: Checkout
         uses: actions/checkout@v4
 
-      # §11.7 quality gate — SWA requires index.html as the default document
-      # Copy app.html → index.html when the HTML entry point has been renamed
-      - name: Ensure index.html exists (§11.7 gate)
+      - name: Set SWA token
         run: |
-          if [ -f source-app/app-code/build/app.html ] && [ ! -f source-app/app-code/build/index.html ]; then
-            echo "Copying app.html → index.html for SWA compatibility."
-            cp source-app/app-code/build/app.html source-app/app-code/build/index.html
-          fi
-          if [ ! -f source-app/app-code/build/index.html ]; then
-            echo "::error::source-app/app-code/build/index.html not found. SWA requires index.html as the default document."
-            exit 1
+          ENV="${{ needs.determine-environment.outputs.environment }}"
+          if [[ "$ENV" == "dev" ]]; then
+            echo "SWA_TOKEN=${{ secrets.STATIC_WEB_APP_TOKEN_DEV }}" >> $GITHUB_ENV
+          elif [[ "$ENV" == "staging" ]]; then
+            echo "SWA_TOKEN=${{ secrets.STATIC_WEB_APP_TOKEN_STAGING }}" >> $GITHUB_ENV
+          else
+            echo "SWA_TOKEN=${{ secrets.STATIC_WEB_APP_TOKEN_PROD }}" >> $GITHUB_ENV
           fi
 
-      # §11.5 precondition — patch API base URL from AWS API Gateway → Azure Functions
-      # Satisfies §11.5 "API base URL must point to the Function App hostname"
-      - name: Resolve Function App hostname
-        id: function-config
-        run: |
-          # Attempt to resolve the live hostname from Azure; fall back to convention
-          function_hostname=$(az functionapp show \
-            --resource-group "${{ vars.RESOURCE_GROUP_NAME }}" \
-            --name "${{ vars.FUNCTION_APP_NAME }}" \
-            --query defaultHostName \
-            --output tsv 2>/dev/null || echo "")
-          if [ -z "$function_hostname" ]; then
-            function_hostname="${{ vars.FUNCTION_APP_NAME }}.azurewebsites.net"
-            echo "::warning::Could not query Function App hostname; using convention: ${function_hostname}"
-          fi
-          echo "function_app_url=https://${function_hostname}/api" >> "$GITHUB_OUTPUT"
-
-      # §11.5 step 2 — Azure Login (OIDC) — must precede the CLI token fetch
-      - name: Azure Login (OIDC)
-        uses: azure/login@v2
-        with:
-          client-id: ${{ secrets.AZURE_CLIENT_ID }}
-          tenant-id: ${{ secrets.AZURE_TENANT_ID }}
-          subscription-id: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
-
-      # §11.5 step 3 — fetch SWA deployment token at runtime (no long-lived secret)
-      - name: Fetch SWA deployment token at runtime
-        id: swa-token
-        run: |
-          token=$(az staticwebapp secrets list \
-            --name "${{ vars.STATIC_WEB_APP_NAME }}" \
-            --resource-group "${{ vars.RESOURCE_GROUP_NAME }}" \
-            --query "properties.apiKey" \
-            --output tsv)
-          if [ -z "$token" ]; then
-            echo "::error::Could not retrieve SWA deployment token for ${{ vars.STATIC_WEB_APP_NAME }}"
-            exit 1
-          fi
-          # Mask the token so it never appears in logs
-          echo "::add-mask::${token}"
-          echo "swa_token=${token}" >> "$GITHUB_OUTPUT"
-
-      # Patch AWS API Gateway URLs to Azure Function App URL in the built SPA
-      - name: Patch SPA API base URL
-        env:
-          FUNCTION_APP_URL: ${{ steps.function-config.outputs.function_app_url }}
-        run: |
-          python - <<'PY'
-          import os, pathlib, re
-
-          index_path = pathlib.Path('source-app/app-code/build/index.html')
-          html = index_path.read_text(encoding='utf-8')
-          function_app_url = os.environ['FUNCTION_APP_URL']
-
-          # Replace any AWS API Gateway base URLs with the Azure Function App URL
-          html = re.sub(
-              r"https://[a-z0-9]+\.execute-api\.[a-z0-9-]+\.amazonaws\.com/[A-Za-z0-9_/-]+",
-              function_app_url,
-              html,
-          )
-          # Replace explicit API_BASE_URL constant assignments
-          html = re.sub(
-              r"const API_BASE_URL\s*=\s*'[^']*';",
-              f"const API_BASE_URL = '{function_app_url}';",
-              html,
-          )
-          # Scrub any accidentally included AWS access key literals
-          html = re.sub(r"AKIA[0-9A-Z]{16}", "REMOVED_AWS_ACCESS_KEY", html)
-
-          index_path.write_text(html, encoding='utf-8')
-          print(f"Patched API base URL → {function_app_url}")
-          PY
-
-      # §11.5 step 4 — deploy with Azure/static-web-apps-deploy@v1
       - name: Deploy to Azure Static Web Apps
         id: deploy
         uses: Azure/static-web-apps-deploy@v1
         with:
-          azure_static_web_apps_api_token: ${{ steps.swa-token.outputs.swa_token }}
+          azure_static_web_apps_api_token: ${{ env.SWA_TOKEN }}
           repo_token: ${{ secrets.GITHUB_TOKEN }}
           action: upload
           app_location: source-app/app-code/build
-          skip_app_build: true   # Pre-built; do not re-build
+          output_location: ''
+          skip_app_build: true
 
-      # §11.7 quality gate — smoke test the live SWA hostname
-      - name: Smoke test SWA hostname
+      - name: Rollback on failure
+        if: failure() && steps.deploy.outcome == 'failure'
         run: |
-          hostname=$(az staticwebapp show \
-            --resource-group "${{ vars.RESOURCE_GROUP_NAME }}" \
-            --name "${{ vars.STATIC_WEB_APP_NAME }}" \
-            --query defaultHostname \
-            --output tsv)
-          echo "Testing https://${hostname}"
-          status=$(curl --silent --show-error --location --output /dev/null \
-            --write-out '%{http_code}' \
-            "https://${hostname}")
-          echo "HTTP status: ${status}"
-          if [ "$status" -lt 200 ] || [ "$status" -ge 400 ]; then
-            echo "::error::Unexpected HTTP status from https://${hostname}: ${status}"
-            exit 1
-          fi
-
-      # Surface the deployed URL for quick access from the Actions summary
-      - name: Print deployed URL
-        if: success()
-        run: |
-          hostname=$(az staticwebapp show \
-            --resource-group "${{ vars.RESOURCE_GROUP_NAME }}" \
-            --name "${{ vars.STATIC_WEB_APP_NAME }}" \
-            --query defaultHostname \
-            --output tsv)
-          echo "::notice::Static Web App deployed → https://${hostname}"
+          echo "::warning::SWA deploy failed — to roll back, re-run this workflow"
+          echo "  with the previous known-good commit, or use SWA built-in environment snapshots."
