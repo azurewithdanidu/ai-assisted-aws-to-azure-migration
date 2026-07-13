@@ -1,14 +1,8 @@
 ---
 name: what-if-validation
 description: Run pre-deployment validation (Bicep syntax, policy compliance, quota, what-if) and security checks, then write a full validation report
-allowed-tools:
-  - Bash
-  - PowerShell
-compatibility: "Requires curl + jq (macOS/Linux/WSL, preferred) or PowerShell 7+ (pwsh) or Windows PowerShell 5.1 (powershell.exe)"
-metadata:
-  author: azurewithdanidu
-  version: "1.0.0"
 ---
+
 
 # What-If Validation Skill
 
