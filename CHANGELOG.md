@@ -7,6 +7,14 @@ Versioning: [Semantic Versioning](https://semver.org/)
 
 ---
 
+## [1.2.0] - 2026-07-14
+
+### Changed
+
+- **Release pipeline validation** — end-to-end test of `version:` PR → `create-release-pr.yml` → `release:` PR → `create-release.yml` flow confirming automated tagging and GitHub Release creation works correctly after pipeline fixes in v1.1.0
+
+---
+
 ## [1.1.0] - 2026-07-14
 
 ### Added
