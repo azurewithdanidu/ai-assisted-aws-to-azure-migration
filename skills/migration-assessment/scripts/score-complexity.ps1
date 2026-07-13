@@ -40,7 +40,7 @@ Service Complexity Matrix. Otherwise it applies default complexity rules.
 function Get-TierRank {
     param([string]$Tier)
 
-    switch ((Normalize-Tier $Tier)) {
+    switch ((ConvertTo-NormalizedTier $Tier)) {
         'Low'      { return 1 }
         'Medium'   { return 2 }
         'High'     { return 3 }
@@ -49,7 +49,7 @@ function Get-TierRank {
     }
 }
 
-function Normalize-Tier {
+function ConvertTo-NormalizedTier {
     param([string]$Tier)
 
     switch (($Tier ?? '').ToLowerInvariant()) {
@@ -252,16 +252,16 @@ function Get-EffortForTier {
 function Get-EffortFromCell {
     param([string]$Cell)
 
-    $matches = [regex]::Matches((($Cell ?? '') -replace '[–—]', '-'), '[0-9]+(\.[0-9]+)?')
-    if ($matches.Count -eq 0) {
+    $cellMatches = [regex]::Matches((($Cell ?? '') -replace '[–—]', '-'), '[0-9]+(\.[0-9]+)?')
+    if ($cellMatches.Count -eq 0) {
         return 0.0
     }
 
-    if ($matches.Count -eq 1) {
-        return [double]$matches[0].Value
+    if ($cellMatches.Count -eq 1) {
+        return [double]$cellMatches[0].Value
     }
 
-    return (([double]$matches[0].Value) + ([double]$matches[1].Value)) / 2
+    return (([double]$cellMatches[0].Value) + ([double]$cellMatches[1].Value)) / 2
 }
 
 function Format-Number {
@@ -283,7 +283,7 @@ function Add-ServiceSummary {
         [double]$Effort
     )
 
-    $Complexity = Normalize-Tier $Complexity
+    $Complexity = ConvertTo-NormalizedTier $Complexity
 
     if ($Rows.ContainsKey($Service)) {
         $Rows[$Service].Count += $Count
@@ -301,23 +301,22 @@ function Add-ServiceSummary {
 }
 
 function Invoke-ComplexitySummary {
-    if ($Help) {
-        Show-Usage
-        return
+    param(
+        [string]$Path
+    )
+
+    Write-Host "==> Reading AWS inventory: $Path" -ForegroundColor Cyan
+    if (-not (Test-Path $Path -PathType Leaf)) {
+        throw "Inventory file not found: $Path"
     }
 
-    Write-Host "==> Reading AWS inventory: $InventoryPath" -ForegroundColor Cyan
-    if (-not (Test-Path $InventoryPath -PathType Leaf)) {
-        throw "Inventory file not found: $InventoryPath"
-    }
-
-    $inventory = (Get-Content $InventoryPath -Raw) | ConvertFrom-Json
+    $inventory = (Get-Content $Path -Raw) | ConvertFrom-Json
     $serviceEntries = @($inventory.services.PSObject.Properties)
     if ($serviceEntries.Count -eq 0) {
         throw 'Inventory file must contain a non-empty services object.'
     }
 
-    $assessmentPath = Join-Path (Split-Path $InventoryPath -Parent) 'migration-assessment.md'
+    $assessmentPath = Join-Path (Split-Path $Path -Parent) 'migration-assessment.md'
     $rows = @{}
     $parsedRows = 0
 
@@ -414,8 +413,13 @@ function Invoke-ComplexitySummary {
     Write-Host "Overall risk level: $overallRisk"
 }
 
+if ($Help) {
+    Show-Usage
+    exit 0
+}
+
 try {
-    Invoke-ComplexitySummary
+    Invoke-ComplexitySummary -Path $InventoryPath
 } catch {
     Write-Host "❌ $($_.Exception.Message)" -ForegroundColor Yellow
 }
