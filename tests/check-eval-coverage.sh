@@ -5,7 +5,7 @@
 
 set -euo pipefail
 
-EVALS_DIR="tests/evals/aws-to-azure-migrator"
+EVALS_DIR="tests/evals/cloud-avengers"
 PASS=0
 FAIL=0
 MISSING=()
