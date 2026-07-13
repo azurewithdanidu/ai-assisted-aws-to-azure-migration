@@ -22,6 +22,6 @@ jobs:
 
       - name: Create release PR (dev → main)
         env:
-          GH_TOKEN: ${{ secrets.GH_TOKEN }}
+          GH_TOKEN: ${{ github.token }}
           PR_BODY: ${{ github.event.pull_request.body }}
         run: bash .github/scripts/release/create-release-pr.sh

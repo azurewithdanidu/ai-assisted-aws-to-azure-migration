@@ -7,6 +7,34 @@ Versioning: [Semantic Versioning](https://semver.org/)
 
 ---
 
+## [1.1.0] - 2026-07-14
+
+### Added
+
+- **6 new dual-platform scripts** (Bash + PowerShell) with full arg validation and strict error handling:
+  - `skills/aws-inventory-scan/scripts/validate-inventory.{sh,ps1}` — validates `aws-inventory.json` schema before downstream agents consume it
+  - `skills/migration-assessment/scripts/score-complexity.{sh,ps1}` — scores AWS services by migration complexity tier and prints effort estimates
+  - `skills/cost-estimator/scripts/fetch-prices.{sh,ps1}` — queries Azure Retail Prices API (no auth) for live SKU pricing
+
+### Changed
+
+- **Skills overhaul** — all 22 `SKILL.md` files updated:
+  - Stripped non-standard frontmatter fields (`allowed-tools`, `compatibility`, `metadata`) — now comply with VS Code Copilot skill spec (`name` + `description` only)
+  - 8 thin skills enriched to 200–350 lines with full procedures, input/output specs, templates, edge cases, and decision trees: `orchestration`, `task-tracking`, `architecture-design`, `phase-delegation`, `architecture-diagramming`, `bicep-generation`, `multi-env-strategy`, `cost-analysis`
+  - Fixed broken skill path references across all agent files (`skills/<subfolder>/<name>.md` → `skills/<skill-name>/SKILL.md`)
+  - Fixed broken script path in `module-organization` (was `.github/skills/…`, now `./scripts/…`)
+- **Agent descriptions** improved with keyword-rich `Use when:` trigger phrases for reliable subagent discovery: `aws-discovery`, `azure-architect`, `code-refactor`, `deployment-validation`
+- **`skill-evolution-engine`** body enriched with Diagnosis Checklist and Improvement Patterns sections
+- **`skill-generator-agent`** renamed to correct `.agent.md` extension; body enriched with Skill Template, Wiring Checklist, and Discovery Validation sections
+
+### Removed
+
+- **`.github/agents/`** — stale drifted copies of product agents with wrong skill path references
+- **`.github/skills/agents/`** — legacy pre-restructure skill docs superseded by `skills/`
+- **`.github/instructions/`** — per-agent instruction files superseded by inline agent instructions
+
+---
+
 ## [1.0.0] - 2026-07-13
 
 ### Added
