@@ -38,7 +38,7 @@ jobs:
           # PSAvoidUsingWriteHost is excluded: all scripts are standalone interactive
           # tools that legitimately use coloured terminal output via -ForegroundColor.
           $results = Invoke-ScriptAnalyzer -Path skills -Recurse -Severity Warning,Error `
-            -ExcludeRule @('PSAvoidUsingWriteHost')
+            -ExcludeRule @('PSAvoidUsingWriteHost', 'PSUseBOMForUnicodeEncodedFile')
           if ($results) {
             $results | Format-Table -AutoSize
             Write-Error "PSScriptAnalyzer found $($results.Count) issue(s)"

@@ -94,13 +94,13 @@ Write-Host "`n==> Smoke Tests: $Environment / $FunctionAppName`n" -ForegroundCol
 # ── 1. HTTP Health Endpoint ──────────────────────────────────────────────────
 Write-Host "Check 1 — HTTP health endpoint"
 try {
-    $host = az functionapp show `
+    $funcHost = az functionapp show `
         --name $FunctionAppName `
         --resource-group $ResourceGroup `
         @subArgs `
         --query defaultHostName -o tsv
 
-    $response = Invoke-WebRequest -Uri "https://$host/api/health" -UseBasicParsing -SkipHttpErrorCheck -TimeoutSec 30
+    $response = Invoke-WebRequest -Uri "https://$funcHost/api/health" -UseBasicParsing -SkipHttpErrorCheck -TimeoutSec 30
     $code = $response.StatusCode
 
     if ($code -in 200, 401) {

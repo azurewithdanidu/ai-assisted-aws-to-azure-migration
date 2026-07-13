@@ -31,7 +31,7 @@ SCRIPT="$BATS_TEST_DIRNAME/../../skills/deployment-validation/scripts/run-what-i
 @test "run-what-if.sh rejects invalid --environment value" {
   run bash "$SCRIPT" --resource-group myRG --environment production
   [ "$status" -ne 0 ]
-  [[ "$output" == *"dev|staging|prod"* ]]
+  [[ "$output" == *"dev, staging, or prod"* ]]
 }
 
 @test "run-what-if.sh rejects unknown flags" {
