@@ -16,7 +16,7 @@ on:
           - gpt-5.3-codex
         default: claude-sonnet-4.6
       tags:
-        description: 'Optional tag filter (e.g. smoke, agent:aws-discovery)'
+        description: 'Optional tag filter — comma-separated (e.g. smoke,negative or service:s3)'
         required: false
         type: string
 
@@ -42,7 +42,8 @@ jobs:
       - name: Install Waza
         uses: ./.github/actions/install-waza
       - name: Run mock evaluations (no LLM)
-        run: waza run tests/evals/cloud-avengers/eval-mock.yaml --tags negative,smoke
+        # --tags must be repeated once per tag (StringArrayVar, not comma-split)
+        run: waza run tests/evals/cloud-avengers/eval-mock.yaml --tags smoke --tags negative
       - name: Upload mock eval results
         if: always()
         uses: actions/upload-artifact@v4
@@ -75,11 +76,13 @@ jobs:
       - name: Build targeted eval tag list
         id: tags
         run: |
-          TAGS="smoke"
-          ${{ steps.filter.outputs.skill-core == 'true' }} && TAGS="$TAGS,skill-core"
-          ${{ steps.filter.outputs.agents == 'true' }} && TAGS="$TAGS,agent"
-          ${{ steps.filter.outputs.eval-tasks == 'true' }} && TAGS="$TAGS,smoke,negative"
-          echo "EVAL_TAGS=$TAGS" >> "$GITHUB_OUTPUT"
+          TAGS=("smoke")
+          [[ "${{ steps.filter.outputs.skill-core }}" == "true" ]] && TAGS+=("skill-core")
+          [[ "${{ steps.filter.outputs.agents }}" == "true" ]] && TAGS+=("agent")
+          [[ "${{ steps.filter.outputs.eval-tasks }}" == "true" ]] && TAGS+=("negative")
+          # Deduplicate and output as newline-separated list
+          printf '%s\n' "${TAGS[@]}" | sort -u | tr '\n' ',' | sed 's/,$//' > /tmp/tags.txt
+          echo "EVAL_TAGS=$(cat /tmp/tags.txt)" >> "$GITHUB_OUTPUT"
 
       - name: Install Waza
         uses: ./.github/actions/install-waza
@@ -88,7 +91,14 @@ jobs:
         continue-on-error: true
         env:
           COPILOT_GITHUB_TOKEN: ${{ secrets.COPILOT_GITHUB_TOKEN }}
-        run: waza run --tags "${{ steps.tags.outputs.EVAL_TAGS }}"
+        run: |
+          # Split comma-separated tags into individual --tags flags
+          IFS=',' read -ra TAG_ARRAY <<< "${{ steps.tags.outputs.EVAL_TAGS }}"
+          ARGS=()
+          for t in "${TAG_ARRAY[@]}"; do
+            ARGS+=(--tags "$t")
+          done
+          waza run "${ARGS[@]}"
 
       - name: Upload critical eval results
         if: always()
@@ -109,11 +119,17 @@ jobs:
         env:
           COPILOT_GITHUB_TOKEN: ${{ secrets.COPILOT_GITHUB_TOKEN }}
         run: |
-          ARGS="--model ${{ inputs.model }}"
+          ARGS=(--model "${{ inputs.model }}")
+          # Split comma-separated tags into individual --tags flags
           if [[ -n "${{ inputs.tags }}" ]]; then
-            ARGS="$ARGS --tags ${{ inputs.tags }}"
+            IFS=',' read -ra TAG_ARRAY <<< "${{ inputs.tags }}"
+            for t in "${TAG_ARRAY[@]}"; do
+              t="${t#"${t%%[![:space:]]*}"}"   # trim leading whitespace
+              t="${t%"${t##*[![:space:]]}"}"   # trim trailing whitespace
+              [[ -n "$t" ]] && ARGS+=(--tags "$t")
+            done
           fi
-          waza run $ARGS
+          waza run "${ARGS[@]}"
       - name: Upload full eval results
         if: always()
         uses: actions/upload-artifact@v4
