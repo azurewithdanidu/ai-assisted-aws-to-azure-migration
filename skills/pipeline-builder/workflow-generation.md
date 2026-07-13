@@ -1,6 +1,13 @@
 ---
 name: workflow-generation
 description: Generate production-ready GitHub Actions YAML for IaC, Azure Functions, and Static Web App deployments — job structure, artifact handling, and rollback
+allowed-tools:
+  - Bash
+  - PowerShell
+compatibility: "Requires curl + jq (macOS/Linux/WSL, preferred) or PowerShell 7+ (pwsh) or Windows PowerShell 5.1 (powershell.exe)"
+metadata:
+  author: azurewithdanidu
+  version: "1.0.0"
 ---
 
 # Workflow Generation Skill
@@ -192,3 +199,32 @@ jobs:
 - **Tag every deployment with `github.run_id`** — this makes it easy to correlate a deployment failure in Azure with the specific GitHub Actions run that caused it.
 - **Rollback is not automatic rollback:** `az functionapp deployment slot swap` reverts app code but not infrastructure. If Bicep changes were part of the same deployment, a separate template rollback is needed.
 - **SWA deployment token rotation:** The Static Web Apps deployment token does not expire but should be rotated if a team member with access leaves. Regenerate from the Azure portal and update the GitHub secret.
+
+---
+
+## Runtime Detection
+
+This skill supports both Bash and PowerShell. Use the following detection order:
+
+| Priority | Runtime | Condition | Script |
+|---|---|---|---|
+| 1 (preferred) | Bash | `curl` and `jq` available on PATH | `scripts/<name>.sh` |
+| 2 | PowerShell 7+ | `pwsh` available on PATH | `scripts/<name>.ps1` |
+| 3 (fallback) | Windows PowerShell 5.1 | `powershell.exe` available | `scripts/<name>.ps1 -ExecutionPolicy RemoteSigned` |
+
+**Detection snippet (Bash):**
+```bash
+if command -v curl &>/dev/null && command -v jq &>/dev/null; then
+  bash scripts/<name>.sh [args]
+elif command -v pwsh &>/dev/null; then
+  pwsh -File scripts/<name>.ps1 [args]
+elif command -v powershell.exe &>/dev/null; then
+  powershell.exe -ExecutionPolicy RemoteSigned -File scripts/<name>.ps1 [args]
+else
+  echo "ERROR: Requires curl+jq (Bash) or PowerShell 7+ (pwsh)"
+  exit 1
+fi
+```
+
+**Parameter naming convention:** Bash uses `--kebab-case`; PowerShell uses `-PascalCase`. Both produce identical output.
+

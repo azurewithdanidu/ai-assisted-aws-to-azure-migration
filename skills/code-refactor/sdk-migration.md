@@ -1,6 +1,13 @@
 ---
 name: sdk-migration
 description: Replace AWS SDK calls with Azure SDK equivalents — Python (boto3), Node.js/TypeScript (@aws-sdk), and Java (AWS SDK v2) package mapping, client instantiation, authentication, and runtime gotchas
+allowed-tools:
+  - Bash
+  - PowerShell
+compatibility: "Requires curl + jq (macOS/Linux/WSL, preferred) or PowerShell 7+ (pwsh) or Windows PowerShell 5.1 (powershell.exe)"
+metadata:
+  author: azurewithdanidu
+  version: "1.0.0"
 ---
 
 # SDK Migration Skill
@@ -632,3 +639,32 @@ Also wire into CI as a gate step before the deployment job:
 - **Key Vault references over SDK:** For secrets that don't change at runtime, inject via `@Microsoft.KeyVault(SecretUri=...)` in app settings \u2014 no SDK call, no latency, no token refresh logic needed.
 - **Azure SDK BOM for Java:** Always use the BOM to avoid version conflicts between Azure SDK artifacts \u2014 never specify individual artifact versions manually.
 - **`DefaultAzureCredential` is environment-agnostic:** The same code runs on a developer's laptop (`az login`), in CI (environment credentials), and in Azure (managed identity). This is by design \u2014 never override it with `ManagedIdentityCredential` or `ClientSecretCredential`.
+
+---
+
+## Runtime Detection
+
+This skill supports both Bash and PowerShell. Use the following detection order:
+
+| Priority | Runtime | Condition | Script |
+|---|---|---|---|
+| 1 (preferred) | Bash | `curl` and `jq` available on PATH | `scripts/<name>.sh` |
+| 2 | PowerShell 7+ | `pwsh` available on PATH | `scripts/<name>.ps1` |
+| 3 (fallback) | Windows PowerShell 5.1 | `powershell.exe` available | `scripts/<name>.ps1 -ExecutionPolicy RemoteSigned` |
+
+**Detection snippet (Bash):**
+```bash
+if command -v curl &>/dev/null && command -v jq &>/dev/null; then
+  bash scripts/<name>.sh [args]
+elif command -v pwsh &>/dev/null; then
+  pwsh -File scripts/<name>.ps1 [args]
+elif command -v powershell.exe &>/dev/null; then
+  powershell.exe -ExecutionPolicy RemoteSigned -File scripts/<name>.ps1 [args]
+else
+  echo "ERROR: Requires curl+jq (Bash) or PowerShell 7+ (pwsh)"
+  exit 1
+fi
+```
+
+**Parameter naming convention:** Bash uses `--kebab-case`; PowerShell uses `-PascalCase`. Both produce identical output.
+

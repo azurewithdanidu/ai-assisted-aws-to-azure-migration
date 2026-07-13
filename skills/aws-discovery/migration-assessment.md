@@ -1,6 +1,13 @@
 ---
 name: migration-assessment
 description: Score each AWS service for migration complexity, flag risks, and produce the Service Complexity Matrix in migration-assessment.md
+allowed-tools:
+  - Bash
+  - PowerShell
+compatibility: "Requires curl + jq (macOS/Linux/WSL, preferred) or PowerShell 7+ (pwsh) or Windows PowerShell 5.1 (powershell.exe)"
+metadata:
+  author: azurewithdanidu
+  version: "1.0.0"
 ---
 
 # Migration Assessment Skill

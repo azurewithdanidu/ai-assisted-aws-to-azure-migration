@@ -1,6 +1,13 @@
 ---
 name: what-if-validation
 description: Run pre-deployment validation (Bicep syntax, policy compliance, quota, what-if) and security checks, then write a full validation report
+allowed-tools:
+  - Bash
+  - PowerShell
+compatibility: "Requires curl + jq (macOS/Linux/WSL, preferred) or PowerShell 7+ (pwsh) or Windows PowerShell 5.1 (powershell.exe)"
+metadata:
+  author: azurewithdanidu
+  version: "1.0.0"
 ---
 
 # What-If Validation Skill
@@ -434,3 +441,32 @@ The script blocks on destructive what-if changes (deletes of data resources, `pu
 - **Block on `changeType: Delete` for data resources** — accidental deletion of storage accounts, Key Vaults, or databases is not easily recoverable even with soft-delete enabled.
 - **What-if is not a guarantee:** ARM what-if output can differ from actual deployment results in edge cases (e.g., resource provider bugs, concurrent changes). Always review what-if output before approving.
 - **Policy compliance must be checked pre-deployment:** Deploying a non-compliant resource in `Deny` policy mode causes a 403 error mid-deployment and leaves the stack in a partial state.
+
+---
+
+## Runtime Detection
+
+This skill supports both Bash and PowerShell. Use the following detection order:
+
+| Priority | Runtime | Condition | Script |
+|---|---|---|---|
+| 1 (preferred) | Bash | `curl` and `jq` available on PATH | `scripts/<name>.sh` |
+| 2 | PowerShell 7+ | `pwsh` available on PATH | `scripts/<name>.ps1` |
+| 3 (fallback) | Windows PowerShell 5.1 | `powershell.exe` available | `scripts/<name>.ps1 -ExecutionPolicy RemoteSigned` |
+
+**Detection snippet (Bash):**
+```bash
+if command -v curl &>/dev/null && command -v jq &>/dev/null; then
+  bash scripts/<name>.sh [args]
+elif command -v pwsh &>/dev/null; then
+  pwsh -File scripts/<name>.ps1 [args]
+elif command -v powershell.exe &>/dev/null; then
+  powershell.exe -ExecutionPolicy RemoteSigned -File scripts/<name>.ps1 [args]
+else
+  echo "ERROR: Requires curl+jq (Bash) or PowerShell 7+ (pwsh)"
+  exit 1
+fi
+```
+
+**Parameter naming convention:** Bash uses `--kebab-case`; PowerShell uses `-PascalCase`. Both produce identical output.
+

@@ -1,6 +1,13 @@
 ---
 name: cost-estimator
 description: Fetch real Azure Retail Prices API data (no auth) for any Azure service in the target architecture and emit defensible per-SKU costs into cost-comparison.md. Read before any cost output.
+allowed-tools:
+  - Bash
+  - PowerShell
+compatibility: "Requires curl + jq (macOS/Linux/WSL, preferred) or PowerShell 7+ (pwsh) or Windows PowerShell 5.1 (powershell.exe)"
+metadata:
+  author: azurewithdanidu
+  version: "1.0.0"
 ---
 
 # Cost Estimator Skill

@@ -1,0 +1,123 @@
+name: Skill Evaluations
+
+on:
+  pull_request:
+    branches: [dev]
+  workflow_dispatch:
+    inputs:
+      model:
+        description: 'Model to evaluate against'
+        required: true
+        type: choice
+        options:
+          - claude-sonnet-4.6
+          - claude-sonnet-4.5
+          - claude-opus-4.6
+          - gpt-5.3-codex
+        default: claude-sonnet-4.6
+      tags:
+        description: 'Optional tag filter (e.g. smoke, agent:aws-discovery)'
+        required: false
+        type: string
+
+jobs:
+  validate-eval-schema:
+    if: github.event_name == 'pull_request'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install Waza
+        uses: ./.github/actions/install-waza
+      - name: Validate eval YAML schemas
+        run: waza check
+      - name: Check eval coverage for changed skills
+        run: bash tests/check-eval-coverage.sh
+
+  evaluate-mock:
+    if: github.event_name == 'pull_request'
+    runs-on: ubuntu-latest
+    needs: validate-eval-schema
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install Waza
+        uses: ./.github/actions/install-waza
+      - name: Run mock evaluations (no LLM)
+        run: waza run tests/evals/aws-to-azure-migrator/eval-mock.yaml --tags negative,smoke
+      - name: Upload mock eval results
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: eval-mock-results
+          path: results/
+          retention-days: 30
+
+  evaluate-critical:
+    if: github.event_name == 'pull_request'
+    runs-on: ubuntu-latest
+    needs: validate-eval-schema
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Detect changed areas
+        uses: dorny/paths-filter@v3
+        id: filter
+        with:
+          filters: |
+            skill-core:
+              - 'skills/**'
+            agents:
+              - 'agents/**'
+            commands:
+              - 'commands/**'
+            eval-tasks:
+              - 'tests/evals/**'
+
+      - name: Build targeted eval tag list
+        id: tags
+        run: |
+          TAGS="smoke"
+          ${{ steps.filter.outputs.skill-core == 'true' }} && TAGS="$TAGS,skill-core"
+          ${{ steps.filter.outputs.agents == 'true' }} && TAGS="$TAGS,agent"
+          ${{ steps.filter.outputs.eval-tasks == 'true' }} && TAGS="$TAGS,smoke,negative"
+          echo "EVAL_TAGS=$TAGS" >> "$GITHUB_OUTPUT"
+
+      - name: Install Waza
+        uses: ./.github/actions/install-waza
+
+      - name: Run targeted critical evaluations
+        continue-on-error: true
+        env:
+          COPILOT_GITHUB_TOKEN: ${{ secrets.COPILOT_GITHUB_TOKEN }}
+        run: waza run --tags "${{ steps.tags.outputs.EVAL_TAGS }}"
+
+      - name: Upload critical eval results
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: eval-critical-results
+          path: results/
+          retention-days: 30
+
+  run-evals:
+    if: github.event_name == 'workflow_dispatch'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install Waza
+        uses: ./.github/actions/install-waza
+      - name: Run full evaluation suite
+        env:
+          COPILOT_GITHUB_TOKEN: ${{ secrets.COPILOT_GITHUB_TOKEN }}
+        run: |
+          ARGS="--model ${{ inputs.model }}"
+          if [[ -n "${{ inputs.tags }}" ]]; then
+            ARGS="$ARGS --tags ${{ inputs.tags }}"
+          fi
+          waza run $ARGS
+      - name: Upload full eval results
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: eval-full-results-${{ inputs.model }}
+          path: results/
+          retention-days: 30

@@ -1,0 +1,25 @@
+name: Install Waza
+description: Downloads and installs the Waza AI skill evaluation binary (pinned to v0.23.0 with sha256 verification)
+
+runs:
+  using: composite
+  steps:
+    - name: Download and verify Waza binary
+      shell: bash
+      run: |
+        TMP_WAZA=$(mktemp)
+        echo "Downloading Waza v0.23.0..."
+        curl -fsSL \
+          "https://github.com/microsoft/waza/releases/download/v0.23.0/waza-linux-amd64" \
+          -o "${TMP_WAZA}"
+
+        echo "Verifying sha256..."
+        echo "9cf7c99292100892b3274155b39f62e54c66d6dbd43d69b1a626a9ef5d35668b  ${TMP_WAZA}" \
+          | sha256sum -c -
+
+        echo "Installing to /usr/local/bin/waza..."
+        sudo install -m 755 "${TMP_WAZA}" /usr/local/bin/waza
+        rm -f "${TMP_WAZA}"
+
+        echo "Waza version:"
+        waza --version

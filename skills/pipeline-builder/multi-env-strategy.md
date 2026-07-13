@@ -1,6 +1,13 @@
 ---
 name: multi-env-strategy
 description: Define branch-to-environment mapping, GitHub Environment protection rules, approval gates, and secret separation for dev/staging/prod
+allowed-tools:
+  - Bash
+  - PowerShell
+compatibility: "Requires curl + jq (macOS/Linux/WSL, preferred) or PowerShell 7+ (pwsh) or Windows PowerShell 5.1 (powershell.exe)"
+metadata:
+  author: azurewithdanidu
+  version: "1.0.0"
 ---
 
 # Multi-Environment Strategy Skill
@@ -106,3 +113,32 @@ When structuring GitHub Actions workflows that target multiple environments.
 - **Environment secrets over repo secrets for per-environment values** — this prevents a dev deployment from accidentally using prod credentials or resource group names.
 - **Add a 10-minute wait timer to prod** — this provides a short window to cancel an approved deployment if a mistake is noticed after approval.
 - **Separate reviewer teams for staging vs prod** — staging approval can be any team member; prod approval should require a lead engineer or ops team member.
+
+---
+
+## Runtime Detection
+
+This skill supports both Bash and PowerShell. Use the following detection order:
+
+| Priority | Runtime | Condition | Script |
+|---|---|---|---|
+| 1 (preferred) | Bash | `curl` and `jq` available on PATH | `scripts/<name>.sh` |
+| 2 | PowerShell 7+ | `pwsh` available on PATH | `scripts/<name>.ps1` |
+| 3 (fallback) | Windows PowerShell 5.1 | `powershell.exe` available | `scripts/<name>.ps1 -ExecutionPolicy RemoteSigned` |
+
+**Detection snippet (Bash):**
+```bash
+if command -v curl &>/dev/null && command -v jq &>/dev/null; then
+  bash scripts/<name>.sh [args]
+elif command -v pwsh &>/dev/null; then
+  pwsh -File scripts/<name>.ps1 [args]
+elif command -v powershell.exe &>/dev/null; then
+  powershell.exe -ExecutionPolicy RemoteSigned -File scripts/<name>.ps1 [args]
+else
+  echo "ERROR: Requires curl+jq (Bash) or PowerShell 7+ (pwsh)"
+  exit 1
+fi
+```
+
+**Parameter naming convention:** Bash uses `--kebab-case`; PowerShell uses `-PascalCase`. Both produce identical output.
+

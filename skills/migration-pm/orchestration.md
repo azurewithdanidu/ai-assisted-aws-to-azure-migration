@@ -1,6 +1,13 @@
 ---
 name: orchestration
 description: Coordinate the 6-phase migration pipeline — sequence phases, verify artifacts, detect blockers, and ensure migration-task-plan.md reflects reality
+allowed-tools:
+  - Bash
+  - PowerShell
+compatibility: "Requires curl + jq (macOS/Linux/WSL, preferred) or PowerShell 7+ (pwsh) or Windows PowerShell 5.1 (powershell.exe)"
+metadata:
+  author: azurewithdanidu
+  version: "1.0.0"
 ---
 
 # Orchestration Skill

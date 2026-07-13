@@ -1,6 +1,13 @@
 ---
 name: module-organization
 description: Decide what belongs in root main.bicep vs child modules, AVM module selection, dependency ordering, and how to avoid circular dependencies and common Bicep pitfalls
+allowed-tools:
+  - Bash
+  - PowerShell
+compatibility: "Requires curl + jq (macOS/Linux/WSL, preferred) or PowerShell 7+ (pwsh) or Windows PowerShell 5.1 (powershell.exe)"
+metadata:
+  author: azurewithdanidu
+  version: "1.0.0"
 ---
 
 # Module Organization Skill
@@ -444,3 +451,32 @@ Look up the correct AVM module version before pinning it in a `.bicepparam`:
 - **`modulePath: "bicep"` in bicepconfig.json is the only correct value** — `"bicep/public"` does not exist in MCR and causes a confusing registry error.
 - **Append `Avm` to all inner AVM module `name:` values** — duplicate deployment IDs cause ARM 409 conflicts when the same name is used at both the outer and inner module level.
 - **Always validate breaking changes** between AVM versions before upgrading — check the CHANGELOG at `https://raw.githubusercontent.com/Azure/bicep-registry-modules/main/avm/res/<module>/CHANGELOG.md`.
+
+---
+
+## Runtime Detection
+
+This skill supports both Bash and PowerShell. Use the following detection order:
+
+| Priority | Runtime | Condition | Script |
+|---|---|---|---|
+| 1 (preferred) | Bash | `curl` and `jq` available on PATH | `scripts/<name>.sh` |
+| 2 | PowerShell 7+ | `pwsh` available on PATH | `scripts/<name>.ps1` |
+| 3 (fallback) | Windows PowerShell 5.1 | `powershell.exe` available | `scripts/<name>.ps1 -ExecutionPolicy RemoteSigned` |
+
+**Detection snippet (Bash):**
+```bash
+if command -v curl &>/dev/null && command -v jq &>/dev/null; then
+  bash scripts/<name>.sh [args]
+elif command -v pwsh &>/dev/null; then
+  pwsh -File scripts/<name>.ps1 [args]
+elif command -v powershell.exe &>/dev/null; then
+  powershell.exe -ExecutionPolicy RemoteSigned -File scripts/<name>.ps1 [args]
+else
+  echo "ERROR: Requires curl+jq (Bash) or PowerShell 7+ (pwsh)"
+  exit 1
+fi
+```
+
+**Parameter naming convention:** Bash uses `--kebab-case`; PowerShell uses `-PascalCase`. Both produce identical output.
+

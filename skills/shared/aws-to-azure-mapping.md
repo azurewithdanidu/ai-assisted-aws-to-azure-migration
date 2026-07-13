@@ -1,6 +1,13 @@
 ---
 name: aws-to-azure-mapping
 description: Authoritative AWS-to-Azure service equivalents for all service categories — compute, storage, database, messaging, networking, security, monitoring
+allowed-tools:
+  - Bash
+  - PowerShell
+compatibility: "Requires curl + jq (macOS/Linux/WSL, preferred) or PowerShell 7+ (pwsh) or Windows PowerShell 5.1 (powershell.exe)"
+metadata:
+  author: azurewithdanidu
+  version: "1.0.0"
 ---
 
 # AWS-to-Azure Mapping Skill

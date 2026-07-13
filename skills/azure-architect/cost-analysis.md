@@ -1,6 +1,13 @@
 ---
 name: cost-analysis
 description: Produce a credible AWS-vs-Azure cost comparison with monthly delta, break-even, and ROI — read before generating cost-comparison.md
+allowed-tools:
+  - Bash
+  - PowerShell
+compatibility: "Requires curl + jq (macOS/Linux/WSL, preferred) or PowerShell 7+ (pwsh) or Windows PowerShell 5.1 (powershell.exe)"
+metadata:
+  author: azurewithdanidu
+  version: "1.0.0"
 ---
 
 # Cost Analysis Skill

@@ -1,6 +1,13 @@
 ---
 name: lambda-to-functions
 description: Rewrite AWS Lambda handlers as Azure Functions — full trigger catalog covering HTTP, Timer, Blob, Service Bus, Cosmos DB Change Feed, Event Grid, Event Hubs, Durable Functions, SignalR, and Cognito migration guidance
+allowed-tools:
+  - Bash
+  - PowerShell
+compatibility: "Requires curl + jq (macOS/Linux/WSL, preferred) or PowerShell 7+ (pwsh) or Windows PowerShell 5.1 (powershell.exe)"
+metadata:
+  author: azurewithdanidu
+  version: "1.0.0"
 ---
 
 # Lambda-to-Functions Skill
@@ -271,3 +278,32 @@ azure-keyvault-secrets
 - **CRON is 6-part in Azure, 5-part in AWS:** AWS `rate(5 minutes)` = Azure `0 */5 * * * *` (6 fields, leading seconds). Missing the seconds field causes a silent schedule misfire.
 - **Cognito triggers have no Azure Functions equivalent trigger** — move that logic to MSAL middleware or Azure AD B2C custom policies.
 - **Extension bundles must be v4.x** — v3.x does not support the v2 Python programming model decorator syntax.
+
+---
+
+## Runtime Detection
+
+This skill supports both Bash and PowerShell. Use the following detection order:
+
+| Priority | Runtime | Condition | Script |
+|---|---|---|---|
+| 1 (preferred) | Bash | `curl` and `jq` available on PATH | `scripts/<name>.sh` |
+| 2 | PowerShell 7+ | `pwsh` available on PATH | `scripts/<name>.ps1` |
+| 3 (fallback) | Windows PowerShell 5.1 | `powershell.exe` available | `scripts/<name>.ps1 -ExecutionPolicy RemoteSigned` |
+
+**Detection snippet (Bash):**
+```bash
+if command -v curl &>/dev/null && command -v jq &>/dev/null; then
+  bash scripts/<name>.sh [args]
+elif command -v pwsh &>/dev/null; then
+  pwsh -File scripts/<name>.ps1 [args]
+elif command -v powershell.exe &>/dev/null; then
+  powershell.exe -ExecutionPolicy RemoteSigned -File scripts/<name>.ps1 [args]
+else
+  echo "ERROR: Requires curl+jq (Bash) or PowerShell 7+ (pwsh)"
+  exit 1
+fi
+```
+
+**Parameter naming convention:** Bash uses `--kebab-case`; PowerShell uses `-PascalCase`. Both produce identical output.
+

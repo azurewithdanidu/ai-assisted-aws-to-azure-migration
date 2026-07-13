@@ -1,6 +1,13 @@
 ---
 name: parameter-management
 description: Create environment-specific .bicepparam files for dev, staging, and production — derive parameter names from deployed services, apply correct SKUs and replication by environment
+allowed-tools:
+  - Bash
+  - PowerShell
+compatibility: "Requires curl + jq (macOS/Linux/WSL, preferred) or PowerShell 7+ (pwsh) or Windows PowerShell 5.1 (powershell.exe)"
+metadata:
+  author: azurewithdanidu
+  version: "1.0.0"
 ---
 
 # Parameter Management Skill
@@ -183,3 +190,32 @@ Run after generating or updating `.bicepparam` files to verify all parameter val
 - **Burstable SKUs for dev databases:** `Standard_B1ms` is sufficient for development but should never be used in production — it has limited CPU credits and will throttle under sustained load.
 - **Log retention: 30/60/90 day pattern** is a common regulatory baseline. Increase to 365+ days if your workload has compliance requirements (HIPAA, PCI-DSS, SOC 2).
 - **Never commit actual secret values in `.bicepparam` files** — mark `@secure()` params and pass them at deploy time via `az deployment group create --parameters key=value` or reference Key Vault secrets.
+
+---
+
+## Runtime Detection
+
+This skill supports both Bash and PowerShell. Use the following detection order:
+
+| Priority | Runtime | Condition | Script |
+|---|---|---|---|
+| 1 (preferred) | Bash | `curl` and `jq` available on PATH | `scripts/<name>.sh` |
+| 2 | PowerShell 7+ | `pwsh` available on PATH | `scripts/<name>.ps1` |
+| 3 (fallback) | Windows PowerShell 5.1 | `powershell.exe` available | `scripts/<name>.ps1 -ExecutionPolicy RemoteSigned` |
+
+**Detection snippet (Bash):**
+```bash
+if command -v curl &>/dev/null && command -v jq &>/dev/null; then
+  bash scripts/<name>.sh [args]
+elif command -v pwsh &>/dev/null; then
+  pwsh -File scripts/<name>.ps1 [args]
+elif command -v powershell.exe &>/dev/null; then
+  powershell.exe -ExecutionPolicy RemoteSigned -File scripts/<name>.ps1 [args]
+else
+  echo "ERROR: Requires curl+jq (Bash) or PowerShell 7+ (pwsh)"
+  exit 1
+fi
+```
+
+**Parameter naming convention:** Bash uses `--kebab-case`; PowerShell uses `-PascalCase`. Both produce identical output.
+

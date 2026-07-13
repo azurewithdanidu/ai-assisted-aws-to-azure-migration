@@ -1,0 +1,80 @@
+name: Unit Tests
+
+on:
+  pull_request:
+    branches: [dev, main]
+  push:
+    branches: [dev]
+    paths:
+      - 'skills/**/scripts/**'
+      - 'tests/unit/**'
+      - '.github/scripts/**'
+
+jobs:
+  powershell-tests:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Check for relevant changes
+        uses: dorny/paths-filter@v3
+        id: filter
+        with:
+          filters: |
+            scripts:
+              - 'skills/**/scripts/**/*.ps1'
+              - '.github/scripts/**/*.ps1'
+              - 'tests/unit/**'
+
+      - name: Install Pester and PSScriptAnalyzer
+        if: steps.filter.outputs.scripts == 'true'
+        shell: pwsh
+        run: pwsh -File .github/scripts/test/Install-Pester.ps1
+
+      - name: Run PSScriptAnalyzer
+        if: steps.filter.outputs.scripts == 'true'
+        shell: pwsh
+        run: |
+          $results = Invoke-ScriptAnalyzer -Path skills -Recurse -Severity Warning,Error
+          if ($results) {
+            $results | Format-Table -AutoSize
+            Write-Error "PSScriptAnalyzer found $($results.Count) issue(s)"
+          } else {
+            Write-Host "✅ PSScriptAnalyzer: no issues found"
+          }
+
+      - name: Run Pester tests
+        if: steps.filter.outputs.scripts == 'true'
+        shell: pwsh
+        run: pwsh -File tests/unit/Run-PesterTests.ps1 -OutputFormat Detailed -CIOutputPath results/pester.xml
+
+      - name: Upload Pester results
+        if: steps.filter.outputs.scripts == 'true' && always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: pester-results
+          path: results/pester.xml
+          retention-days: 30
+
+  bash-tests:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Check for relevant changes
+        uses: dorny/paths-filter@v3
+        id: filter
+        with:
+          filters: |
+            scripts:
+              - 'skills/**/scripts/**/*.sh'
+              - '.github/scripts/**/*.sh'
+              - 'tests/unit/**'
+
+      - name: Install bats-core
+        if: steps.filter.outputs.scripts == 'true'
+        run: bash .github/scripts/test/install-bats.sh
+
+      - name: Run bats tests
+        if: steps.filter.outputs.scripts == 'true'
+        run: bash tests/unit/run-bats-tests.sh
