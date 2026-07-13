@@ -23,7 +23,7 @@ As the primary workflow for Phase 2, before writing any Bicep, diagrams, or cost
 ## Process
 
 1. Read `outputs/aws-migration-artifacts/aws-inventory.json` and `migration-assessment.md`.
-2. For each AWS service, look up the Azure equivalent in `.github/skills/agents/shared/aws-to-azure-mapping.md`.
+2. For each AWS service, look up the Azure equivalent in `skills/aws-to-azure-mapping/SKILL.md`.
 3. Apply design constraints (see Rules below).
 4. For each Azure service you select, read the matching knowledge skill in `.github/skills/azure-architecture/<service>/SKILL.md` before finalizing — use its SKU guidance and anti-patterns section.
 5. For each service selection, document: which WAF pillar it optimizes, what trade-off it makes, and cite the knowledge skill consulted.

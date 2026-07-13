@@ -406,14 +406,14 @@ Every module `name:` is an ARM nested deployment ID. If the name in `main.bicep`
 Agents should run `validate-bicep.ps1` immediately after generating or modifying any Bicep file:
 
 ```powershell
-./.github/skills/agents/iac-transformation/scripts/validate-bicep.ps1 \
+./scripts/validate-bicep.ps1 \
     -ResourceGroup "rg-dev-migration" -Environment dev
 ```
 
 Look up the correct AVM module version before pinning it in a `.bicepparam`:
 
 ```powershell
-./.github/skills/agents/iac-transformation/scripts/resolve-avm-version.ps1 \
+./scripts/resolve-avm-version.ps1 \
     -ModulePath "storage/storage-account"
 ```
 

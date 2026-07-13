@@ -84,16 +84,29 @@ agents/                     ← USER-FACING PRODUCT. All 10 migration agents liv
 commands/
 └── run-migration.md        ← /run-migration slash command. Primary user entry point.
 
-skills/                     ← 22 skills across 8 agent categories.
-├── aws-discovery/          2 skills  (aws-inventory-scan, migration-assessment)
-├── azure-architect/        4 skills  (architecture-design, architecture-diagramming, cost-analysis, cost-estimator)
-├── code-refactor/          2 skills  (lambda-to-functions, sdk-migration)
-├── iac-transformation/     2 skills  (module-organization, parameter-management)
-├── deployment-validation/  2 skills  (smoke-testing, what-if-validation)
-├── pipeline-builder/       3 skills  (github-actions-oidc, multi-env-strategy, workflow-generation)
-├── migration-pm/           2 skills  (orchestration, phase-delegation)
-└── shared/                 5 skills  (aws-to-azure-mapping, azure-auth-patterns, azure-security-patterns,
-                                       bicep-generation, task-tracking)
+skills/                     ← 22 skills, each as skills/<name>/SKILL.md.
+├── aws-inventory-scan/     ← aws-discovery
+├── migration-assessment/   ← aws-discovery
+├── architecture-design/    ← azure-architect
+├── architecture-diagramming/ ← azure-architect
+├── cost-analysis/          ← azure-architect
+├── cost-estimator/         ← azure-architect
+├── lambda-to-functions/    ← code-refactor
+├── sdk-migration/          ← code-refactor
+├── smoke-testing/          ← deployment-validation
+├── what-if-validation/     ← deployment-validation
+├── module-organization/    ← iac-transformation
+├── parameter-management/   ← iac-transformation
+├── github-actions-oidc/    ← pipeline-builder
+├── multi-env-strategy/     ← pipeline-builder
+├── workflow-generation/    ← pipeline-builder
+├── orchestration/          ← migration-pm
+├── phase-delegation/       ← migration-pm
+├── aws-to-azure-mapping/   ← shared
+├── azure-auth-patterns/    ← shared
+├── azure-security-patterns/ ← shared
+├── bicep-generation/       ← shared
+└── task-tracking/          ← shared
 
 .github/
 ├── agents/                 CI-only agents (not shipped). PR reviewers, triage bots.
@@ -198,16 +211,16 @@ Meta-agent. Creates new skill files and wires them into the correct agent. Invok
 
 22 skills distributed across 8 agent categories. Each skill is a structured Markdown file with a description, usage pattern, and embedded cross-platform scripts where needed.
 
-| Category | Skills |
+| Domain | Skills |
 |---|---|
-| `aws-discovery` | aws-inventory-scan · migration-assessment |
-| `azure-architect` | architecture-design · architecture-diagramming · cost-analysis · cost-estimator |
-| `code-refactor` | lambda-to-functions · sdk-migration |
-| `iac-transformation` | module-organization · parameter-management |
-| `deployment-validation` | smoke-testing · what-if-validation |
-| `pipeline-builder` | github-actions-oidc · multi-env-strategy · workflow-generation |
-| `migration-pm` | orchestration · phase-delegation |
-| `shared` | aws-to-azure-mapping · azure-auth-patterns · azure-security-patterns · bicep-generation · task-tracking |
+| AWS Discovery | aws-inventory-scan · migration-assessment |
+| Azure Architecture | architecture-design · architecture-diagramming · cost-analysis · cost-estimator |
+| Code Refactor | lambda-to-functions · sdk-migration |
+| IaC Transformation | module-organization · parameter-management |
+| Deployment Validation | smoke-testing · what-if-validation |
+| Pipeline Builder | github-actions-oidc · multi-env-strategy · workflow-generation |
+| Migration PM | orchestration · phase-delegation |
+| Shared | aws-to-azure-mapping · azure-auth-patterns · azure-security-patterns · bicep-generation · task-tracking |
 
 All skills with scripts ship dual implementations:
 - **`scripts/<name>.sh`** — Bash (macOS / Linux / WSL)

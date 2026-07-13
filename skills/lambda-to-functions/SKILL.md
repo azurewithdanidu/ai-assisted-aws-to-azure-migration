@@ -223,7 +223,7 @@ azure-keyvault-secrets
 ## Rules
 
 - **Never import boto3 in output files.**
-- **Always use `DefaultAzureCredential`** for downstream service access — see `.github/skills/agents/shared/azure-auth-patterns.md`.
+- **Always use `DefaultAzureCredential`** for downstream service access — see `skills/azure-auth-patterns/SKILL.md`.
 - **Always use `os.environ["VAR_NAME"]`** for environment variables — same pattern as Lambda, different variable names.
 - **Never use `context.log()` or Lambda `print()` for logging** — use `logging.getLogger(__name__).info(...)`.
 - **Python version must be 3.9–3.11** — never 3.12+ (Azure Functions v4 constraint).

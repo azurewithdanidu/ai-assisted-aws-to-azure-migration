@@ -117,7 +117,7 @@ Replace all AWS IAM-based authentication patterns with Azure Managed Identity an
 Use to assign any built-in role to a managed identity:
 
 ```powershell
-./.github/skills/agents/shared/scripts/assign-rbac.ps1 \
+./scripts/assign-rbac.ps1 \
     -PrincipalId "<managed-identity-object-id>" \
     -Scope "/subscriptions/<sub>/resourceGroups/<rg>" \
     -Role "StorageBlobDataContributor"

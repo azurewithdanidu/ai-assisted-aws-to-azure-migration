@@ -1,7 +1,7 @@
 #!/usr/bin/env bats
 # Unit tests for verify-security.sh
 
-SCRIPT="$BATS_TEST_DIRNAME/../../skills/shared/scripts/verify-security.sh"
+SCRIPT="$BATS_TEST_DIRNAME/../../skills/azure-security-patterns/scripts/verify-security.sh"
 
 @test "verify-security.sh exists" {
   [ -f "$SCRIPT" ]

@@ -29,10 +29,10 @@ feature/... ──► dev  ──► main
 
 ## Adding a New Skill
 
-1. Determine the owning agent folder: `skills/<agent-folder>/`.
-2. Create `skills/<agent-folder>/<skill-name>.md` following the mandatory structure in `agents/skill-generator-agent.md`.
+1. Create a new directory `skills/<skill-name>/`.
+2. Create `skills/<skill-name>/SKILL.md` following the mandatory structure in `agents/skill-generator-agent.md`.
 3. Add a row to the owning agent's **Skills** table in `agents/<agent>.agent.md`.
-4. If the skill has scripts, add both `scripts/<name>.sh` and `scripts/<name>.ps1` versions.
+4. If the skill has scripts, add both `scripts/<name>.sh` and `scripts/<name>.ps1` versions inside the new skill directory.
 5. Add an eval task in `tests/evals/aws-to-azure-migrator/` tagged `skill:<skill-name>`.
 
 ## Adding a New Agent

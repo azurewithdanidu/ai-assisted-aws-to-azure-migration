@@ -336,7 +336,7 @@ uses: azure/login@6c251865b4e6290e7b78be643ea2d005bc51f69a       # v2.1.1
 Run once per environment before creating GitHub workflows:
 
 ```powershell
-./.github/skills/agents/pipeline-builder/scripts/setup-oidc.ps1 \
+./scripts/setup-oidc.ps1 \
     -GitHubOrg "azurewithdanidu" \
     -GitHubRepo "ai-assisted-aws-to-azure-migration" \
     -Environment prod \

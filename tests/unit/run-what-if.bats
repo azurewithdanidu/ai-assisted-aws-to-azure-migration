@@ -1,7 +1,7 @@
 #!/usr/bin/env bats
 # Unit tests for run-what-if.sh
 
-SCRIPT="$BATS_TEST_DIRNAME/../../skills/deployment-validation/scripts/run-what-if.sh"
+SCRIPT="$BATS_TEST_DIRNAME/../../skills/what-if-validation/scripts/run-what-if.sh"
 
 @test "run-what-if.sh exists" {
   [ -f "$SCRIPT" ]

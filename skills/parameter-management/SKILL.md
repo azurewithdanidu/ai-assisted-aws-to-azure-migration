@@ -159,7 +159,7 @@ param logRetentionDays = 90
 Run after generating or updating `.bicepparam` files to verify all parameter values resolve correctly:
 
 ```powershell
-./.github/skills/agents/iac-transformation/scripts/validate-bicep.ps1 \
+./scripts/validate-bicep.ps1 \
     -ResourceGroup "rg-dev-migration" -Environment dev
 ```
 

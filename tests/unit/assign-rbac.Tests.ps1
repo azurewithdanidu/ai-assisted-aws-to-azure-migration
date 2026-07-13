@@ -5,7 +5,7 @@
 #>
 Describe "assign-rbac.ps1" {
     BeforeAll {
-        $script:ScriptPath = "$PSScriptRoot/../../skills/shared/scripts/assign-rbac.ps1"
+        $script:ScriptPath = "$PSScriptRoot/../../skills/azure-auth-patterns/scripts/assign-rbac.ps1"
         $script:Content    = Get-Content $script:ScriptPath -Raw -ErrorAction SilentlyContinue
     }
 

@@ -1,7 +1,7 @@
 #!/usr/bin/env bats
 # Unit tests for assign-rbac.sh
 
-SCRIPT="$BATS_TEST_DIRNAME/../../skills/shared/scripts/assign-rbac.sh"
+SCRIPT="$BATS_TEST_DIRNAME/../../skills/azure-auth-patterns/scripts/assign-rbac.sh"
 
 @test "assign-rbac.sh exists" {
   [ -f "$SCRIPT" ]

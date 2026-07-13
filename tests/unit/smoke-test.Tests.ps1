@@ -5,7 +5,7 @@
 #>
 Describe "smoke-test.ps1" {
     BeforeAll {
-        $script:ScriptPath = "$PSScriptRoot/../../skills/deployment-validation/scripts/smoke-test.ps1"
+        $script:ScriptPath = "$PSScriptRoot/../../skills/smoke-testing/scripts/smoke-test.ps1"
         $script:Content    = Get-Content $script:ScriptPath -Raw -ErrorAction SilentlyContinue
     }
 

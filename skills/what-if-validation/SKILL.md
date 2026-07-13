@@ -408,7 +408,7 @@ Write `outputs/validation-report.md` using this structure:
 Run before every environment deployment:
 
 ```powershell
-./.github/skills/agents/deployment-validation/scripts/run-what-if.ps1 \
+./scripts/run-what-if.ps1 \
     -ResourceGroup "rg-dev-migration" -Environment dev
 ```
 

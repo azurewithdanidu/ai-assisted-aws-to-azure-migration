@@ -586,14 +586,14 @@ Minimum `pom.xml` dependencies for a migrated Java service:
 Run after every refactoring pass to verify no AWS SDK references remain:
 
 ```powershell
-./.github/skills/agents/code-refactor/scripts/scan-aws-sdk.ps1 -ScanPath "outputs/azure-functions"
+./scripts/scan-aws-sdk.ps1 -ScanPath "outputs/azure-functions"
 ```
 
 Also wire into CI as a gate step before the deployment job:
 
 ```yaml
 - name: Scan for AWS SDK residue
-  run: pwsh .github/skills/agents/code-refactor/scripts/scan-aws-sdk.ps1
+  run: pwsh scripts/scan-aws-sdk.ps1
 ```
 
 ---

@@ -170,7 +170,7 @@ Apply consistent zero-trust security defaults to every Azure resource deployed i
 Run after every deployment to assert security baselines are met:
 
 ```powershell
-./.github/skills/agents/shared/scripts/verify-security.ps1 \
+./scripts/verify-security.ps1 \
     -ResourceGroup "rg-prod-migration"
 ```
 

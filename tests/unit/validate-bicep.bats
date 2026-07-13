@@ -1,7 +1,7 @@
 #!/usr/bin/env bats
 # Unit tests for validate-bicep.sh
 
-SCRIPT="$BATS_TEST_DIRNAME/../../skills/iac-transformation/scripts/validate-bicep.sh"
+SCRIPT="$BATS_TEST_DIRNAME/../../skills/module-organization/scripts/validate-bicep.sh"
 
 @test "validate-bicep.sh exists" {
   [ -f "$SCRIPT" ]

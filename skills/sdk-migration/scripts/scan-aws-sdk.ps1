@@ -33,7 +33,7 @@
 
 .EXAMPLE
     # In a GitHub Actions step:
-    #   - run: pwsh .github/skills/agents/code-refactor/scripts/scan-aws-sdk.ps1
+    #   - run: pwsh scripts/scan-aws-sdk.ps1
 #>
 
 [CmdletBinding()]

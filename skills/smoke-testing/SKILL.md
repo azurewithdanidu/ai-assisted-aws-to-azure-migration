@@ -267,7 +267,7 @@ az monitor log-analytics query \
 Run immediately after a successful deployment:
 
 ```powershell
-./.github/skills/agents/deployment-validation/scripts/smoke-test.ps1 \
+./scripts/smoke-test.ps1 \
     -ResourceGroup "rg-dev-migration" \
     -Environment dev \
     -FunctionAppName "dev-myapp-func" \
