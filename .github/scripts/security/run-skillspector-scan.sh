@@ -4,10 +4,11 @@
 # Usage: run-skillspector-scan.sh
 # Env vars consumed: SKILL_PATH, JSON_OUTPUT, SARIF_OUTPUT
 #
-# SkillSpector is assumed to already be installed in the current environment.
-# The CI workflow installs it before calling this script.
+# SkillSpector exits 1 when it finds security findings — that is its normal
+# behavior. The threshold gate is handled by check-skillspector-threshold.sh.
+# This script exits non-zero only if SkillSpector failed to produce output.
 
-set -euo pipefail
+set -uo pipefail   # intentionally no -e: scanner exits 1 on findings
 
 SKILL_PATH="${SKILL_PATH:-skills}"
 JSON_OUTPUT="${JSON_OUTPUT:-skillspector.json}"
@@ -17,12 +18,24 @@ echo "Running SkillSpector JSON scan on $SKILL_PATH..."
 skillspector scan "$SKILL_PATH" \
   --format json \
   --output "$JSON_OUTPUT" \
-  --no-llm
+  --no-llm || true   # exit 1 on findings is expected; file is still written
+
+if [[ ! -f "$JSON_OUTPUT" ]]; then
+  echo "ERROR: SkillSpector failed to produce JSON output — check install and flags"
+  exit 1
+fi
+echo "  JSON report: $JSON_OUTPUT"
 
 echo "Running SkillSpector SARIF scan on $SKILL_PATH..."
 skillspector scan "$SKILL_PATH" \
   --format sarif \
   --output "$SARIF_OUTPUT" \
-  --no-llm
+  --no-llm || true
 
-echo "Scan complete. Outputs: $JSON_OUTPUT, $SARIF_OUTPUT"
+if [[ -f "$SARIF_OUTPUT" ]]; then
+  echo "  SARIF report: $SARIF_OUTPUT"
+else
+  echo "  WARN: SARIF output not produced (non-blocking)"
+fi
+
+echo "Scan complete."
