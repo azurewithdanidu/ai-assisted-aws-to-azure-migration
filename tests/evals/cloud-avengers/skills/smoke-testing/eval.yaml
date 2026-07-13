@@ -1,0 +1,19 @@
+# yaml-language-server: $schema=https://raw.githubusercontent.com/microsoft/waza/v0.23.0/schemas/eval.schema.json
+name: cloud-avengers-smoke-testing-eval
+description: Skill-level eval suite for smoke-testing.
+skill: smoke-testing
+version: "1.0"
+config:
+  trials_per_task: 1
+  timeout_seconds: 60
+  parallel: false
+  executor: mock
+  model: claude-sonnet-4.6
+metrics:
+  - name: trigger_accuracy
+    weight: 1.0
+    threshold: 1.0
+    description: smoke-testing trigger correctness.
+tasks:
+  - "../../tasks/skills/smoke-testing/should-trigger.yaml"
+

@@ -1,0 +1,18 @@
+# yaml-language-server: $schema=https://raw.githubusercontent.com/microsoft/waza/v0.23.0/schemas/eval.schema.json
+name: cloud-avengers-lambda-to-functions-eval
+description: Skill-level eval suite for lambda-to-functions.
+skill: lambda-to-functions
+version: "1.0"
+config:
+  trials_per_task: 1
+  timeout_seconds: 60
+  parallel: false
+  executor: mock
+  model: claude-sonnet-4.6
+metrics:
+  - name: trigger_accuracy
+    weight: 1.0
+    threshold: 1.0
+    description: lambda-to-functions trigger correctness.
+tasks:
+  - "../../tasks/skills/lambda-to-functions/should-trigger.yaml"

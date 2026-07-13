@@ -1,0 +1,19 @@
+# yaml-language-server: $schema=https://raw.githubusercontent.com/microsoft/waza/v0.23.0/schemas/eval.schema.json
+name: cloud-avengers-multi-env-strategy-eval
+description: Skill-level eval suite for multi-env-strategy.
+skill: multi-env-strategy
+version: "1.0"
+config:
+  trials_per_task: 1
+  timeout_seconds: 60
+  parallel: false
+  executor: mock
+  model: claude-sonnet-4.6
+metrics:
+  - name: trigger_accuracy
+    weight: 1.0
+    threshold: 1.0
+    description: multi-env-strategy trigger correctness.
+tasks:
+  - "../../tasks/skills/multi-env-strategy/should-trigger.yaml"
+

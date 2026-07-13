@@ -1,0 +1,21 @@
+# yaml-language-server: $schema=https://raw.githubusercontent.com/microsoft/waza/v0.23.0/schemas/task.schema.json
+id: eval:skill/bicep-generation/should-trigger
+name: bicep-generation triggers on explicit request
+description: Validates bicep-generation triggers when directly requested.
+tags:
+  - smoke
+  - trigger
+  - skill-core
+  - skill:bicep-generation
+inputs:
+  prompt: "Use the bicep-generation skill to generate Bicep templates for the Azure target infrastructure."
+expected:
+  should_trigger: true
+graders:
+  - type: trigger
+    name: skill-activates
+    config:
+      skill_path: "skills/bicep-generation"
+      mode: "positive"
+    weight: 1.0
+

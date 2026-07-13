@@ -1,0 +1,50 @@
+version: "1.0"
+name: "<suite-name>-eval-scorecard"
+description: "Template for measurable eval outcomes and one-to-one task criteria mapping."
+
+measurement:
+  cadence: per-pr-and-nightly
+  repeat_runs_for_flakiness: 5
+  dimensions:
+    - pass_rate
+    - critical_pass_rate
+    - flakiness_rate
+    - p95_latency_seconds
+    - cost_per_run_usd
+
+targets:
+  pass_rate:
+    baseline: 0.00
+    target: 0.00
+    gate: 0.00
+  critical_pass_rate:
+    baseline: 0.00
+    target: 0.00
+    gate: 0.00
+  flakiness_rate:
+    baseline: 0.00
+    target: 0.00
+    gate: 0.00
+  p95_latency_seconds:
+    baseline: 0
+    target: 0
+    gate: 0
+  cost_per_run_usd:
+    baseline: 0.00
+    target: 0.00
+    gate: 0.00
+
+task_scorecard:
+  - task_id: "eval:smoke/example"
+    owner_type: skill # skill | agent
+    owner_id: "<skill-or-agent-name>"
+    criteria:
+      metric: "<metric-name>"
+      expected_outcome: "<expected-output-condition>"
+      target: 1.0
+      weight: 1.0
+    status: active
+
+agent_policy:
+  coverage_goal: 1.0
+  rule: "Every production agent has at least one task tagged agent:<agent-name>."

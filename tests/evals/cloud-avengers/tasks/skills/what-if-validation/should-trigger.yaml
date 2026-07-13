@@ -1,0 +1,21 @@
+# yaml-language-server: $schema=https://raw.githubusercontent.com/microsoft/waza/v0.23.0/schemas/task.schema.json
+id: eval:skill/what-if-validation/should-trigger
+name: what-if-validation triggers on explicit request
+description: Validates what-if-validation triggers when directly requested.
+tags:
+  - smoke
+  - trigger
+  - skill-core
+  - skill:what-if-validation
+inputs:
+  prompt: "Use the what-if-validation skill to run Azure what-if checks and flag risky changes."
+expected:
+  should_trigger: true
+graders:
+  - type: trigger
+    name: skill-activates
+    config:
+      skill_path: "skills/what-if-validation"
+      mode: "positive"
+    weight: 1.0
+

@@ -1,0 +1,21 @@
+# yaml-language-server: $schema=https://raw.githubusercontent.com/microsoft/waza/v0.23.0/schemas/task.schema.json
+id: eval:skill/orchestration/should-trigger
+name: orchestration triggers on explicit request
+description: Validates orchestration triggers when directly requested.
+tags:
+  - smoke
+  - trigger
+  - skill-core
+  - skill:orchestration
+inputs:
+  prompt: "Use the orchestration skill to coordinate migration phases and hand-offs between specialists."
+expected:
+  should_trigger: true
+graders:
+  - type: trigger
+    name: skill-activates
+    config:
+      skill_path: "skills/orchestration"
+      mode: "positive"
+    weight: 1.0
+

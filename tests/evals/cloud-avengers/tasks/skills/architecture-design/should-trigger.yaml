@@ -1,0 +1,21 @@
+# yaml-language-server: $schema=https://raw.githubusercontent.com/microsoft/waza/v0.23.0/schemas/task.schema.json
+id: eval:skill/architecture-design/should-trigger
+name: architecture-design triggers on explicit request
+description: Validates architecture-design triggers when directly requested.
+tags:
+  - smoke
+  - trigger
+  - skill-core
+  - skill:architecture-design
+inputs:
+  prompt: "Use the architecture-design skill to design the Azure target architecture for this AWS migration."
+expected:
+  should_trigger: true
+graders:
+  - type: trigger
+    name: skill-activates
+    config:
+      skill_path: "skills/architecture-design"
+      mode: "positive"
+    weight: 1.0
+

@@ -30,8 +30,10 @@ jobs:
         uses: ./.github/actions/install-waza
       - name: Validate eval YAML schemas
         run: waza check
-      - name: Check eval coverage for changed skills
+      - name: Check eval coverage for changed skills and agents
         run: bash tests/check-eval-coverage.sh
+      - name: Validate eval scorecard 1:1 criteria mapping
+        run: bash tests/check-eval-scorecard.sh
 
   evaluate-mock:
     if: github.event_name == 'pull_request'

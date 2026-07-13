@@ -8,6 +8,8 @@ description: >
 tags:
   - negative
   - anti-trigger
+  - skill-core
+  - skill:aws-inventory-scan
 inputs:
   prompt: "What Azure certifications should I study for?"
 expected:

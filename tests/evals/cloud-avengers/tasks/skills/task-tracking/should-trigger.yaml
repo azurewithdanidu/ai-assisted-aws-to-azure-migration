@@ -1,0 +1,21 @@
+# yaml-language-server: $schema=https://raw.githubusercontent.com/microsoft/waza/v0.23.0/schemas/task.schema.json
+id: eval:skill/task-tracking/should-trigger
+name: task-tracking triggers on explicit request
+description: Validates task-tracking triggers when directly requested.
+tags:
+  - smoke
+  - trigger
+  - skill-core
+  - skill:task-tracking
+inputs:
+  prompt: "Use the task-tracking skill to create and track migration tasks with dependencies."
+expected:
+  should_trigger: true
+graders:
+  - type: trigger
+    name: skill-activates
+    config:
+      skill_path: "skills/task-tracking"
+      mode: "positive"
+    weight: 1.0
+

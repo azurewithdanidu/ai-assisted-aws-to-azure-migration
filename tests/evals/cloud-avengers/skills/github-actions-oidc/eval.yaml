@@ -1,0 +1,19 @@
+# yaml-language-server: $schema=https://raw.githubusercontent.com/microsoft/waza/v0.23.0/schemas/eval.schema.json
+name: cloud-avengers-github-actions-oidc-eval
+description: Skill-level eval suite for github-actions-oidc.
+skill: github-actions-oidc
+version: "1.0"
+config:
+  trials_per_task: 1
+  timeout_seconds: 60
+  parallel: false
+  executor: mock
+  model: claude-sonnet-4.6
+metrics:
+  - name: trigger_accuracy
+    weight: 1.0
+    threshold: 1.0
+    description: github-actions-oidc trigger correctness.
+tasks:
+  - "../../tasks/skills/github-actions-oidc/should-trigger.yaml"
+

@@ -1,0 +1,19 @@
+# yaml-language-server: $schema=https://raw.githubusercontent.com/microsoft/waza/v0.23.0/schemas/eval.schema.json
+name: cloud-avengers-azure-security-patterns-eval
+description: Skill-level eval suite for azure-security-patterns.
+skill: azure-security-patterns
+version: "1.0"
+config:
+  trials_per_task: 1
+  timeout_seconds: 60
+  parallel: false
+  executor: mock
+  model: claude-sonnet-4.6
+metrics:
+  - name: trigger_accuracy
+    weight: 1.0
+    threshold: 1.0
+    description: azure-security-patterns trigger correctness.
+tasks:
+  - "../../tasks/skills/azure-security-patterns/should-trigger.yaml"
+

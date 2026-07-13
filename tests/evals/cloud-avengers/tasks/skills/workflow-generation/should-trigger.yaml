@@ -1,0 +1,21 @@
+# yaml-language-server: $schema=https://raw.githubusercontent.com/microsoft/waza/v0.23.0/schemas/task.schema.json
+id: eval:skill/workflow-generation/should-trigger
+name: workflow-generation triggers on explicit request
+description: Validates workflow-generation triggers when directly requested.
+tags:
+  - smoke
+  - trigger
+  - skill-core
+  - skill:workflow-generation
+inputs:
+  prompt: "Use the workflow-generation skill to generate GitHub Actions workflows for migration CI/CD."
+expected:
+  should_trigger: true
+graders:
+  - type: trigger
+    name: skill-activates
+    config:
+      skill_path: "skills/workflow-generation"
+      mode: "positive"
+    weight: 1.0
+

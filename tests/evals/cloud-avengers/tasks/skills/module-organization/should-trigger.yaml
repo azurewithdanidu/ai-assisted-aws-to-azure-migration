@@ -1,0 +1,21 @@
+# yaml-language-server: $schema=https://raw.githubusercontent.com/microsoft/waza/v0.23.0/schemas/task.schema.json
+id: eval:skill/module-organization/should-trigger
+name: module-organization triggers on explicit request
+description: Validates module-organization triggers when directly requested.
+tags:
+  - smoke
+  - trigger
+  - skill-core
+  - skill:module-organization
+inputs:
+  prompt: "Use the module-organization skill to structure Bicep modules and dependencies cleanly."
+expected:
+  should_trigger: true
+graders:
+  - type: trigger
+    name: skill-activates
+    config:
+      skill_path: "skills/module-organization"
+      mode: "positive"
+    weight: 1.0
+

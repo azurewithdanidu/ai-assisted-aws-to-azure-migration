@@ -7,6 +7,8 @@ description: >
 tags:
   - negative
   - anti-trigger
+  - skill-core
+  - skill:aws-inventory-scan
 inputs:
   prompt: "What is the capital of France?"
 expected:

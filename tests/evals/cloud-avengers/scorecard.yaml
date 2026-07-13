@@ -1,0 +1,280 @@
+version: "1.0"
+name: cloud-avengers-eval-scorecard
+description: >
+  Canonical scorecard that defines measurable outcomes, thresholds, and
+  one-to-one task criteria mapping for the cloud-avengers eval suite.
+
+measurement:
+  cadence: per-pr-and-nightly
+  repeat_runs_for_flakiness: 5
+  dimensions:
+    - pass_rate
+    - critical_pass_rate
+    - flakiness_rate
+    - p95_latency_seconds
+    - cost_per_run_usd
+
+targets:
+  pass_rate:
+    baseline: 0.75
+    target: 0.90
+    gate: 0.85
+  critical_pass_rate:
+    baseline: 0.80
+    target: 0.95
+    gate: 0.90
+  flakiness_rate:
+    baseline: 0.10
+    target: 0.02
+    gate: 0.03
+  p95_latency_seconds:
+    baseline: 45
+    target: 30
+    gate: 35
+  cost_per_run_usd:
+    baseline: 2.00
+    target: 1.20
+    gate: 1.50
+
+task_scorecard:
+  - task_id: eval:smoke/should-trigger
+    owner_type: skill
+    owner_id: aws-inventory-scan
+    criteria:
+      metric: trigger_accuracy
+      expected_outcome: should_trigger=true
+      target: 1.0
+      weight: 1.0
+    status: active
+  - task_id: eval:smoke/deploy-infra-triggers
+    owner_type: agent
+    owner_id: migration-project-manager
+    criteria:
+      metric: trigger_accuracy
+      expected_outcome: should_trigger=true
+      target: 1.0
+      weight: 1.0
+    status: active
+  - task_id: eval:negative/should-not-trigger-unrelated
+    owner_type: skill
+    owner_id: aws-inventory-scan
+    criteria:
+      metric: trigger_accuracy
+      expected_outcome: should_trigger=false
+      target: 1.0
+      weight: 1.0
+    status: active
+  - task_id: eval:negative/should-not-trigger-azure-only
+    owner_type: skill
+    owner_id: aws-inventory-scan
+    criteria:
+      metric: trigger_accuracy
+      expected_outcome: should_trigger=false
+      target: 1.0
+      weight: 1.0
+    status: active
+  - task_id: eval:skill/architecture-design/should-trigger
+    owner_type: skill
+    owner_id: architecture-design
+    criteria:
+      metric: trigger_accuracy
+      expected_outcome: should_trigger=true
+      target: 1.0
+      weight: 1.0
+    status: active
+  - task_id: eval:skill/architecture-diagramming/should-trigger
+    owner_type: skill
+    owner_id: architecture-diagramming
+    criteria:
+      metric: trigger_accuracy
+      expected_outcome: should_trigger=true
+      target: 1.0
+      weight: 1.0
+    status: active
+  - task_id: eval:skill/aws-inventory-scan/should-trigger
+    owner_type: skill
+    owner_id: aws-inventory-scan
+    criteria:
+      metric: trigger_accuracy
+      expected_outcome: should_trigger=true
+      target: 1.0
+      weight: 1.0
+    status: active
+  - task_id: eval:skill/aws-to-azure-mapping/should-trigger
+    owner_type: skill
+    owner_id: aws-to-azure-mapping
+    criteria:
+      metric: trigger_accuracy
+      expected_outcome: should_trigger=true
+      target: 1.0
+      weight: 1.0
+    status: active
+  - task_id: eval:skill/azure-auth-patterns/should-trigger
+    owner_type: skill
+    owner_id: azure-auth-patterns
+    criteria:
+      metric: trigger_accuracy
+      expected_outcome: should_trigger=true
+      target: 1.0
+      weight: 1.0
+    status: active
+  - task_id: eval:skill/azure-security-patterns/should-trigger
+    owner_type: skill
+    owner_id: azure-security-patterns
+    criteria:
+      metric: trigger_accuracy
+      expected_outcome: should_trigger=true
+      target: 1.0
+      weight: 1.0
+    status: active
+  - task_id: eval:skill/bicep-generation/should-trigger
+    owner_type: skill
+    owner_id: bicep-generation
+    criteria:
+      metric: trigger_accuracy
+      expected_outcome: should_trigger=true
+      target: 1.0
+      weight: 1.0
+    status: active
+  - task_id: eval:skill/cost-analysis/should-trigger
+    owner_type: skill
+    owner_id: cost-analysis
+    criteria:
+      metric: trigger_accuracy
+      expected_outcome: should_trigger=true
+      target: 1.0
+      weight: 1.0
+    status: active
+  - task_id: eval:skill/cost-estimator/should-trigger
+    owner_type: skill
+    owner_id: cost-estimator
+    criteria:
+      metric: trigger_accuracy
+      expected_outcome: should_trigger=true
+      target: 1.0
+      weight: 1.0
+    status: active
+  - task_id: eval:skill/github-actions-oidc/should-trigger
+    owner_type: skill
+    owner_id: github-actions-oidc
+    criteria:
+      metric: trigger_accuracy
+      expected_outcome: should_trigger=true
+      target: 1.0
+      weight: 1.0
+    status: active
+  - task_id: eval:skill/lambda-to-functions/should-trigger
+    owner_type: skill
+    owner_id: lambda-to-functions
+    criteria:
+      metric: trigger_accuracy
+      expected_outcome: should_trigger=true
+      target: 1.0
+      weight: 1.0
+    status: active
+  - task_id: eval:skill/migration-assessment/should-trigger
+    owner_type: skill
+    owner_id: migration-assessment
+    criteria:
+      metric: trigger_accuracy
+      expected_outcome: should_trigger=true
+      target: 1.0
+      weight: 1.0
+    status: active
+  - task_id: eval:skill/module-organization/should-trigger
+    owner_type: skill
+    owner_id: module-organization
+    criteria:
+      metric: trigger_accuracy
+      expected_outcome: should_trigger=true
+      target: 1.0
+      weight: 1.0
+    status: active
+  - task_id: eval:skill/multi-env-strategy/should-trigger
+    owner_type: skill
+    owner_id: multi-env-strategy
+    criteria:
+      metric: trigger_accuracy
+      expected_outcome: should_trigger=true
+      target: 1.0
+      weight: 1.0
+    status: active
+  - task_id: eval:skill/orchestration/should-trigger
+    owner_type: skill
+    owner_id: orchestration
+    criteria:
+      metric: trigger_accuracy
+      expected_outcome: should_trigger=true
+      target: 1.0
+      weight: 1.0
+    status: active
+  - task_id: eval:skill/parameter-management/should-trigger
+    owner_type: skill
+    owner_id: parameter-management
+    criteria:
+      metric: trigger_accuracy
+      expected_outcome: should_trigger=true
+      target: 1.0
+      weight: 1.0
+    status: active
+  - task_id: eval:skill/phase-delegation/should-trigger
+    owner_type: skill
+    owner_id: phase-delegation
+    criteria:
+      metric: trigger_accuracy
+      expected_outcome: should_trigger=true
+      target: 1.0
+      weight: 1.0
+    status: active
+  - task_id: eval:skill/sdk-migration/should-trigger
+    owner_type: skill
+    owner_id: sdk-migration
+    criteria:
+      metric: trigger_accuracy
+      expected_outcome: should_trigger=true
+      target: 1.0
+      weight: 1.0
+    status: active
+  - task_id: eval:skill/smoke-testing/should-trigger
+    owner_type: skill
+    owner_id: smoke-testing
+    criteria:
+      metric: trigger_accuracy
+      expected_outcome: should_trigger=true
+      target: 1.0
+      weight: 1.0
+    status: active
+  - task_id: eval:skill/task-tracking/should-trigger
+    owner_type: skill
+    owner_id: task-tracking
+    criteria:
+      metric: trigger_accuracy
+      expected_outcome: should_trigger=true
+      target: 1.0
+      weight: 1.0
+    status: active
+  - task_id: eval:skill/what-if-validation/should-trigger
+    owner_type: skill
+    owner_id: what-if-validation
+    criteria:
+      metric: trigger_accuracy
+      expected_outcome: should_trigger=true
+      target: 1.0
+      weight: 1.0
+    status: active
+  - task_id: eval:skill/workflow-generation/should-trigger
+    owner_type: skill
+    owner_id: workflow-generation
+    criteria:
+      metric: trigger_accuracy
+      expected_outcome: should_trigger=true
+      target: 1.0
+      weight: 1.0
+    status: active
+
+agent_policy:
+  coverage_goal: 1.0
+  rule: >
+    Every production agent should have at least one eval task tagged agent:<agent-name>.
+    Until a dedicated agent grader is introduced, proxy coverage can be measured with
+    agent-tagged trigger tasks that validate orchestration prompts.

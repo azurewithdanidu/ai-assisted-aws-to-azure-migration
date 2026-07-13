@@ -34,6 +34,7 @@ feature/... ──► dev  ──► main
 3. Add a row to the owning agent's **Skills** table in `agents/<agent>.agent.md`.
 4. If the skill has scripts, add both `scripts/<name>.sh` and `scripts/<name>.ps1` versions inside the new skill directory.
 5. Add an eval task in `tests/evals/cloud-avengers/` tagged `skill:<skill-name>`.
+6. Add/update a one-to-one `task_scorecard` entry in `tests/evals/cloud-avengers/scorecard.yaml` for each new/updated eval task.
 
 ## Adding a New Agent
 
@@ -57,3 +58,25 @@ All PRs to `dev` must pass:
 | Unit tests (Pester + bats) | `unit-tests.yml` |
 | SkillSpector security scan | `skill-security-scan.yml` |
 | Waza mock evals | `eval.yml` |
+
+### Eval Scorecard Rules
+
+- `tests/evals/cloud-avengers/scorecard.yaml` is the source of truth for eval targets and expected outcomes.
+- Every task in `tests/evals/cloud-avengers/tasks/**/*.yaml` must map to exactly one `task_scorecard` row (`task_id` 1:1).
+- Each `task_scorecard` row must include:
+  - `owner_type` (`skill` or `agent`)
+  - `owner_id` (e.g. `aws-inventory-scan`, `migration-project-manager`)
+  - `criteria.metric`
+  - `criteria.expected_outcome`
+  - `criteria.target`
+- Use `tests/evals/cloud-avengers/scorecard-template.yaml` when creating a new eval suite.
+
+### Per-Skill Eval Workflow
+
+- Keep each skill's suite in `tests/evals/cloud-avengers/skills/<skill-name>/eval.yaml`.
+- Keep each skill's dedicated tasks in `tests/evals/cloud-avengers/tasks/skills/<skill-name>/`.
+- Use explicit tags (`skill:<skill-name>`) in every skill task so coverage checks can detect ownership.
+- Run one skill during focused improvement:
+  - `bash tests/evals/run-skill-eval.sh <skill-name> [model]`
+- Run all skill suites:
+  - `bash tests/evals/run-all-skill-evals.sh [model]`

@@ -1,0 +1,21 @@
+# yaml-language-server: $schema=https://raw.githubusercontent.com/microsoft/waza/v0.23.0/schemas/task.schema.json
+id: eval:skill/phase-delegation/should-trigger
+name: phase-delegation triggers on explicit request
+description: Validates phase-delegation triggers when directly requested.
+tags:
+  - smoke
+  - trigger
+  - skill-core
+  - skill:phase-delegation
+inputs:
+  prompt: "Use the phase-delegation skill to delegate migration phases to the correct specialist agents."
+expected:
+  should_trigger: true
+graders:
+  - type: trigger
+    name: skill-activates
+    config:
+      skill_path: "skills/phase-delegation"
+      mode: "positive"
+    weight: 1.0
+

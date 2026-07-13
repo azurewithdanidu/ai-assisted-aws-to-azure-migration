@@ -1,0 +1,21 @@
+# yaml-language-server: $schema=https://raw.githubusercontent.com/microsoft/waza/v0.23.0/schemas/task.schema.json
+id: eval:skill/migration-assessment/should-trigger
+name: migration-assessment triggers on explicit request
+description: Validates migration-assessment triggers when directly requested.
+tags:
+  - smoke
+  - trigger
+  - skill-core
+  - skill:migration-assessment
+inputs:
+  prompt: "Use the migration-assessment skill to assess migration readiness, scope, and risks."
+expected:
+  should_trigger: true
+graders:
+  - type: trigger
+    name: skill-activates
+    config:
+      skill_path: "skills/migration-assessment"
+      mode: "positive"
+    weight: 1.0
+

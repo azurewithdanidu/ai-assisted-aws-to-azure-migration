@@ -8,6 +8,10 @@ description: >
 tags:
   - smoke
   - trigger
+  - skill-core
+  - agent
+  - skill:aws-inventory-scan
+  - agent:migration-project-manager
 inputs:
   prompt: "Scan AWS account 535002891143 and produce the JSON inventory, architecture diagram, and dependency matrix"
 expected:

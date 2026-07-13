@@ -1,0 +1,21 @@
+# yaml-language-server: $schema=https://raw.githubusercontent.com/microsoft/waza/v0.23.0/schemas/task.schema.json
+id: eval:skill/cost-analysis/should-trigger
+name: cost-analysis triggers on explicit request
+description: Validates cost-analysis triggers when directly requested.
+tags:
+  - smoke
+  - trigger
+  - skill-core
+  - skill:cost-analysis
+inputs:
+  prompt: "Use the cost-analysis skill to analyze AWS-to-Azure migration costs and trade-offs."
+expected:
+  should_trigger: true
+graders:
+  - type: trigger
+    name: skill-activates
+    config:
+      skill_path: "skills/cost-analysis"
+      mode: "positive"
+    weight: 1.0
+

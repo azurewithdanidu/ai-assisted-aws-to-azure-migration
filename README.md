@@ -249,6 +249,22 @@ All skill Markdown files are scanned by [NVIDIA SkillSpector](https://github.com
 
 LLM-in-the-loop evaluations run via [Waza](https://github.com/microsoft/waza). Configuration is in [`.waza.yaml`](.waza.yaml); task suites live in [`tests/evals/`](tests/evals/).
 
+### Eval Metrics Scorecard (Targets + 1:1 Criteria)
+
+- Canonical scorecard: [`tests/evals/cloud-avengers/scorecard.yaml`](tests/evals/cloud-avengers/scorecard.yaml)
+- Reusable template: [`tests/evals/cloud-avengers/scorecard-template.yaml`](tests/evals/cloud-avengers/scorecard-template.yaml)
+- CI validation: `tests/check-eval-scorecard.sh` enforces one-to-one mapping between eval `task_id`s and scorecard rows.
+- Agent coverage is supported through `owner_type: agent` entries and `agent:<agent-name>` task tags.
+
+### Per-Skill Eval Suites
+
+- Each skill has its own eval suite at: `tests/evals/cloud-avengers/skills/<skill-name>/eval.yaml`
+- Each skill has at least one dedicated trigger task at: `tests/evals/cloud-avengers/tasks/skills/<skill-name>/should-trigger.yaml`
+- Run one skill suite:
+  - `bash tests/evals/run-skill-eval.sh <skill-name> [model]`
+- Run all skill suites:
+  - `bash tests/evals/run-all-skill-evals.sh [model]`
+
 ---
 
 ## CI/CD (Repository Pipelines)

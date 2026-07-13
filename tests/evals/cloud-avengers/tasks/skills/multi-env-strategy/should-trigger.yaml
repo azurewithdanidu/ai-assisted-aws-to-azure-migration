@@ -1,0 +1,21 @@
+# yaml-language-server: $schema=https://raw.githubusercontent.com/microsoft/waza/v0.23.0/schemas/task.schema.json
+id: eval:skill/multi-env-strategy/should-trigger
+name: multi-env-strategy triggers on explicit request
+description: Validates multi-env-strategy triggers when directly requested.
+tags:
+  - smoke
+  - trigger
+  - skill-core
+  - skill:multi-env-strategy
+inputs:
+  prompt: "Use the multi-env-strategy skill to design dev/test/prod environment strategy for migration."
+expected:
+  should_trigger: true
+graders:
+  - type: trigger
+    name: skill-activates
+    config:
+      skill_path: "skills/multi-env-strategy"
+      mode: "positive"
+    weight: 1.0
+
