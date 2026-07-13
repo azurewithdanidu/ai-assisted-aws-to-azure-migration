@@ -121,3 +121,4 @@ dist
 ./buildkite
 ./deploy
 ./source-app
+./ignore
