@@ -1,0 +1,53 @@
+name: Skill Security Scan — Upload SARIF
+
+on:
+  workflow_run:
+    workflows: ["Skill Security Scan"]
+    types: [completed]
+
+jobs:
+  upload-sarif:
+    runs-on: ubuntu-latest
+    permissions:
+      security-events: write
+      actions: read
+
+    steps:
+      - name: Resolve PR number from head SHA
+        id: pr
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          HEAD_SHA="${{ github.event.workflow_run.head_sha }}"
+          PR_NUMBER=$(gh api "repos/${{ github.repository }}/pulls" \
+            --jq "[.[] | select(
+              .state == \"open\" and
+              .head.sha == \"$HEAD_SHA\" and
+              .head.repo.full_name == \"${{ github.repository }}\" and
+              (.base.ref == \"dev\" or .base.ref == \"main\")
+            )] | first | .number")
+
+          if [[ -z "$PR_NUMBER" || "$PR_NUMBER" == "null" ]]; then
+            echo "No matching open PR found for SHA $HEAD_SHA — skipping SARIF upload"
+            echo "skip=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "PR_NUMBER=$PR_NUMBER" >> "$GITHUB_OUTPUT"
+            echo "skip=false" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Download SARIF artifact
+        if: steps.pr.outputs.skip == 'false'
+        uses: actions/download-artifact@v4
+        with:
+          name: skillspector-sarif
+          run-id: ${{ github.event.workflow_run.id }}
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          path: sarif-results/
+
+      - name: Upload SARIF to GitHub Code Scanning
+        if: steps.pr.outputs.skip == 'false'
+        uses: github/codeql-action/upload-sarif@v3
+        with:
+          sarif_file: sarif-results/skillspector.sarif
+          ref: refs/pull/${{ steps.pr.outputs.PR_NUMBER }}/head
+          sha: ${{ github.event.workflow_run.head_sha }}

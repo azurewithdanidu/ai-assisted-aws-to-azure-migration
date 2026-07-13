@@ -1,0 +1,106 @@
+# Mock eval suite — runs with no real LLM (mock executor)
+# Used in every PR to validate eval schema and negative/smoke cases quickly
+# Tags: smoke, negative
+
+version: "1"
+name: aws-to-azure-migrator mock evals
+
+executor:
+  type: mock
+
+tasks:
+  - id: smoke-plugin-manifest
+    name: Plugin manifest is valid
+    tags: [smoke]
+    type: program
+    program: |
+      #!/usr/bin/env bash
+      set -euo pipefail
+      FILE=".claude-plugin/plugin.json"
+      jq -e '.name and .version and .description and .author' "$FILE" > /dev/null
+      echo "PASS: plugin.json is valid"
+    expected_exit_code: 0
+
+  - id: smoke-agents-exist
+    name: All 10 agent files exist
+    tags: [smoke]
+    type: program
+    program: |
+      #!/usr/bin/env bash
+      set -euo pipefail
+      EXPECTED=(
+        "aws-discovery.agent.md"
+        "azure-architect.agent.md"
+        "azure-deployer.agent.md"
+        "code-refactor.agent.md"
+        "deployment-validation.agent.md"
+        "iac-transformation.agent.md"
+        "migration-project-manager.agent.md"
+        "pipeline-builder-agent.agent.md"
+        "skill-evolution-engine.agent.md"
+        "skill-generator-agent.md"
+      )
+      for agent in "${EXPECTED[@]}"; do
+        [[ -f "agents/$agent" ]] || { echo "MISSING: agents/$agent"; exit 1; }
+      done
+      echo "PASS: all 10 agent files present"
+    expected_exit_code: 0
+
+  - id: smoke-skills-have-frontmatter
+    name: All skill files have required frontmatter fields
+    tags: [smoke]
+    type: program
+    program: |
+      #!/usr/bin/env bash
+      set -euo pipefail
+      FAIL=0
+      for f in $(find skills -name "*.md" ! -path "*/scripts/*"); do
+        for field in "name:" "allowed-tools:" "metadata:"; do
+          grep -q "^$field" "$f" || { echo "MISSING $field in $f"; FAIL=1; }
+        done
+      done
+      [[ $FAIL -eq 0 ]] && echo "PASS: all skill frontmatter valid" || exit 1
+    expected_exit_code: 0
+
+  - id: smoke-commands-exist
+    name: run-migration command exists
+    tags: [smoke]
+    type: program
+    program: |
+      #!/usr/bin/env bash
+      [[ -f "commands/run-migration.md" ]] || { echo "MISSING: commands/run-migration.md"; exit 1; }
+      grep -q "^agent:" "commands/run-migration.md" || { echo "MISSING agent: field in run-migration.md"; exit 1; }
+      echo "PASS: run-migration command valid"
+    expected_exit_code: 0
+
+  - id: negative-no-github-skills-paths
+    name: No .github/skills paths remain in agent files
+    tags: [negative]
+    type: program
+    program: |
+      #!/usr/bin/env bash
+      set -euo pipefail
+      FOUND=$(grep -r "\.github/skills" agents/ 2>/dev/null || true)
+      if [[ -n "$FOUND" ]]; then
+        echo "FAIL: old .github/skills paths found in agents/:"
+        echo "$FOUND"
+        exit 1
+      fi
+      echo "PASS: no stale .github/skills paths in agents/"
+    expected_exit_code: 0
+
+  - id: negative-no-github-agents-paths
+    name: No .github/agents paths remain in agent files
+    tags: [negative]
+    type: program
+    program: |
+      #!/usr/bin/env bash
+      set -euo pipefail
+      FOUND=$(grep -r "\.github/agents" agents/ 2>/dev/null || true)
+      if [[ -n "$FOUND" ]]; then
+        echo "FAIL: old .github/agents paths found in agents/:"
+        echo "$FOUND"
+        exit 1
+      fi
+      echo "PASS: no stale .github/agents paths in agents/"
+    expected_exit_code: 0

@@ -1,0 +1,31 @@
+name: Create Release
+
+on:
+  pull_request:
+    types: [closed]
+    branches: [main]
+
+jobs:
+  create-release:
+    if: github.event.pull_request.merged == true && startsWith(github.event.pull_request.title, 'release:')
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+
+    steps:
+      - name: Checkout main
+        uses: actions/checkout@v4
+        with:
+          ref: main
+          fetch-depth: 0
+
+      - name: Extract and validate version
+        run: bash .github/scripts/release/extract-version.sh
+
+      - name: Extract changelog section
+        run: bash .github/scripts/release/extract-changelog.sh "$VERSION"
+
+      - name: Create annotated tag and GitHub Release
+        env:
+          GH_TOKEN: ${{ secrets.GH_TOKEN }}
+        run: bash .github/scripts/release/create-tag-and-release.sh "$VERSION" /tmp/release-body.md
