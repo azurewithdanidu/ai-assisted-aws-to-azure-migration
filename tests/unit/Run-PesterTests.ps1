@@ -12,7 +12,8 @@ $ErrorActionPreference = 'Stop'
 Import-Module Pester -MinimumVersion 5.0
 
 $config = New-PesterConfiguration
-$config.Run.Path = "$PSScriptRoot"
+$config.Run.Path      = "$PSScriptRoot"
+$config.Run.PassThru  = $true          # required so Invoke-Pester returns a result object
 $config.Output.Verbosity = $OutputFormat
 $config.TestResult.Enabled = $true
 
