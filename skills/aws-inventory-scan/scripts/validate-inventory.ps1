@@ -43,7 +43,7 @@ Checks:
 "@ | Write-Host
 }
 
-function Fail-Validation {
+function Stop-Validation {
     param([string]$Message)
 
     Write-Error $Message
@@ -92,12 +92,12 @@ if ($Help) {
 Write-Host "==> Validating inventory file: $InventoryPath" -ForegroundColor Cyan
 
 if (-not (Test-Path $InventoryPath -PathType Leaf)) {
-    Fail-Validation "Inventory file not found: $InventoryPath"
+    Stop-Validation "Inventory file not found: $InventoryPath"
 }
 
 $fileInfo = Get-Item $InventoryPath
 if ($fileInfo.Length -le 0) {
-    Fail-Validation "Inventory file is empty: $InventoryPath"
+    Stop-Validation "Inventory file is empty: $InventoryPath"
 }
 
 Write-Host '==> Checking JSON syntax' -ForegroundColor Cyan
@@ -105,19 +105,19 @@ try {
     $rawInventory = Get-Content $InventoryPath -Raw
     $inventory = $rawInventory | ConvertFrom-Json
 } catch {
-    Fail-Validation "Inventory file is not valid JSON: $InventoryPath"
+    Stop-Validation "Inventory file is not valid JSON: $InventoryPath"
 }
 
 Write-Host '==> Checking top-level schema' -ForegroundColor Cyan
 foreach ($requiredKey in @('discovery_timestamp', 'aws_account_id', 'aws_region', 'services')) {
     if (-not (Test-PropertyValue -Object $inventory -Name $requiredKey)) {
-        Fail-Validation "Missing required top-level key: $requiredKey"
+        Stop-Validation "Missing required top-level key: $requiredKey"
     }
 }
 
 $serviceEntries = @($inventory.services.PSObject.Properties)
 if ($serviceEntries.Count -eq 0) {
-    Fail-Validation "The services object must contain at least one service entry."
+    Stop-Validation "The services object must contain at least one service entry."
 }
 
 Write-Host '==> Checking service entries' -ForegroundColor Cyan
@@ -127,17 +127,17 @@ foreach ($serviceEntry in $serviceEntries) {
     $service = $serviceEntry.Value
 
     if (-not (Test-PropertyValue -Object $service -Name 'service_type')) {
-        Fail-Validation "Service '$serviceName' is missing required field: service_type"
+        Stop-Validation "Service '$serviceName' is missing required field: service_type"
     }
 
     $parsedCount = 0
     $countProperty = $service.PSObject.Properties['count']
     if ($null -eq $countProperty -or -not [int]::TryParse([string]$countProperty.Value, [ref]$parsedCount) -or $parsedCount -lt 0) {
-        Fail-Validation "Service '$serviceName' is missing a valid numeric count field."
+        Stop-Validation "Service '$serviceName' is missing a valid numeric count field."
     }
 
     if (-not ($service.PSObject.Properties.Name -contains 'resources') -or $service.resources -isnot [System.Array]) {
-        Fail-Validation "Service '$serviceName' must include a resources array."
+        Stop-Validation "Service '$serviceName' must include a resources array."
     }
 
     $resources = @($service.resources)
@@ -146,22 +146,22 @@ foreach ($serviceEntry in $serviceEntries) {
     for ($index = 0; $index -lt $resources.Count; $index++) {
         $resource = $resources[$index]
         if ($resource -isnot [pscustomobject]) {
-            Fail-Validation "Service '$serviceName' resource[$index] must be a JSON object."
+            Stop-Validation "Service '$serviceName' resource[$index] must be a JSON object."
         }
 
         $nameOrId = Get-FirstPropertyValue -Object $resource -Names @('name', 'id', 'identifier')
         if (-not $nameOrId) {
-            Fail-Validation "Service '$serviceName' resource[$index] is missing name or id"
+            Stop-Validation "Service '$serviceName' resource[$index] is missing name or id"
         }
 
         $arnEquivalent = Get-FirstPropertyValue -Object $resource -Names @('arn', 'resource_arn', 'resource_id', 'identifier', 'url')
         if (-not $arnEquivalent) {
-            Fail-Validation "Service '$serviceName' resource[$index] is missing arn or equivalent identifier"
+            Stop-Validation "Service '$serviceName' resource[$index] is missing arn or equivalent identifier"
         }
 
         $region = Get-FirstPropertyValue -Object $resource -Names @('region')
         if (-not $region) {
-            Fail-Validation "Service '$serviceName' resource[$index] is missing region"
+            Stop-Validation "Service '$serviceName' resource[$index] is missing region"
         }
     }
 }

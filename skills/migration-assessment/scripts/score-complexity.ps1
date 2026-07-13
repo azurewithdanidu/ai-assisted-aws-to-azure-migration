@@ -40,7 +40,7 @@ Service Complexity Matrix. Otherwise it applies default complexity rules.
 function Get-TierRank {
     param([string]$Tier)
 
-    switch ((Normalize-Tier $Tier)) {
+    switch ((ConvertTo-NormalizedTier $Tier)) {
         'Low'      { return 1 }
         'Medium'   { return 2 }
         'High'     { return 3 }
@@ -49,7 +49,7 @@ function Get-TierRank {
     }
 }
 
-function Normalize-Tier {
+function ConvertTo-NormalizedTier {
     param([string]$Tier)
 
     switch (($Tier ?? '').ToLowerInvariant()) {
@@ -283,7 +283,7 @@ function Add-ServiceSummary {
         [double]$Effort
     )
 
-    $Complexity = Normalize-Tier $Complexity
+    $Complexity = ConvertTo-NormalizedTier $Complexity
 
     if ($Rows.ContainsKey($Service)) {
         $Rows[$Service].Count += $Count
@@ -304,11 +304,6 @@ function Invoke-ComplexitySummary {
     param(
         [string]$Path
     )
-
-    if ($Help) {
-        Show-Usage
-        return
-    }
 
     Write-Host "==> Reading AWS inventory: $Path" -ForegroundColor Cyan
     if (-not (Test-Path $Path -PathType Leaf)) {
@@ -416,6 +411,11 @@ function Invoke-ComplexitySummary {
     Write-Host "Total services: $($sortedRows.Count)"
     Write-Host "Total effort estimate: $(Format-Number $totalEffort) days"
     Write-Host "Overall risk level: $overallRisk"
+}
+
+if ($Help) {
+    Show-Usage
+    exit 0
 }
 
 try {
