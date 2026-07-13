@@ -3,7 +3,7 @@ name: Create Release PR
 on:
   pull_request:
     types: [closed]
-    branches: [dev]
+    branches: [main]
 
 jobs:
   create-release-pr:
@@ -14,14 +14,14 @@ jobs:
       pull-requests: write
 
     steps:
-      - name: Checkout dev branch
+      - name: Checkout main branch
         uses: actions/checkout@v4
         with:
-          ref: dev
+          ref: main
           fetch-depth: 0
 
-      - name: Create release PR (dev → main)
+      - name: Create release PR
         env:
-          GH_TOKEN: ${{ secrets.GH_TOKEN }}
+          GH_TOKEN: ${{ github.token }}
           PR_BODY: ${{ github.event.pull_request.body }}
         run: bash .github/scripts/release/create-release-pr.sh
