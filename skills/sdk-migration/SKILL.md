@@ -1,14 +1,8 @@
 ---
 name: sdk-migration
 description: Replace AWS SDK calls with Azure SDK equivalents — Python (boto3), Node.js/TypeScript (@aws-sdk), and Java (AWS SDK v2) package mapping, client instantiation, authentication, and runtime gotchas
-allowed-tools:
-  - Bash
-  - PowerShell
-compatibility: "Requires curl + jq (macOS/Linux/WSL, preferred) or PowerShell 7+ (pwsh) or Windows PowerShell 5.1 (powershell.exe)"
-metadata:
-  author: azurewithdanidu
-  version: "1.0.0"
 ---
+
 
 # SDK Migration Skill
 

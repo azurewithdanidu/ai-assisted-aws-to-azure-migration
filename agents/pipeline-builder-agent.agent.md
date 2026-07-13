@@ -32,14 +32,14 @@ Read each skill before performing the associated task.
 
 | Task | Skill |
 |---|---|
-| App registration, federated credential creation, and `azure/login@v2` YAML snippet | `skills/pipeline-builder/github-actions-oidc.md` |
-| Branch-to-environment mapping, GitHub Environment protection rules, secret separation | `skills/pipeline-builder/multi-env-strategy.md` |
-| IaC deployment YAML (what-if + deploy + rollback) and Functions deployment YAML | `skills/pipeline-builder/workflow-generation.md` |
-| Updating `outputs/migration-task-plan.md` status | `skills/shared/task-tracking.md` |
+| App registration, federated credential creation, and `azure/login@v2` YAML snippet | `skills/github-actions-oidc/SKILL.md` |
+| Branch-to-environment mapping, GitHub Environment protection rules, secret separation | `skills/multi-env-strategy/SKILL.md` |
+| IaC deployment YAML (what-if + deploy + rollback) and Functions deployment YAML | `skills/workflow-generation/SKILL.md` |
+| Updating `outputs/migration-task-plan.md` status | `skills/task-tracking/SKILL.md` |
 
 ## Task Status Reporting (MANDATORY)
 
-Follow the `task-tracking` skill: `skills/shared/task-tracking.md`
+Follow the `task-tracking` skill: `skills/task-tracking/SKILL.md`
 
 **Your assigned phase:** `Phase 3c — Pipeline Build` (section `### Phase 3c — Pipeline Build` and row `3c — Pipeline Build` in the Phase Summary table).
 

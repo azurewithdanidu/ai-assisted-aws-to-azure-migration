@@ -1,96 +1,250 @@
 ---
 name: bicep-generation
-description: Write secure, modular, deployable Bicep IaC — naming conventions, decorators, module structure, outputs, and validation steps
-allowed-tools:
-  - Bash
-  - PowerShell
-compatibility: "Requires curl + jq (macOS/Linux/WSL, preferred) or PowerShell 7+ (pwsh) or Windows PowerShell 5.1 (powershell.exe)"
-metadata:
-  author: azurewithdanidu
-  version: "1.0.0"
+description: 'Generate secure modular Azure Bicep templates. Use when: writing outputs/bicep-templates/*.bicep, defining module parameters and outputs, applying naming conventions, or validating that IaC matches the architecture design contract.'
 ---
 
 # Bicep Generation Skill
 
 ## Purpose
 
-Produce valid, secure, and maintainable Azure Bicep templates that follow Azure best practices, pass `az bicep build` without errors, and can be deployed safely across dev/staging/prod environments.
+Produce deployment-ready Azure Bicep that is modular, secure, environment-aware, and explicit enough for human review and automated deployment.
 
 ## When to Use
 
-- When specifying Bicep module structure in `design-document.md` Section 5 (azure-architect)
-- When implementing Bicep files from the design document (iac-transformation)
-- When reviewing or modifying any existing `.bicep` or `.bicepparam` file
+- When translating Section 5 of `design-document.md` into Bicep files
+- When reviewing or repairing generated Bicep modules
+- When creating environment parameter files for dev, staging, and prod
+- When validation finds drift between design and IaC
+
+## Inputs
+
+| Path | Why it matters |
+|---|---|
+| `outputs/azure-architecture-output/design-document.md` | Source of truth for Section 5 module specifications |
+| `outputs/bicep-templates/` | Target output directory |
+| `outputs/bicep-templates/modules/` | Target directory for per-module files |
+| `outputs/bicep-templates/parameters/` | Target directory for environment parameter files |
+
+## Outputs
+
+| Path | Result |
+|---|---|
+| `outputs/bicep-templates/main.bicep` | Root orchestration template |
+| `outputs/bicep-templates/modules/*.bicep` | One module per infrastructure concern |
+| `outputs/bicep-templates/parameters/dev.bicepparam` | Dev parameter file |
+| `outputs/bicep-templates/parameters/staging.bicepparam` | Staging parameter file |
+| `outputs/bicep-templates/parameters/prod.bicepparam` | Prod parameter file |
 
 ## Process
 
-1. **Naming:** Use `'${environment}-${workload}-<type>-${location}'` for most resources. For storage accounts (24-char limit, no hyphens): `'${environment}${workload}stor${uniqueSuffix}'`. Use `uniqueString(resourceGroup().id)` for the suffix.
+### 1. Start from the architecture contract
 
-2. **Parameters:** Decorate every parameter:
-   ```bicep
-   @minLength(3)
-   @maxLength(24)
-   @description('Name of the storage account. Must be globally unique.')
-   param storageAccountName string
+1. Read Section 5 of `outputs/azure-architecture-output/design-document.md` in full.
+2. List every module required.
+3. Assign each module one primary responsibility.
+4. Decide which parameters belong in the root template versus module scope.
+5. Write the header block, parameters, variables, resources, and outputs in that order.
 
-   @allowed(['dev', 'staging', 'prod'])
-   @description('Deployment environment.')
-   param environment string
+### 2. Required Bicep file header comment block
 
-   @minValue(1)
-   @maxValue(10)
-   @description('Number of instances.')
-   param instanceCount int = 1
-   ```
+Put this header at the top of every `.bicep` file and adjust the values for the specific module:
 
-3. **Variables:** Compute derived names in variables — never inline:
-   ```bicep
-   var uniqueSuffix = uniqueString(resourceGroup().id)
-   var functionAppName = '${environment}-${workload}-func-${location}'
-   var storageAccountName = toLower('${environment}${workload}stor${uniqueSuffix}')
-   ```
+```bicep
+/*
+  Module: modules/<file-name>.bicep
+  Purpose: <what this module deploys>
+  Source: outputs/azure-architecture-output/design-document.md Section 5
+  Inputs: <comma-separated parameter names>
+  Outputs: resourceId, name, principalId
+  Notes: No hardcoded secrets, no inline resource-name interpolation, API versions 2023 or newer
+*/
+```
 
-4. **Modules:** Each module has one responsibility (networking, storage, compute, security, monitoring). Keep modules under ~150 lines. Root `main.bicep` only declares parameters and module calls — no direct resources.
+### 3. Mandatory parameter decorator patterns
 
-5. **Outputs:** Every module must output:
-   - `resourceId` — the full resource ID
-   - `resourceName` — the resource name
-   - `principalId` — if the resource has a managed identity
-   - `endpoint` or `fqdn` — for services accessed over the network
+Every public parameter must include a description. Apply range or allowed-value decorators where the contract requires them.
 
-6. **Tags:** Apply a `tags` object to every resource:
-   ```bicep
-   param tags object = {
-     environment: environment
-     workload: workload
-     managedBy: 'bicep'
-   }
-   ```
+```bicep
+@description('Short workload identifier used in resource naming.')
+@minLength(2)
+param workload string
 
-7. **Validate before declaring done:**
-   ```bash
-   az bicep build --file main.bicep
-   az deployment group what-if \
-     --resource-group <rg> \
-     --template-file main.bicep \
-     --parameters @parameters/dev.bicepparam
-   ```
+@description('Deployment environment.')
+@allowed([
+  'dev'
+  'staging'
+  'prod'
+])
+param environment string
+
+@description('Azure region short code such as aue or ause.')
+@minLength(2)
+param regionCode string
+
+@description('Tags applied to every resource in this module.')
+param tags object
+```
+
+Recommended additional decorators when the contract needs them:
+
+- `@maxLength()` for globally constrained names
+- `@secure()` for secrets or protected values
+- `@minValue()` / `@maxValue()` for numeric capacity settings
+
+### 4. Naming convention rules
+
+Use deterministic names derived from parameters or variables, not ad hoc literals.
+
+| Resource type | Pattern | Example |
+|---|---|---|
+| Resource group | `rg-{workload}-{env}-{region}` | `rg-orders-dev-aue` |
+| Function App | `func-{workload}-{env}` | `func-orders-dev` |
+| App Service plan / Functions plan | `plan-{workload}-{env}` | `plan-orders-dev` |
+| Storage account | `st{workload}{env}{region}{suffix}` | `stordersdevaue01` |
+| Service Bus namespace | `sb-{workload}-{env}` | `sb-orders-dev` |
+| Cosmos DB account | `cosmos-{workload}-{env}` | `cosmos-orders-dev` |
+| PostgreSQL server | `psql-{workload}-{env}` | `psql-orders-dev` |
+| Key Vault | `kv-{workload}-{env}` | `kv-orders-dev` |
+| Log Analytics workspace | `log-{workload}-{env}` | `log-orders-dev` |
+| Application Insights | `appi-{workload}-{env}` | `appi-orders-dev` |
+
+Naming rules:
+
+- Compute names once in variables or parameters.
+- Keep storage account names lowercase and globally unique.
+- Avoid inline interpolation inside resource `name:` properties; assign the final string to a variable first.
+- Reuse the same workload, environment, and region tokens everywhere for reviewability.
+
+### 5. Required outputs for every module
+
+Every module must expose these outputs so downstream templates and workflows can compose safely.
+
+| Output | Type | Required behavior |
+|---|---|---|
+| `resourceId` | `string` | Always output the ARM resource ID of the primary resource |
+| `name` | `string` | Always output the deployable resource name |
+| `principalId` | `string` | Output the managed identity principal ID, or an empty string if the module has no identity |
+
+Recommended optional outputs when relevant:
+
+- `hostname`
+- `endpoint`
+- `privateEndpointId`
+- `connectionSettingName`
+
+### 6. Anti-patterns to reject
+
+Do not accept any of the following:
+
+- Hardcoded subscription IDs, tenant IDs, secrets, or passwords
+- Inline string interpolation directly in resource `name:` properties
+- API versions older than 2023
+- One giant module that mixes networking, security, compute, and data responsibilities
+- Public network access enabled on sensitive data services without an explicit design exception
+- Output omission for `resourceId`, `name`, or `principalId`
+- Environment-specific literals embedded in module code when they belong in parameter files
+
+### 7. Example Bicep module skeleton
+
+```bicep
+/*
+  Module: modules/function-app.bicep
+  Purpose: Deploy the Azure Function App and its managed identity.
+  Source: outputs/azure-architecture-output/design-document.md Section 5
+  Inputs: workload, environment, location, tags, storageAccountName, appInsightsConnectionString
+  Outputs: resourceId, name, principalId
+  Notes: No hardcoded secrets, no inline resource-name interpolation, API versions 2023 or newer
+*/
+
+targetScope = 'resourceGroup'
+
+@description('Short workload identifier used in resource naming.')
+@minLength(2)
+param workload string
+
+@description('Deployment environment.')
+@allowed([
+  'dev'
+  'staging'
+  'prod'
+])
+param environment string
+
+@description('Azure location for the resource group deployment.')
+param location string = resourceGroup().location
+
+@description('Tags applied to the Function App resources.')
+param tags object
+
+@description('Existing storage account name used by the Function App.')
+@minLength(3)
+param storageAccountName string
+
+@description('Application Insights connection string.')
+@secure()
+param appInsightsConnectionString string
+
+var functionAppName = 'func-${workload}-${environment}'
+var siteConfigAppSettings = [
+  {
+    name: 'APPINSIGHTS_CONNECTION_STRING'
+    value: appInsightsConnectionString
+  }
+]
+
+resource functionApp 'Microsoft.Web/sites@2023-12-01' = {
+  name: functionAppName
+  location: location
+  kind: 'functionapp,linux'
+  identity: {
+    type: 'SystemAssigned'
+  }
+  tags: tags
+  properties: {
+    httpsOnly: true
+    siteConfig: {
+      appSettings: siteConfigAppSettings
+    }
+  }
+}
+
+output resourceId string = functionApp.id
+output name string = functionApp.name
+output principalId string = functionApp.identity.principalId ?? ''
+```
+
+### 8. Validation workflow
+
+1. Ensure every module file has the required header block.
+2. Ensure every parameter has `@description`.
+3. Ensure any bounded string or enum-like parameter also has `@minLength` or `@allowed` as applicable.
+4. Ensure every module emits `resourceId`, `name`, and `principalId`.
+5. Build and sanity-check the templates using the existing repo or ecosystem validation commands where available.
+
+### 9. Edge Cases / Failure Modes
+
+- **No managed identity on a resource:** still output `principalId` as an empty string to keep the module contract stable.
+- **Global naming collision:** introduce a suffix variable or parameter rather than changing the naming scheme ad hoc.
+- **One resource type needs an older API version:** escalate to architecture or document the exception explicitly; the default rule is 2023 or newer.
+- **Design document omits a required module:** do not invent the module purpose; route the issue back to architecture.
+- **Private endpoint requirements absent:** if the security design says private networking is mandatory, treat the omission as a contract issue.
 
 ## Rules
 
-- **Never hardcode secrets, passwords, or connection strings.** Use `@secure()` for sensitive parameters; reference Key Vault secrets via `@Microsoft.KeyVault(SecretUri=...)`.
-- **Never set `publicNetworkAccess: 'Enabled'` on data services** (Storage, Key Vault, Service Bus, databases). Always `'Disabled'` with a private endpoint.
-- **Never use access keys for service-to-service auth.** Always Managed Identity + RBAC role assignments (see `azure-auth-patterns` skill).
-- **Always pin API versions** — never use `@latest` or omit the version. Example: `'Microsoft.Storage/storageAccounts@2023-01-01'`.
-- **Never create a module that exceeds ~150 lines** — split it if it grows beyond that.
-- **Always run `az bicep build`** before declaring any Bicep file complete. A file that does not build is not done.
+- **Every module must have one primary responsibility.**
+- **Every public parameter must have `@description`.**
+- **Use `@minLength` and `@allowed` whenever the contract implies them.**
+- **No inline interpolation in resource names; compute names in variables first.**
+- **No API versions older than 2023.**
+- **Every module must output `resourceId`, `name`, and `principalId`.**
 
-## Output
+## Best Practices
 
-- Valid `.bicep` files under `outputs/bicep-templates/` with zero build errors
-- `.bicepparam` files under `outputs/bicep-templates/parameters/` for each environment (dev, staging, prod)
-- `az bicep build` exits with code 0 for every file
-- `az deployment group what-if` produces no blocking errors
+- Keep root `main.bicep` thin and module-focused.
+- Put environment differences in `.bicepparam` files instead of branching inside modules.
+- Prefer consistent variable names like `functionAppName`, `serviceBusNamespaceName`, and `keyVaultName`.
+- Reuse the same `tags` object across modules for auditability.
+- Make module outputs predictable so CI/CD workflows can consume them without file-specific logic.
 
 ---
 
@@ -118,7 +272,7 @@ Produce valid, secure, and maintainable Azure Bicep templates that follow Azure 
 
 ### Best Practices
 
-- **Always pin API versions:** The Azure resource provider API surface changes frequently. Unpinned versions silently break after provider upgrades. Cross-reference https://learn.microsoft.com/en-us/azure/templates/ for each resource type.
-- **`@secure()` on all secret params:** Even if the value is passed from a `.bicepparam` file, decorate the param with `@secure()` so ARM masks it in deployment logs and the Activity Log.
-- **`uniqueString()` is deterministic per scope:** `uniqueString(resourceGroup().id)` always returns the same suffix for the same RG — safe for idempotent resource naming across re-deployments.
-- **AVM module first:** Before writing a raw `resource` declaration, check the AVM registry. AVM modules bundle private endpoints, diagnostic settings, RBAC assignments, and naming conventions that would take 100+ lines to replicate manually.
+- **Module contracts matter as much as resources** — the outputs drive downstream workflows and composition.
+- **Name once, reuse everywhere** — deterministic names reduce review errors and environment drift.
+- **Header comments help human review** — they keep module purpose and contract visible at the top of the file.
+- **Reject obsolete API versions by default** — old versions quietly remove needed capabilities and policy support.

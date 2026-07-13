@@ -1,6 +1,16 @@
 ---
 name: aws-discovery
-description: Automated discovery of AWS resources and dependency analysis
+description: >
+  Read-only AWS resource discovery and dependency analysis using the AWS MCP
+  server. Use when: performing Phase 1 migration, scanning an AWS environment,
+  generating `aws-inventory.json`, building an architecture diagram, building a
+  dependency matrix, scoring migration complexity, producing
+  `migration-assessment.md`, or when the user says "discover", "scan AWS",
+  "inventory", or "what AWS services are used". Key outputs:
+  `outputs/aws-migration-artifacts/aws-inventory.json`,
+  `outputs/aws-migration-artifacts/architecture-diagram.mmd`,
+  `outputs/aws-migration-artifacts/dependency-matrix.csv`,
+  `outputs/aws-migration-artifacts/migration-assessment.md`.
 tools: [vscode, execute, read, agent, edit, search, web, 'mcp_docker/*', todo]
 ---
 
@@ -31,13 +41,13 @@ Read each skill before performing the associated task.
 
 | Task | Skill |
 |---|---|
-| Reading source app and producing `aws-inventory.json`, diagram, and dependency matrix | `skills/aws-discovery/aws-inventory-scan.md` |
-| Scoring complexity and producing `migration-assessment.md` | `skills/aws-discovery/migration-assessment.md` |
-| Updating `outputs/migration-task-plan.md` status | `skills/shared/task-tracking.md` |
+| Reading source app and producing `aws-inventory.json`, diagram, and dependency matrix | `skills/aws-inventory-scan/SKILL.md` |
+| Scoring complexity and producing `migration-assessment.md` | `skills/migration-assessment/SKILL.md` |
+| Updating `outputs/migration-task-plan.md` status | `skills/task-tracking/SKILL.md` |
 
 ## Task Status Reporting (MANDATORY)
 
-Follow the `task-tracking` skill: `skills/shared/task-tracking.md`
+Follow the `task-tracking` skill: `skills/task-tracking/SKILL.md`
 
 **Your assigned phase:** `Phase 1 — AWS Discovery` (section `### Phase 1 — AWS Discovery` and row `1 — Discovery` in the Phase Summary table).
 

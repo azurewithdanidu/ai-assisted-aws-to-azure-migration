@@ -50,9 +50,9 @@ Read each skill before performing the associated task.
 
 | Task | Skill |
 |---|---|
-| Coordinating phase sequence and artifact verification | `skills/migration-pm/orchestration.md` |
-| Delegating to worker agents (exact prompts + artifact checks) | `skills/migration-pm/phase-delegation.md` |
-| Updating `outputs/migration-task-plan.md` | `skills/shared/task-tracking.md` |
+| Coordinating phase sequence and artifact verification | `skills/orchestration/SKILL.md` |
+| Delegating to worker agents (exact prompts + artifact checks) | `skills/phase-delegation/SKILL.md` |
+| Updating `outputs/migration-task-plan.md` | `skills/task-tracking/SKILL.md` |
 
 ---
 

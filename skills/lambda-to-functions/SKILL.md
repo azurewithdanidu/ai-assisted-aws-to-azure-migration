@@ -1,14 +1,8 @@
 ---
 name: lambda-to-functions
 description: Rewrite AWS Lambda handlers as Azure Functions — full trigger catalog covering HTTP, Timer, Blob, Service Bus, Cosmos DB Change Feed, Event Grid, Event Hubs, Durable Functions, SignalR, and Cognito migration guidance
-allowed-tools:
-  - Bash
-  - PowerShell
-compatibility: "Requires curl + jq (macOS/Linux/WSL, preferred) or PowerShell 7+ (pwsh) or Windows PowerShell 5.1 (powershell.exe)"
-metadata:
-  author: azurewithdanidu
-  version: "1.0.0"
 ---
+
 
 # Lambda-to-Functions Skill
 

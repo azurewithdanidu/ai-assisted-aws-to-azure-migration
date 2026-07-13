@@ -1,6 +1,12 @@
 ---
 name: deployment-validation
-description: Validate Azure deployments and ensure migration success
+description: >
+  Validate deployed Azure resources and post-migration readiness. Use when:
+  performing Phase 4, validating deployed Azure resources, running smoke tests,
+  running what-if validation, checking endpoints, verifying managed identity,
+  confirming Key Vault access, or when the user says "validate", "test
+  deployment", "smoke test", "check endpoints", "verify deployment", or
+  "post-deploy checks". Key output: `outputs/validation-report.md`.
 tools: [vscode, execute, read, agent, edit, search, web, azure-mcp/documentation, todo]
 ---
 
@@ -20,14 +26,14 @@ Read each skill before performing the associated task.
 
 | Task | Skill |
 |---|---|
-| Running `az deployment group what-if`, interpreting results, blocking on destructive changes | `skills/deployment-validation/what-if-validation.md` |
-| HTTP endpoint checks, Managed Identity verification, Key Vault resolution, end-to-end blob test | `skills/deployment-validation/smoke-testing.md` |
-| Security pattern verification (private endpoints, NSGs, Key Vault hardening) | `skills/shared/azure-security-patterns.md` |
-| Updating `outputs/migration-task-plan.md` status | `skills/shared/task-tracking.md` |
+| Running `az deployment group what-if`, interpreting results, blocking on destructive changes | `skills/what-if-validation/SKILL.md` |
+| HTTP endpoint checks, Managed Identity verification, Key Vault resolution, end-to-end blob test | `skills/smoke-testing/SKILL.md` |
+| Security pattern verification (private endpoints, NSGs, Key Vault hardening) | `skills/azure-security-patterns/SKILL.md` |
+| Updating `outputs/migration-task-plan.md` status | `skills/task-tracking/SKILL.md` |
 
 ## Task Status Reporting (MANDATORY)
 
-Follow the `task-tracking` skill: `skills/shared/task-tracking.md`
+Follow the `task-tracking` skill: `skills/task-tracking/SKILL.md`
 
 **Your assigned phase:** `Phase 4 — Validation` (section `### Phase 4 — Validation` and row `4 — Validation` in the Phase Summary table).
 

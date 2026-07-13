@@ -44,6 +44,33 @@ Edge cases and pitfalls:
 - Some issues are not skill problems—they may be configuration issues or incorrect tool usage
 - Don't over-engineer fixes; prefer simple, clear improvements
 
+## Diagnosis Checklist
+
+When a skill is reported broken, check these items systematically before changing anything:
+
+- [ ] Validate the `SKILL.md` frontmatter parses correctly and only uses supported fields
+- [ ] Confirm the `description` contains the right trigger phrases for discovery
+- [ ] Check that the procedures are explicit, ordered, and easy to follow
+- [ ] Verify every referenced script, asset, and reference path exists and is correct
+- [ ] Confirm required inputs, outputs, and artifact paths are stated clearly
+- [ ] Check whether the output format is specified precisely enough to test
+- [ ] Review examples, commands, and placeholders for technical correctness
+- [ ] Test realistic scenarios and edge cases that match the reported failure
+- [ ] Check for overlapping skills that may be causing ambiguous discovery
+- [ ] Confirm the proposed fix preserves the skill's original purpose
+
+## Improvement Patterns
+
+Common upgrades that make a skill more reliable and easier to use:
+
+- Add helper scripts when a procedure is repetitive or error-prone
+- Add explicit edge cases and failure-handling steps for known weak spots
+- Strengthen rules and guardrails so the agent avoids common mistakes
+- Add concrete references, examples, and templates to reduce ambiguity
+- Expand trigger phrases in `description` so the right skill is discovered sooner
+- Add clearer verification steps and success criteria for produced artifacts
+- Break out bulky supporting material into references or assets when needed
+
 Output format when fixing/improving a skill:
 - Problem summary: What was broken or underperforming
 - Root cause analysis: Why the skill was failing or ineffective
@@ -51,6 +78,15 @@ Output format when fixing/improving a skill:
 - Testing verification: How you confirmed the fix works
 - Impact statement: What changed and why it matters
 - Any follow-up recommendations for further improvement
+
+## Output
+
+This agent should produce:
+
+1. A PR-ready diff that updates the affected skill files and any required wiring
+2. An updated `SKILL.md` file plus any supporting `scripts/`, `references/`, or `assets/` changes
+3. Test verification showing how the fix was validated (dry run, example scenario, or script check)
+4. A concise explanation of the problem, root cause, fix, impact, and follow-up recommendations
 
 Quality controls:
 1. Verify you understand the exact failure or performance gap before proposing a fix

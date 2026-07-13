@@ -1,14 +1,8 @@
 ---
 name: migration-assessment
 description: Score each AWS service for migration complexity, flag risks, and produce the Service Complexity Matrix in migration-assessment.md
-allowed-tools:
-  - Bash
-  - PowerShell
-compatibility: "Requires curl + jq (macOS/Linux/WSL, preferred) or PowerShell 7+ (pwsh) or Windows PowerShell 5.1 (powershell.exe)"
-metadata:
-  author: azurewithdanidu
-  version: "1.0.0"
 ---
+
 
 # Migration Assessment Skill
 
@@ -273,6 +267,13 @@ Ordered by dependency (dependencies before dependents):
 - **Always include a phase sequencing recommendation** — dependencies must come before the services that depend on them.
 - **Flag any service with no clear Azure equivalent** as High complexity with a note in "Open Questions / Gaps".
 - **Effort estimates must match the scoring tables** — do not invent numbers.
+
+## Scripts
+
+| Script | When to run |
+|---|---|
+| `./scripts/score-complexity.sh` | Run on Bash/macOS/Linux/WSL after `aws-inventory.json` exists to print a quick complexity summary; it prefers the `Service Complexity Matrix` in `migration-assessment.md` when present. |
+| `./scripts/score-complexity.ps1` | Run the same reporting flow on PowerShell 7+ environments, including Windows developer workstations and CI runners. |
 
 ## Output
 

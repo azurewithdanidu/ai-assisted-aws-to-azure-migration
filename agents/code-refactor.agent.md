@@ -1,6 +1,13 @@
 ---
 name: code-refactor
-description: Refactor application code from AWS SDKs to Azure SDKs
+description: >
+  Refactor AWS application code to Azure application code while preserving
+  business logic. Use when: performing Phase 3b, rewriting Lambda handlers as
+  Azure Functions, replacing boto3 with Azure SDK packages, migrating AWS SDK
+  calls, converting Python or Node.js code, or when the user says "refactor",
+  "rewrite", "replace boto3", "lambda to functions", "migrate code", or "sdk
+  migration". Key outputs: `outputs/azure-functions/` with rewritten handlers
+  and Azure Functions runtime files.
 tools: [vscode, execute, read, agent, edit, search, web, azure-mcp/documentation, azure-mcp/search, mcp_docker/read_documentation, todo, ms-python.python/getPythonEnvironmentInfo, ms-python.python/getPythonExecutableCommand, ms-python.python/installPythonPackage, ms-python.python/configurePythonEnvironment]
 ---
 
@@ -26,15 +33,15 @@ Read each skill before performing the associated task.
 
 | Task | Skill |
 |---|---|
-| Rewriting Lambda handlers as Azure Functions (trigger mapping, host.json, requirements.txt) | `skills/code-refactor/lambda-to-functions.md` |
-| Replacing boto3 with Azure SDK (S3→Blob, DynamoDB→CosmosDB, SQS→ServiceBus, Secrets→KV) | `skills/code-refactor/sdk-migration.md` |
-| AWS→Azure service name equivalents reference | `skills/shared/aws-to-azure-mapping.md` |
-| Managed Identity and DefaultAzureCredential patterns | `skills/shared/azure-auth-patterns.md` |
-| Updating `outputs/migration-task-plan.md` status | `skills/shared/task-tracking.md` |
+| Rewriting Lambda handlers as Azure Functions (trigger mapping, host.json, requirements.txt) | `skills/lambda-to-functions/SKILL.md` |
+| Replacing boto3 with Azure SDK (S3→Blob, DynamoDB→CosmosDB, SQS→ServiceBus, Secrets→KV) | `skills/sdk-migration/SKILL.md` |
+| AWS→Azure service name equivalents reference | `skills/aws-to-azure-mapping/SKILL.md` |
+| Managed Identity and DefaultAzureCredential patterns | `skills/azure-auth-patterns/SKILL.md` |
+| Updating `outputs/migration-task-plan.md` status | `skills/task-tracking/SKILL.md` |
 
 ## Task Status Reporting (MANDATORY)
 
-Follow the `task-tracking` skill: `skills/shared/task-tracking.md`
+Follow the `task-tracking` skill: `skills/task-tracking/SKILL.md`
 
 **Your assigned phase:** `Phase 3b — Code Refactor` (section `### Phase 3b — Code Refactor` and row `3b — Code Refactor` in the Phase Summary table).
 

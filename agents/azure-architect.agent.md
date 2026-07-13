@@ -1,6 +1,16 @@
 ---
 name: azure-architect
-description: Design Azure architecture and generate Infrastructure as Code
+description: >
+  Design Azure target architecture and target service mapping for AWS
+  migrations. Use when: performing Phase 2, designing the Azure target
+  architecture, selecting Azure services, generating `design-document.md`,
+  creating architecture diagrams, producing `cost-comparison.md`, or when the
+  user says "design", "architect", "select services", "create design
+  document", "cost estimate", or "Mermaid diagram". Key outputs:
+  `outputs/azure-architecture-output/design-document.md`,
+  `outputs/azure-architecture-output/architecture-diagram-azure.mmd`
+  (`architecture-diagram.mmd`),
+  `outputs/azure-architecture-output/cost-comparison.md`.
 tools: ['vscode', 'execute', 'read', 'edit', 'search', 'web', 'azure-mcp/documentation', 'azure-mcp/search', 'agent', 'aws-knowledge-mcp/*', 'microsoftdocs/mcp/*', 'todo', 'mermaidchart.vscode-mermaid-chart/get_syntax_docs', 'mermaidchart.vscode-mermaid-chart/mermaid-diagram-validator', 'mermaidchart.vscode-mermaid-chart/mermaid-diagram-preview']
 ---
 
@@ -20,19 +30,19 @@ Read each skill before performing the associated task.
 
 | Task | Skill |
 |---|---|
-| Service selection and WAF-aligned design decisions | `skills/azure-architect/architecture-design.md` |
-| Cost comparison and `cost-comparison.md` (hand-estimated rules) | `skills/azure-architect/cost-analysis.md` |
-| **Live SKU prices from Azure Retail Prices API → `cost-comparison.md`** | **`skills/azure-architect/cost-estimator.md`** |
-| Mermaid diagram generation | `skills/azure-architect/architecture-diagramming.md` |
-| AWS→Azure service equivalents | `skills/shared/aws-to-azure-mapping.md` |
-| Bicep module specification | `skills/shared/bicep-generation.md` |
-| Security patterns (private endpoints, NSGs, Key Vault) | `skills/shared/azure-security-patterns.md` |
-| Managed Identity and RBAC patterns | `skills/shared/azure-auth-patterns.md` |
-| Updating `outputs/migration-task-plan.md` status | `skills/shared/task-tracking.md` |
+| Service selection and WAF-aligned design decisions | `skills/architecture-design/SKILL.md` |
+| Cost comparison and `cost-comparison.md` (hand-estimated rules) | `skills/cost-analysis/SKILL.md` |
+| **Live SKU prices from Azure Retail Prices API → `cost-comparison.md`** | **`skills/cost-estimator/SKILL.md`** |
+| Mermaid diagram generation | `skills/architecture-diagramming/SKILL.md` |
+| AWS→Azure service equivalents | `skills/aws-to-azure-mapping/SKILL.md` |
+| Bicep module specification | `skills/bicep-generation/SKILL.md` |
+| Security patterns (private endpoints, NSGs, Key Vault) | `skills/azure-security-patterns/SKILL.md` |
+| Managed Identity and RBAC patterns | `skills/azure-auth-patterns/SKILL.md` |
+| Updating `outputs/migration-task-plan.md` status | `skills/task-tracking/SKILL.md` |
 
 ## Task Status Reporting (MANDATORY)
 
-Follow the `task-tracking` skill: `skills/shared/task-tracking.md`
+Follow the `task-tracking` skill: `skills/task-tracking/SKILL.md`
 
 **Your assigned phase:** `Phase 2 — Azure Architecture Design` (section `### Phase 2 — Azure Architecture Design` and row `2 — Architecture` in the Phase Summary table).
 
