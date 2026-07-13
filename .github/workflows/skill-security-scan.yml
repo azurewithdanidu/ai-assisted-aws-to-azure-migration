@@ -33,19 +33,15 @@ jobs:
 
       - name: Install SkillSpector
         if: steps.filter.outputs.skills == 'true'
-        env:
-          SKILLSPECTOR_REF: 2eb844780ab163f01468ecf142c40a2ec0fcaec0
         run: |
           python -m pip install --quiet \
-            "git+https://github.com/NVIDIA/skillspector@${SKILLSPECTOR_REF}"
+            "git+https://github.com/NVIDIA/skillspector@2eb844780ab163f01468ecf142c40a2ec0fcaec0"
+          skillspector --version
 
-      - name: Run scan (JSON gate)
+      - name: Run scan (JSON + SARIF)
         if: steps.filter.outputs.skills == 'true'
         env:
           SKILL_PATH: skills
-          SKILLSPECTOR_REF: 2eb844780ab163f01468ecf142c40a2ec0fcaec0
-          SKILLSPECTOR_REF_DATE: "2026-05-18"
-          SKILLSPECTOR_FAIL_ON: "HIGH,CRITICAL"
           JSON_OUTPUT: skillspector.json
           SARIF_OUTPUT: skillspector.sarif
         run: bash .github/scripts/security/run-skillspector-scan.sh
