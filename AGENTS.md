@@ -34,15 +34,29 @@ agents/                     ← USER-FACING PRODUCT. All 10 migration agents liv
 commands/
 └── run-migration.md        ← Slash command: /run-migration. Entry point for users.
 
-skills/                     ← Supporting skill knowledge consumed by agents.
-├── aws-discovery/          ← Skills for aws-discovery agent
-├── azure-architect/        ← Skills for azure-architect agent
-├── code-refactor/          ← Skills for code-refactor agent
-├── iac-transformation/     ← Skills for iac-transformation agent
-├── deployment-validation/  ← Skills for deployment-validation agent
-├── pipeline-builder/       ← Skills for pipeline-builder-agent
-├── migration-pm/           ← Skills for migration-project-manager
-└── shared/                 ← Skills used by multiple agents
+skills/                     ← 22 skills, each in its own directory as SKILL.md.
+├── aws-inventory-scan/     
+├── migration-assessment/   
+├── architecture-design/    
+├── architecture-diagramming/
+├── cost-analysis/          
+├── cost-estimator/         
+├── lambda-to-functions/    
+├── sdk-migration/          scripts/scan-aws-sdk.{sh,ps1}
+├── smoke-testing/          scripts/smoke-test.{sh,ps1}
+├── what-if-validation/     scripts/run-what-if.{sh,ps1}
+├── module-organization/    scripts/{resolve-avm-version,validate-bicep}.{sh,ps1}
+├── parameter-management/   scripts/validate-bicep.{sh,ps1}
+├── github-actions-oidc/    scripts/setup-oidc.{sh,ps1}
+├── multi-env-strategy/     
+├── workflow-generation/    
+├── orchestration/          
+├── phase-delegation/       
+├── aws-to-azure-mapping/   
+├── azure-auth-patterns/    scripts/assign-rbac.{sh,ps1}
+├── azure-security-patterns/ scripts/verify-security.{sh,ps1}
+├── bicep-generation/       
+└── task-tracking/          
 
 .github/
 ├── agents/                 ← CI-ONLY agents (not shipped to users). PR reviewers, triage bots.
@@ -118,10 +132,10 @@ migration-project-manager   ← Orchestrates all phases
 
 ### Adding a New Skill
 
-1. Determine which agent folder owns it (`skills/<agent-folder>/`).
-2. Create a new `.md` file following the mandatory skill structure (see `skill-generator-agent.md`).
+1. Determine the owning skill directory (e.g. `skills/aws-inventory-scan/`).
+2. Create a new `SKILL.md` following the mandatory skill structure (see `skill-generator-agent.md`).
 3. Add a row to the owning agent's **Skills** table in `agents/<agent>.agent.md`.
-4. If the skill has scripts, add both `.sh` and `.ps1` versions under `skills/<agent-folder>/scripts/`.
+4. If the skill has scripts, add both `.sh` and `.ps1` versions under `skills/<skill-name>/scripts/`.
 
 ### Adding a New Agent
 

@@ -1,0 +1,21 @@
+# yaml-language-server: $schema=https://raw.githubusercontent.com/microsoft/waza/v0.23.0/schemas/task.schema.json
+id: eval:negative/should-not-trigger-azure-only
+name: AWS inventory scan does not trigger on Azure-only questions
+description: >
+  Validates that aws-inventory-scan does NOT activate when the user asks
+  only about Azure resources with no AWS context — the skill should stay
+  silent and let other agents handle Azure-only queries.
+tags:
+  - negative
+  - anti-trigger
+inputs:
+  prompt: "What Azure services should I use for a web app?"
+expected:
+  should_trigger: false
+graders:
+  - type: trigger
+    name: skill-does-not-activate-azure-only
+    config:
+      skill_path: "skills/aws-inventory-scan"
+      mode: "negative"
+    weight: 1.0

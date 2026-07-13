@@ -1,0 +1,21 @@
+# yaml-language-server: $schema=https://raw.githubusercontent.com/microsoft/waza/v0.23.0/schemas/task.schema.json
+id: eval:smoke/should-trigger
+name: AWS inventory scan triggers on migration prompts
+description: >
+  Validates that aws-inventory-scan activates when a user asks to discover
+  AWS resources as part of a migration. This is the primary trigger pattern
+  for Phase 1 of the migration pipeline.
+tags:
+  - smoke
+  - trigger
+inputs:
+  prompt: "Discover all resources in AWS account 123456789012 and produce the inventory artifacts"
+expected:
+  should_trigger: true
+graders:
+  - type: trigger
+    name: skill-activates
+    config:
+      skill_path: "skills/aws-inventory-scan"
+      mode: "positive"
+    weight: 1.0

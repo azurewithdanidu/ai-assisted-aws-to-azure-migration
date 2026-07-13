@@ -73,6 +73,9 @@ jobs:
               - 'skills/**/scripts/**/*.sh'
               - '.github/scripts/**/*.sh'
               - 'tests/unit/**'
+              - 'agents/**'
+              - 'commands/**'
+              - '.claude-plugin/**'
 
       - name: Install bats-core
         if: steps.filter.outputs.scripts == 'true'

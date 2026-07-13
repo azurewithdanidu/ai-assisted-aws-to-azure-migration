@@ -1,7 +1,7 @@
 #!/usr/bin/env bats
 # Unit tests for smoke-test.sh
 
-SCRIPT="$BATS_TEST_DIRNAME/../../skills/deployment-validation/scripts/smoke-test.sh"
+SCRIPT="$BATS_TEST_DIRNAME/../../skills/smoke-testing/scripts/smoke-test.sh"
 
 @test "smoke-test.sh exists" {
   [ -f "$SCRIPT" ]

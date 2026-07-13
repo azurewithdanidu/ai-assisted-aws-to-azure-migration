@@ -5,7 +5,7 @@
 #>
 Describe "validate-bicep.ps1" {
     BeforeAll {
-        $script:ScriptPath = "$PSScriptRoot/../../skills/iac-transformation/scripts/validate-bicep.ps1"
+        $script:ScriptPath = "$PSScriptRoot/../../skills/module-organization/scripts/validate-bicep.ps1"
         $script:Content    = Get-Content $script:ScriptPath -Raw -ErrorAction SilentlyContinue
     }
 
