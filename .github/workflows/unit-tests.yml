@@ -29,7 +29,7 @@ jobs:
       - name: Install Pester and PSScriptAnalyzer
         if: steps.filter.outputs.scripts == 'true'
         shell: pwsh
-        run: pwsh -File .github/scripts/test/Install-Pester.ps1
+        run: .github/scripts/test/Install-Pester.ps1
 
       - name: Run PSScriptAnalyzer
         if: steps.filter.outputs.scripts == 'true'
@@ -46,7 +46,7 @@ jobs:
       - name: Run Pester tests
         if: steps.filter.outputs.scripts == 'true'
         shell: pwsh
-        run: pwsh -File tests/unit/Run-PesterTests.ps1 -OutputFormat Detailed -CIOutputPath results/pester.xml
+        run: tests/unit/Run-PesterTests.ps1 -OutputFormat Detailed -CIOutputPath results/pester.xml
 
       - name: Upload Pester results
         if: steps.filter.outputs.scripts == 'true' && always()
