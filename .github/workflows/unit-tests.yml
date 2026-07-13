@@ -35,7 +35,10 @@ jobs:
         if: steps.filter.outputs.scripts == 'true'
         shell: pwsh
         run: |
-          $results = Invoke-ScriptAnalyzer -Path skills -Recurse -Severity Warning,Error
+          # PSAvoidUsingWriteHost is excluded: all scripts are standalone interactive
+          # tools that legitimately use coloured terminal output via -ForegroundColor.
+          $results = Invoke-ScriptAnalyzer -Path skills -Recurse -Severity Warning,Error `
+            -ExcludeRule @('PSAvoidUsingWriteHost')
           if ($results) {
             $results | Format-Table -AutoSize
             Write-Error "PSScriptAnalyzer found $($results.Count) issue(s)"

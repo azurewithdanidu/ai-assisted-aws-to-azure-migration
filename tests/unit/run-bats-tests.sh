@@ -12,9 +12,9 @@ echo "Running bats tests..."
 for test_file in "$TESTS_DIR"/*.bats; do
   if [[ -f "$test_file" ]]; then
     if bats "$test_file"; then
-      ((PASS++))
+      PASS=$((PASS + 1))
     else
-      ((FAIL++))
+      FAIL=$((FAIL + 1))
     fi
   fi
 done
