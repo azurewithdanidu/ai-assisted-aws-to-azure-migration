@@ -1,0 +1,21 @@
+# yaml-language-server: $schema=https://raw.githubusercontent.com/microsoft/waza/v0.23.0/schemas/task.schema.json
+id: eval:smoke/deploy-infra-triggers
+name: AWS inventory scan triggers on explicit inventory request
+description: >
+  Validates that aws-inventory-scan activates when a user asks to scan
+  an AWS account and produce the inventory JSON, architecture diagram,
+  and dependency matrix — the explicit output artefacts of this skill.
+tags:
+  - smoke
+  - trigger
+inputs:
+  prompt: "Scan AWS account 535002891143 and produce the JSON inventory, architecture diagram, and dependency matrix"
+expected:
+  should_trigger: true
+graders:
+  - type: trigger
+    name: skill-activates-via-orchestrator
+    config:
+      skill_path: "skills/aws-inventory-scan"
+      mode: "positive"
+    weight: 1.0

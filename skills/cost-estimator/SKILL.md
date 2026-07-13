@@ -1,14 +1,8 @@
 ---
 name: cost-estimator
 description: Fetch real Azure Retail Prices API data (no auth) for any Azure service in the target architecture and emit defensible per-SKU costs into cost-comparison.md. Read before any cost output.
-allowed-tools:
-  - Bash
-  - PowerShell
-compatibility: "Requires curl + jq (macOS/Linux/WSL, preferred) or PowerShell 7+ (pwsh) or Windows PowerShell 5.1 (powershell.exe)"
-metadata:
-  author: azurewithdanidu
-  version: "1.0.0"
 ---
+
 
 # Cost Estimator Skill
 
@@ -334,6 +328,15 @@ Write `outputs/azure-architecture-output/cost-comparison.md` using this structur
 6. **If `NextPageLink` is non-null**, follow it to retrieve all pages before selecting the correct meter.
 7. **Match on `meterName`**, not just `skuName` — multiple meters share the same `skuName` (e.g., "Premium" has both vCPU and Memory meters).
 8. **Use `retailPrice`**, not `unitPrice` — they are usually identical for Consumption pricing but `retailPrice` is the public list price.
+
+---
+
+## Scripts
+
+| Script | When to run |
+|---|---|
+| `./scripts/fetch-prices.sh` | Run on Bash/macOS/Linux/WSL whenever you need live Azure Retail Prices API data for a specific service, region, and optional SKU filter. |
+| `./scripts/fetch-prices.ps1` | Run the same live price lookup on PowerShell 7+ environments, including Windows runners and developer shells. |
 
 ---
 

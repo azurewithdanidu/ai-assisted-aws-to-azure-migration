@@ -1,0 +1,21 @@
+# yaml-language-server: $schema=https://raw.githubusercontent.com/microsoft/waza/v0.23.0/schemas/task.schema.json
+id: eval:negative/should-not-trigger-azure-only
+name: AWS inventory scan does not trigger on Azure certification question
+description: >
+  Validates that aws-inventory-scan does NOT activate when the user asks
+  about Azure certifications — completely unrelated to AWS resource discovery.
+  Mirrors the same negative pattern used in the azure-cost-calculator benchmark.
+tags:
+  - negative
+  - anti-trigger
+inputs:
+  prompt: "What Azure certifications should I study for?"
+expected:
+  should_trigger: false
+graders:
+  - type: trigger
+    name: skill-does-not-activate-azure-only
+    config:
+      skill_path: "skills/aws-inventory-scan"
+      mode: "negative"
+    weight: 1.0

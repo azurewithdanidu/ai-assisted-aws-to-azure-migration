@@ -1,14 +1,8 @@
 ---
 name: module-organization
 description: Decide what belongs in root main.bicep vs child modules, AVM module selection, dependency ordering, and how to avoid circular dependencies and common Bicep pitfalls
-allowed-tools:
-  - Bash
-  - PowerShell
-compatibility: "Requires curl + jq (macOS/Linux/WSL, preferred) or PowerShell 7+ (pwsh) or Windows PowerShell 5.1 (powershell.exe)"
-metadata:
-  author: azurewithdanidu
-  version: "1.0.0"
 ---
+
 
 # Module Organization Skill
 
@@ -169,7 +163,7 @@ https://raw.githubusercontent.com/Azure/bicep-registry-modules/main/avm/res/stor
 https://raw.githubusercontent.com/Azure/bicep-registry-modules/main/avm/res/web/site/CHANGELOG.md
 ```
 
-Use the script at `.github/skills/iac-transformation/scripts/resolve-avm-version.sh` to automate:
+Use the script at `./scripts/resolve-avm-version.sh` to automate:
 ```bash
 ./scripts/resolve-avm-version.sh storage/storage-account
 # Returns: 0.32.0

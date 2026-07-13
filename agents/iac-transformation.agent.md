@@ -30,16 +30,16 @@ Read each skill before performing the associated task.
 
 | Task | Skill |
 |---|---|
-| Organising Bicep into modules (networking/storage/security/compute/messaging/monitoring) | `skills/iac-transformation/module-organization.md` |
-| Creating dev/staging/prod `.bicepparam` files with correct SKU and replication rules | `skills/iac-transformation/parameter-management.md` |
-| Bicep naming conventions, parameter decorators, and required outputs | `skills/shared/bicep-generation.md` |
-| Private endpoints, NSGs, Key Vault hardening | `skills/shared/azure-security-patterns.md` |
-| System-assigned Managed Identity and RBAC role assignments in Bicep | `skills/shared/azure-auth-patterns.md` |
-| Updating `outputs/migration-task-plan.md` status | `skills/shared/task-tracking.md` |
+| Organising Bicep into modules (networking/storage/security/compute/messaging/monitoring) | `skills/module-organization/SKILL.md` |
+| Creating dev/staging/prod `.bicepparam` files with correct SKU and replication rules | `skills/parameter-management/SKILL.md` |
+| Bicep naming conventions, parameter decorators, and required outputs | `skills/bicep-generation/SKILL.md` |
+| Private endpoints, NSGs, Key Vault hardening | `skills/azure-security-patterns/SKILL.md` |
+| System-assigned Managed Identity and RBAC role assignments in Bicep | `skills/azure-auth-patterns/SKILL.md` |
+| Updating `outputs/migration-task-plan.md` status | `skills/task-tracking/SKILL.md` |
 
 ## Task Status Reporting (MANDATORY)
 
-Follow the `task-tracking` skill: `skills/shared/task-tracking.md`
+Follow the `task-tracking` skill: `skills/task-tracking/SKILL.md`
 
 **Your assigned phase:** `Phase 3a — IaC Transformation` (section `### Phase 3a — IaC Transformation` and row `3a — IaC Transformation` in the Phase Summary table).
 
@@ -87,7 +87,7 @@ After this step, seek confirmation before progressing to the next step
 4. Implementation Plan - Create a detailed implementation plan for how this module will be implemented break down tasks into manageable steps. These steps will be used for future development so keep each task group focused and have clear objectives. Include acceptance criteria and dependencies.
 
 
-> For CloudFormation→Bicep type mappings, AVM module selection, version resolution, and common pitfalls — read the `module-organization` skill: `skills/iac-transformation/module-organization.md`.
+> For CloudFormation→Bicep type mappings, AVM module selection, version resolution, and common pitfalls — read the `module-organization` skill: `skills/module-organization/SKILL.md`.
 
 ## Buildkite Pipeline Updates
 

@@ -1,14 +1,8 @@
 ---
 name: aws-inventory-scan
 description: Read the source AWS application and produce a structured JSON inventory of every AWS service in use, plus a Mermaid architecture diagram and dependency matrix
-allowed-tools:
-  - Bash
-  - PowerShell
-compatibility: "Requires curl + jq (macOS/Linux/WSL, preferred) or PowerShell 7+ (pwsh) or Windows PowerShell 5.1 (powershell.exe)"
-metadata:
-  author: azurewithdanidu
-  version: "1.0.0"
 ---
+
 
 # AWS Inventory Scan Skill
 
@@ -372,6 +366,13 @@ Before marking Phase 1 complete, every item below must pass:
 - [ ] `architecture-diagram.mmd` renders correctly in Mermaid (no syntax errors)
 - [ ] `dependency-matrix.csv` has all 11 columns and at least one data row
 - [ ] `migration-assessment.md` has `## Service Complexity Matrix` section
+
+## Scripts
+
+| Script | When to run |
+|---|---|
+| `./scripts/validate-inventory.sh` | Run on Bash/macOS/Linux/WSL immediately after generating `outputs/aws-migration-artifacts/aws-inventory.json` to validate the schema before downstream agents consume it. |
+| `./scripts/validate-inventory.ps1` | Run the same validation on PowerShell 7+ environments, including Windows runners and GitHub Actions jobs using `pwsh`. |
 
 ## Output
 

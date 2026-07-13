@@ -1,14 +1,8 @@
 ---
 name: azure-auth-patterns
 description: Authenticate Azure services to each other using Managed Identity and RBAC — never connection strings or access keys
-allowed-tools:
-  - Bash
-  - PowerShell
-compatibility: "Requires curl + jq (macOS/Linux/WSL, preferred) or PowerShell 7+ (pwsh) or Windows PowerShell 5.1 (powershell.exe)"
-metadata:
-  author: azurewithdanidu
-  version: "1.0.0"
 ---
+
 
 # Azure Auth Patterns Skill
 

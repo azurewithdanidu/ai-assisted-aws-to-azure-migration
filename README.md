@@ -12,12 +12,12 @@ Installable as a plugin in Copilot CLI, Claude Code, and VS Code. All skill scri
 
 ### Copilot CLI or Claude Code (recommended)
 ```
-/plugin install azurewithdanidu/aws-to-azure-migrator
+/plugin install azurewithdanidu/cloud-avengers
 ```
 
 ### Any agent runtime — latest `main`
 ```
-npx skills add azurewithdanidu/aws-to-azure-migrator-skill
+npx skills add azurewithdanidu/cloud-avengers-skill
 ```
 
 After installing, start a migration with:
