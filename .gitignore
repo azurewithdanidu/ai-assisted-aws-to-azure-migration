@@ -117,4 +117,7 @@ dist
 
 
 ./doc
-backup
+./backup
+./buildkite
+./deploy
+./source-app
