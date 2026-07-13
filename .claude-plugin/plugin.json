@@ -1,0 +1,23 @@
+{
+  "name": "aws-to-azure-migrator",
+  "version": "1.0.0",
+  "description": "AI-assisted AWS to Azure migration factory. Provides 10 specialist agents and 22 skills that orchestrate the full migration pipeline: AWS discovery → Azure architecture design → IaC transformation → code refactor → CI/CD pipeline build → deployment → validation.",
+  "author": {
+    "name": "azurewithdanidu"
+  },
+  "license": "MIT",
+  "keywords": [
+    "aws",
+    "azure",
+    "migration",
+    "cloud",
+    "bicep",
+    "cloudformation",
+    "agents",
+    "copilot",
+    "devops",
+    "infrastructure"
+  ],
+  "homepage": "https://github.com/azurewithdanidu/ai-assisted-aws-to-azure-migration",
+  "repository": "https://github.com/azurewithdanidu/ai-assisted-aws-to-azure-migration"
+}
