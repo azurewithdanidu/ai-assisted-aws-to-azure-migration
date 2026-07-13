@@ -1,4 +1,4 @@
-# Contributing to aws-to-azure-migrator
+# Contributing to cloud-avengers
 
 Thank you for contributing! This guide covers the branch model, PR conventions, and how to add new skills or agents.
 
@@ -33,7 +33,7 @@ feature/... ──► dev  ──► main
 2. Create `skills/<skill-name>/SKILL.md` following the mandatory structure in `agents/skill-generator-agent.md`.
 3. Add a row to the owning agent's **Skills** table in `agents/<agent>.agent.md`.
 4. If the skill has scripts, add both `scripts/<name>.sh` and `scripts/<name>.ps1` versions inside the new skill directory.
-5. Add an eval task in `tests/evals/aws-to-azure-migrator/` tagged `skill:<skill-name>`.
+5. Add an eval task in `tests/evals/cloud-avengers/` tagged `skill:<skill-name>`.
 
 ## Adding a New Agent
 

@@ -42,7 +42,7 @@ jobs:
       - name: Install Waza
         uses: ./.github/actions/install-waza
       - name: Run mock evaluations (no LLM)
-        run: waza run tests/evals/aws-to-azure-migrator/eval-mock.yaml --tags negative,smoke
+        run: waza run tests/evals/cloud-avengers/eval-mock.yaml --tags negative,smoke
       - name: Upload mock eval results
         if: always()
         uses: actions/upload-artifact@v4

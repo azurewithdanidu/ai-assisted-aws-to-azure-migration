@@ -85,13 +85,12 @@ Users install via two channels:
 
 ### Copilot CLI / Claude Code (versioned)
 ```
-/plugin marketplace add azurewithdanidu/plugins
-/plugin install aws-to-azure-migrator
+/plugin install cloud-avengers
 ```
 
 ### Any Agent — latest main (no version pinning)
 ```
-npx skills add azurewithdanidu/aws-to-azure-migrator-skill
+npx skills add azurewithdanidu/cloud-avengers-skill
 ```
 
 ---
