@@ -5,7 +5,7 @@
 #>
 Describe "run-what-if.ps1" {
     BeforeAll {
-        $script:ScriptPath = "$PSScriptRoot/../../skills/deployment-validation/scripts/run-what-if.ps1"
+        $script:ScriptPath = "$PSScriptRoot/../../skills/what-if-validation/scripts/run-what-if.ps1"
         $script:Content    = Get-Content $script:ScriptPath -Raw -ErrorAction SilentlyContinue
     }
 

@@ -5,7 +5,7 @@
 #>
 Describe "verify-security.ps1" {
     BeforeAll {
-        $script:ScriptPath = "$PSScriptRoot/../../skills/shared/scripts/verify-security.ps1"
+        $script:ScriptPath = "$PSScriptRoot/../../skills/azure-security-patterns/scripts/verify-security.ps1"
         $script:Content    = Get-Content $script:ScriptPath -Raw -ErrorAction SilentlyContinue
     }
 
