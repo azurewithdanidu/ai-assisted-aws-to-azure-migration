@@ -4,11 +4,14 @@
     Unit tests for run-what-if.ps1 — static analysis only (no Azure calls).
 #>
 Describe "run-what-if.ps1" {
-    $Script = "$PSScriptRoot/../../skills/deployment-validation/scripts/run-what-if.ps1"
+    BeforeAll {
+        $script:ScriptPath = "$PSScriptRoot/../../skills/deployment-validation/scripts/run-what-if.ps1"
+        $script:Content    = Get-Content $script:ScriptPath -Raw -ErrorAction SilentlyContinue
+    }
 
     Context "File exists" {
         It "should exist at the expected path" {
-            $Script | Should -Exist
+            $script:ScriptPath | Should -Exist
         }
     }
 
@@ -16,35 +19,28 @@ Describe "run-what-if.ps1" {
         It "should parse without errors" {
             $errors = @()
             $null = [System.Management.Automation.Language.Parser]::ParseFile(
-                $Script, [ref]$null, [ref]$errors)
+                $script:ScriptPath, [ref]$null, [ref]$errors)
             $errors.Count | Should -Be 0
         }
     }
 
     Context "Required parameters" {
-        It "should declare -ResourceGroup parameter" {
-            $ast = [System.Management.Automation.Language.Parser]::ParseFile(
-                $Script, [ref]$null, [ref]$null)
-            $params = $ast.FindAll(
-                { $args[0] -is [System.Management.Automation.Language.ParameterAst] }, $true)
-            $paramNames = $params | ForEach-Object { $_.Name.VariablePath.UserPath }
-            $paramNames | Should -Contain "ResourceGroup"
-        }
-
-        It "should declare -Environment parameter" {
-            $ast = [System.Management.Automation.Language.Parser]::ParseFile(
-                $Script, [ref]$null, [ref]$null)
-            $params = $ast.FindAll(
-                { $args[0] -is [System.Management.Automation.Language.ParameterAst] }, $true)
-            $paramNames = $params | ForEach-Object { $_.Name.VariablePath.UserPath }
-            $paramNames | Should -Contain "Environment"
+        foreach ($param in @("ResourceGroup", "Environment")) {
+            It "should declare -$param parameter" -TestCases @(@{ ParamName = $param }) {
+                param($ParamName)
+                $ast = [System.Management.Automation.Language.Parser]::ParseFile(
+                    $script:ScriptPath, [ref]$null, [ref]$null)
+                $params = $ast.FindAll(
+                    { $args[0] -is [System.Management.Automation.Language.ParameterAst] }, $true)
+                $paramNames = $params | ForEach-Object { $_.Name.VariablePath.UserPath }
+                $paramNames | Should -Contain $ParamName
+            }
         }
     }
 
     Context "Output directory" {
         It "should reference the outputs/deployment-validation path" {
-            $content = Get-Content $Script -Raw
-            $content | Should -Match "outputs[/\\]deployment-validation"
+            $script:Content | Should -Match "outputs[/\\]deployment-validation"
         }
     }
 }

@@ -1,14 +1,17 @@
 #Requires -Module Pester
 <#
 .SYNOPSIS
-    Unit tests for assign-rbac.ps1 — static analysis + role map validation.
+    Unit tests for assign-rbac.ps1 — static analysis only (no Azure calls).
 #>
 Describe "assign-rbac.ps1" {
-    $Script = "$PSScriptRoot/../../skills/shared/scripts/assign-rbac.ps1"
+    BeforeAll {
+        $script:ScriptPath = "$PSScriptRoot/../../skills/shared/scripts/assign-rbac.ps1"
+        $script:Content    = Get-Content $script:ScriptPath -Raw -ErrorAction SilentlyContinue
+    }
 
     Context "File exists" {
         It "should exist at the expected path" {
-            $Script | Should -Exist
+            $script:ScriptPath | Should -Exist
         }
     }
 
@@ -16,14 +19,12 @@ Describe "assign-rbac.ps1" {
         It "should parse without errors" {
             $errors = @()
             $null = [System.Management.Automation.Language.Parser]::ParseFile(
-                $Script, [ref]$null, [ref]$errors)
+                $script:ScriptPath, [ref]$null, [ref]$errors)
             $errors.Count | Should -Be 0
         }
     }
 
     Context "Role GUID map" {
-        $content = Get-Content $Script -Raw
-
         $expectedRoles = @{
             StorageBlobDataContributor = "ba92f5b4-2d11-453d-a403-e96b0029c9fe"
             StorageBlobDataReader      = "2a2b9908-6ea1-4ae2-8e65-a410df84e7d1"
@@ -35,29 +36,31 @@ Describe "assign-rbac.ps1" {
         }
 
         foreach ($roleName in $expectedRoles.Keys) {
-            $expectedGuid = $expectedRoles[$roleName]
-            It "should contain GUID for $roleName ($expectedGuid)" {
-                $content | Should -Match $expectedGuid
+            It "should contain GUID for $roleName ($($expectedRoles[$roleName]))" -TestCases @(
+                @{ RoleGuid = $expectedRoles[$roleName] }
+            ) {
+                param($RoleGuid)
+                $script:Content | Should -Match $RoleGuid
             }
         }
     }
 
     Context "Idempotency" {
         It "should check for existing assignment before creating" {
-            $content = Get-Content $Script -Raw
-            $content | Should -Match "role assignment list"
+            $script:Content | Should -Match "role assignment list"
         }
     }
 
     Context "Required parameters" {
         foreach ($param in @("PrincipalId", "Scope", "Role")) {
-            It "should declare -$param parameter" {
+            It "should declare -$param parameter" -TestCases @(@{ ParamName = $param }) {
+                param($ParamName)
                 $ast = [System.Management.Automation.Language.Parser]::ParseFile(
-                    $Script, [ref]$null, [ref]$null)
+                    $script:ScriptPath, [ref]$null, [ref]$null)
                 $params = $ast.FindAll(
                     { $args[0] -is [System.Management.Automation.Language.ParameterAst] }, $true)
                 $paramNames = $params | ForEach-Object { $_.Name.VariablePath.UserPath }
-                $paramNames | Should -Contain $param
+                $paramNames | Should -Contain $ParamName
             }
         }
     }
