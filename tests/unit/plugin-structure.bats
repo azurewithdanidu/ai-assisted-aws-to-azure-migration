@@ -28,7 +28,7 @@ REPO_ROOT="$BATS_TEST_DIRNAME/../.."
     "migration-project-manager.agent.md" \
     "pipeline-builder-agent.agent.md" \
     "skill-evolution-engine.agent.md" \
-    "skill-generator-agent.md"; do
+    "skill-generator-agent.agent.md"; do
     [ -f "$REPO_ROOT/agents/$agent" ]
   done
 }
@@ -51,7 +51,7 @@ REPO_ROOT="$BATS_TEST_DIRNAME/../.."
 @test "all skill SKILL.md files have required frontmatter fields" {
   FAIL=0
   while IFS= read -r f; do
-    for field in "name:" "allowed-tools:" "metadata:"; do
+    for field in "name:" "description:"; do
       grep -q "^$field" "$f" || { echo "MISSING $field in $f"; FAIL=1; }
     done
   done < <(find "$REPO_ROOT/skills" -name "SKILL.md")

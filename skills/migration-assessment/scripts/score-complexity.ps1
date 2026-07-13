@@ -252,16 +252,16 @@ function Get-EffortForTier {
 function Get-EffortFromCell {
     param([string]$Cell)
 
-    $matches = [regex]::Matches((($Cell ?? '') -replace '[–—]', '-'), '[0-9]+(\.[0-9]+)?')
-    if ($matches.Count -eq 0) {
+    $cellMatches = [regex]::Matches((($Cell ?? '') -replace '[–—]', '-'), '[0-9]+(\.[0-9]+)?')
+    if ($cellMatches.Count -eq 0) {
         return 0.0
     }
 
-    if ($matches.Count -eq 1) {
-        return [double]$matches[0].Value
+    if ($cellMatches.Count -eq 1) {
+        return [double]$cellMatches[0].Value
     }
 
-    return (([double]$matches[0].Value) + ([double]$matches[1].Value)) / 2
+    return (([double]$cellMatches[0].Value) + ([double]$cellMatches[1].Value)) / 2
 }
 
 function Format-Number {
@@ -301,23 +301,27 @@ function Add-ServiceSummary {
 }
 
 function Invoke-ComplexitySummary {
+    param(
+        [string]$Path
+    )
+
     if ($Help) {
         Show-Usage
         return
     }
 
-    Write-Host "==> Reading AWS inventory: $InventoryPath" -ForegroundColor Cyan
-    if (-not (Test-Path $InventoryPath -PathType Leaf)) {
-        throw "Inventory file not found: $InventoryPath"
+    Write-Host "==> Reading AWS inventory: $Path" -ForegroundColor Cyan
+    if (-not (Test-Path $Path -PathType Leaf)) {
+        throw "Inventory file not found: $Path"
     }
 
-    $inventory = (Get-Content $InventoryPath -Raw) | ConvertFrom-Json
+    $inventory = (Get-Content $Path -Raw) | ConvertFrom-Json
     $serviceEntries = @($inventory.services.PSObject.Properties)
     if ($serviceEntries.Count -eq 0) {
         throw 'Inventory file must contain a non-empty services object.'
     }
 
-    $assessmentPath = Join-Path (Split-Path $InventoryPath -Parent) 'migration-assessment.md'
+    $assessmentPath = Join-Path (Split-Path $Path -Parent) 'migration-assessment.md'
     $rows = @{}
     $parsedRows = 0
 
@@ -415,7 +419,7 @@ function Invoke-ComplexitySummary {
 }
 
 try {
-    Invoke-ComplexitySummary
+    Invoke-ComplexitySummary -Path $InventoryPath
 } catch {
     Write-Host "❌ $($_.Exception.Message)" -ForegroundColor Yellow
 }
