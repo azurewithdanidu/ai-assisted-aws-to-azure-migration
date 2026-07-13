@@ -1,4 +1,4 @@
-name: Create Release PR
+name: Create Release
 
 on:
   pull_request:
@@ -6,22 +6,26 @@ on:
     branches: [main]
 
 jobs:
-  create-release-pr:
+  create-release:
     if: github.event.pull_request.merged == true && startsWith(github.event.pull_request.title, 'version:')
     runs-on: ubuntu-latest
     permissions:
-      contents: read
-      pull-requests: write
+      contents: write
 
     steps:
-      - name: Checkout main branch
+      - name: Checkout main
         uses: actions/checkout@v4
         with:
           ref: main
           fetch-depth: 0
 
-      - name: Create release PR
+      - name: Extract and validate version
+        run: bash .github/scripts/release/extract-version.sh
+
+      - name: Extract changelog section
+        run: bash .github/scripts/release/extract-changelog.sh "$VERSION"
+
+      - name: Create annotated tag and GitHub Release
         env:
-          GH_TOKEN: ${{ github.token }}
-          PR_BODY: ${{ github.event.pull_request.body }}
-        run: bash .github/scripts/release/create-release-pr.sh
+          GH_TOKEN: ${{ secrets.GH_TOKEN }}
+        run: bash .github/scripts/release/create-tag-and-release.sh "$VERSION" /tmp/release-body.md
