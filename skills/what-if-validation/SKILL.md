@@ -16,6 +16,19 @@ Before any Bicep deployment and after deployment to validate the deployed state.
 
 ---
 
+## ⚠️ Subscription-scope Mandatory Gate
+
+**If `main.bicep` declares `targetScope = 'subscription'`, ALL az deployment commands MUST use `sub create` / `sub what-if`. Using `group create` or `group what-if` on a subscription-scoped template will fail because the resource group does not yet exist at deployment time. This is a hard gate — block deployment if the wrong command is used.**
+
+| Template scope | Correct deploy command | Correct what-if command | FORBIDDEN |
+|---|---|---|---|
+| `subscription` | `az deployment sub create --location <region>` | `az deployment sub what-if --location <region>` | `az deployment group create/what-if` |
+| `resourceGroup` | `az deployment group create --resource-group <rg>` | `az deployment group what-if --resource-group <rg>` | `az deployment sub create/what-if` |
+
+**Detection rule:** Read the first 10 lines of `outputs/bicep-templates/main.bicep`. If `targetScope = 'subscription'` is present, enforce sub-scope commands everywhere. Reject any CI/CD step, script, or agent prompt that uses `group create` or `group validate` against this template.
+
+---
+
 ## Pre-Deployment Checklist
 
 ### 1. Bicep Syntax Validation
@@ -24,9 +37,9 @@ Before any Bicep deployment and after deployment to validate the deployed state.
 # Bicep syntax check — must exit 0
 az bicep build --file outputs/bicep-templates/main.bicep
 
-# Full ARM validation
-az deployment group validate \
-  --resource-group $RESOURCE_GROUP \
+# ARM validation — subscription-scoped (main.bicep creates its own resource group)
+az deployment sub validate \
+  --location australiaeast \
   --template-file outputs/bicep-templates/main.bicep \
   --parameters outputs/bicep-templates/parameters/prod.bicepparam
 # Expected: validationState: "Valid"
@@ -39,11 +52,10 @@ az deployment group validate \
 For each environment (dev, staging, prod), run:
 
 ```bash
-az deployment group what-if \
-  --resource-group rg-<env>-migration \
+az deployment sub what-if \
+  --location australiaeast \
   --template-file outputs/bicep-templates/main.bicep \
   --parameters outputs/bicep-templates/parameters/<env>.bicepparam \
-  --mode Incremental \
   --output json > /tmp/whatif-<env>.json
 ```
 
@@ -278,8 +290,8 @@ Write `outputs/validation-report.md` using this structure:
 
 ### Template Validation
 - [ ] `az bicep build` — PASS / FAIL
-- [ ] `az deployment group validate` — PASS / FAIL
-- [ ] `az deployment group what-if` — PASS / BLOCKED
+- [ ] `az deployment sub validate` — PASS / FAIL
+- [ ] `az deployment sub what-if` — PASS / BLOCKED
 
 ### What-If Change Table
 | Environment | Change Type | Resource | Verdict |
@@ -381,7 +393,7 @@ Write `outputs/validation-report.md` using this structure:
 
 - **Never proceed past a blocking what-if condition** without explicit user confirmation.
 - **Always run what-if for all three environments** before declaring validation complete.
-- **Never run what-if without `--mode Incremental`** — Complete mode deletes resources not in the template.
+- **If `main.bicep` is subscription-scoped, always use `az deployment sub what-if` and `az deployment sub create`.** Using `group` variants against a subscription-scoped template is a hard failure — block deployment immediately.
 - **Never mark a check `[x] PASS`** unless the underlying validation actually succeeded.
 - **Always save what-if JSON output** to `/tmp/whatif-<env>.json` for inspection.
 - **The detailed report goes to `outputs/validation-report.md`** — the task plan summary is separate.
@@ -417,8 +429,9 @@ The script blocks on destructive what-if changes (deletes of data resources, `pu
 | Topic | Link |
 |---|---|
 | Bicep what-if overview | https://learn.microsoft.com/en-us/azure/azure-resource-manager/bicep/deploy-what-if |
-| `az deployment group what-if` CLI | https://learn.microsoft.com/en-us/cli/azure/deployment/group#az-deployment-group-what-if |
-| `az deployment group validate` CLI | https://learn.microsoft.com/en-us/cli/azure/deployment/group#az-deployment-group-validate |
+| `az deployment sub what-if` CLI | https://learn.microsoft.com/en-us/cli/azure/deployment/sub#az-deployment-sub-what-if |
+| `az deployment sub validate` CLI | https://learn.microsoft.com/en-us/cli/azure/deployment/sub#az-deployment-sub-validate |
+| `az deployment sub create` CLI | https://learn.microsoft.com/en-us/cli/azure/deployment/sub#az-deployment-sub-create |
 | `az bicep build` CLI | https://learn.microsoft.com/en-us/cli/azure/bicep#az-bicep-build |
 | Azure Policy overview | https://learn.microsoft.com/en-us/azure/governance/policy/overview |
 | `az policy state summarize` CLI | https://learn.microsoft.com/en-us/cli/azure/policy/state#az-policy-state-summarize |
@@ -431,7 +444,7 @@ The script blocks on destructive what-if changes (deletes of data resources, `pu
 
 ### Best Practices
 
-- **Always use `--mode Incremental`** in what-if and deployment commands — Complete mode deletes any resource in the resource group that is not in the template, which can cause catastrophic data loss.
+- **Always use subscription-scope commands for subscription-scoped templates** — `az deployment sub create/what-if`. For resource-group-scoped module templates use `az deployment group create` with an existing RG. Mixing scopes causes 403 or 404 errors and is a common source of deployment failures.
 - **Block on `changeType: Delete` for data resources** — accidental deletion of storage accounts, Key Vaults, or databases is not easily recoverable even with soft-delete enabled.
 - **What-if is not a guarantee:** ARM what-if output can differ from actual deployment results in edge cases (e.g., resource provider bugs, concurrent changes). Always review what-if output before approving.
 - **Policy compliance must be checked pre-deployment:** Deploying a non-compliant resource in `Deny` policy mode causes a 403 error mid-deployment and leaves the stack in a partial state.

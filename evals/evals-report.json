@@ -1,0 +1,532 @@
+{
+  "iterations": [
+    {
+      "timestamp": "2026-07-20T17:37:46.703388+00:00",
+      "total_passed": 13,
+      "total_items": 13,
+      "pass_rate": 1.0,
+      "ci_lower": 0.7718981569447083,
+      "ci_upper": 1.0,
+      "converged": true,
+      "threshold": 0.9,
+      "suites": [
+        {
+          "name": "pm-behaviour",
+          "passed": 4,
+          "total": 4,
+          "pass_rate": 1.0,
+          "ci_lower": 0.5100999795960008,
+          "ci_upper": 1.0,
+          "items": [
+            {
+              "fixture": "GOOD_PM_SIGNED_IN_RESPONSE",
+              "expect_pass": true,
+              "item_passed": true,
+              "actual_pass": true,
+              "score": 1.0,
+              "failing_checks": []
+            },
+            {
+              "fixture": "BAD_PM_SIGNED_IN_STALLS",
+              "expect_pass": false,
+              "item_passed": false,
+              "actual_pass": true,
+              "score": 0.4,
+              "failing_checks": [
+                {
+                  "check": "no_stall_on_signed_in",
+                  "reason": "PM asked for subscription ID (matched: 'could you provide your azure subscription'). Should use 'az account show' instead.",
+                  "score": 0.0
+                },
+                {
+                  "check": "uses_az_account_show",
+                  "reason": "'az account show' not found in response.",
+                  "score": 0.0
+                },
+                {
+                  "check": "defaults_region_australiaeast",
+                  "reason": "'australiaeast' not referenced in response.",
+                  "score": 0.0
+                }
+              ]
+            },
+            {
+              "fixture": "BAD_PM_MANY_QUESTIONS",
+              "expect_pass": false,
+              "item_passed": false,
+              "actual_pass": true,
+              "score": 0.2,
+              "failing_checks": [
+                {
+                  "check": "no_stall_on_signed_in",
+                  "reason": "PM asked for subscription ID (matched: 'what is your.*?subscription'). Should use 'az account show' instead.",
+                  "score": 0.0
+                },
+                {
+                  "check": "uses_az_account_show",
+                  "reason": "'az account show' not found in response.",
+                  "score": 0.0
+                },
+                {
+                  "check": "defaults_region_australiaeast",
+                  "reason": "'australiaeast' not referenced in response.",
+                  "score": 0.0
+                },
+                {
+                  "check": "proceeds_without_all_inputs",
+                  "reason": "5 question mark(s) found. Expected \u2264 1.",
+                  "score": 0.0
+                }
+              ]
+            },
+            {
+              "fixture": "BAD_PM_INVOKES_AWS_DISCOVERY",
+              "expect_pass": false,
+              "item_passed": false,
+              "actual_pass": true,
+              "score": 0.4,
+              "failing_checks": [
+                {
+                  "check": "uses_az_account_show",
+                  "reason": "'az account show' not found in response.",
+                  "score": 0.0
+                },
+                {
+                  "check": "defaults_region_australiaeast",
+                  "reason": "'australiaeast' not referenced in response.",
+                  "score": 0.0
+                },
+                {
+                  "check": "skips_aws_discovery_for_direct_azure",
+                  "reason": "PM invoked 'aws discovery' without indicating it should be skipped for a direct Azure task.",
+                  "score": 0.0
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "name": "deploy-commands",
+          "passed": 3,
+          "total": 3,
+          "pass_rate": 1.0,
+          "ci_lower": 0.43849391955098227,
+          "ci_upper": 1.0,
+          "items": [
+            {
+              "fixture": "GOOD_DEPLOY_RESPONSE",
+              "expect_pass": true,
+              "item_passed": true,
+              "actual_pass": true,
+              "score": 1.0,
+              "failing_checks": []
+            },
+            {
+              "fixture": "BAD_DEPLOY_GROUP_CREATE",
+              "expect_pass": false,
+              "item_passed": false,
+              "actual_pass": true,
+              "score": 0.1,
+              "failing_checks": [
+                {
+                  "check": "uses_deployment_sub_create",
+                  "reason": "'az deployment sub create' not found.",
+                  "score": 0.0
+                },
+                {
+                  "check": "no_deployment_group_create",
+                  "reason": "'az deployment group create' found \u2014 forbidden for subscription-scoped templates.",
+                  "score": 0.0
+                },
+                {
+                  "check": "deploy_cmd_has_location_flag",
+                  "reason": "'az deployment sub create' not found; cannot check --location flag.",
+                  "score": 0.0
+                },
+                {
+                  "check": "deploy_cmd_has_parameters_flag",
+                  "reason": "'az deployment sub create' not found; cannot check --parameters flag.",
+                  "score": 0.0
+                }
+              ]
+            },
+            {
+              "fixture": "BAD_DEPLOY_NO_LOCATION",
+              "expect_pass": false,
+              "item_passed": false,
+              "actual_pass": true,
+              "score": 0.7,
+              "failing_checks": [
+                {
+                  "check": "deploy_cmd_has_location_flag",
+                  "reason": "'--location' flag missing from 'az deployment sub create'.",
+                  "score": 0.0
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "name": "bicep-correctness",
+          "passed": 6,
+          "total": 6,
+          "pass_rate": 1.0,
+          "ci_lower": 0.6096569663469354,
+          "ci_upper": 0.9999999999999999,
+          "items": [
+            {
+              "fixture": "GOOD_MAIN_BICEP",
+              "expect_pass": true,
+              "item_passed": true,
+              "actual_pass": true,
+              "score": 1.0,
+              "failing_checks": []
+            },
+            {
+              "fixture": "GOOD_STORAGE_BICEP",
+              "expect_pass": true,
+              "item_passed": true,
+              "actual_pass": true,
+              "score": 1.0,
+              "failing_checks": []
+            },
+            {
+              "fixture": "GOOD_PRIVATE_ENDPOINT_BICEP",
+              "expect_pass": true,
+              "item_passed": true,
+              "actual_pass": true,
+              "score": 1.0,
+              "failing_checks": []
+            },
+            {
+              "fixture": "BAD_MAIN_BICEP_RG_SCOPE",
+              "expect_pass": false,
+              "item_passed": false,
+              "actual_pass": true,
+              "score": 0.5555555555555556,
+              "failing_checks": [
+                {
+                  "check": "subscription_scope_declared",
+                  "reason": "targetScope = 'subscription' not found.",
+                  "score": 0.0
+                },
+                {
+                  "check": "resource_group_resource_declared",
+                  "reason": "No 'Microsoft.Resources/resourceGroups@...' resource found.",
+                  "score": 0.0
+                },
+                {
+                  "check": "modules_have_scope_rg",
+                  "reason": "Module(s) missing 'scope:': indices [1]",
+                  "score": 0.0
+                },
+                {
+                  "check": "deploy_command_is_sub_create",
+                  "reason": "'az deployment group create' found \u2014 must use 'az deployment sub create'.",
+                  "score": 0.0
+                }
+              ]
+            },
+            {
+              "fixture": "BAD_MAIN_BICEP_MISSING_MODULE_SCOPE",
+              "expect_pass": false,
+              "item_passed": false,
+              "actual_pass": true,
+              "score": 0.8888888888888888,
+              "failing_checks": [
+                {
+                  "check": "modules_have_scope_rg",
+                  "reason": "Module(s) missing 'scope:': indices [1, 2]",
+                  "score": 0.0
+                }
+              ]
+            },
+            {
+              "fixture": "BAD_STORAGE_BICEP_PUBLIC_ACCESS",
+              "expect_pass": false,
+              "item_passed": false,
+              "actual_pass": true,
+              "score": 0.7777777777777778,
+              "failing_checks": [
+                {
+                  "check": "storage_public_access_disabled",
+                  "reason": "publicNetworkAccess: 'Disabled' not found.",
+                  "score": 0.0
+                },
+                {
+                  "check": "shared_key_access_disabled",
+                  "reason": "allowSharedKeyAccess: false not found.",
+                  "score": 0.0
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "timestamp": "2026-07-21T12:08:46.817599+00:00",
+      "total_passed": 13,
+      "total_items": 13,
+      "pass_rate": 1.0,
+      "ci_lower": 0.7718981569447083,
+      "ci_upper": 1.0,
+      "converged": true,
+      "threshold": 0.9,
+      "suites": [
+        {
+          "name": "pm-behaviour",
+          "passed": 4,
+          "total": 4,
+          "pass_rate": 1.0,
+          "ci_lower": 0.5100999795960008,
+          "ci_upper": 1.0,
+          "items": [
+            {
+              "fixture": "GOOD_PM_SIGNED_IN_RESPONSE",
+              "expect_pass": true,
+              "item_passed": true,
+              "actual_pass": true,
+              "score": 1.0,
+              "failing_checks": []
+            },
+            {
+              "fixture": "BAD_PM_SIGNED_IN_STALLS",
+              "expect_pass": false,
+              "item_passed": false,
+              "actual_pass": true,
+              "score": 0.4,
+              "failing_checks": [
+                {
+                  "check": "no_stall_on_signed_in",
+                  "reason": "PM asked for subscription ID (matched: 'could you provide your azure subscription'). Should use 'az account show' instead.",
+                  "score": 0.0
+                },
+                {
+                  "check": "uses_az_account_show",
+                  "reason": "'az account show' not found in response.",
+                  "score": 0.0
+                },
+                {
+                  "check": "defaults_region_australiaeast",
+                  "reason": "'australiaeast' not referenced in response.",
+                  "score": 0.0
+                }
+              ]
+            },
+            {
+              "fixture": "BAD_PM_MANY_QUESTIONS",
+              "expect_pass": false,
+              "item_passed": false,
+              "actual_pass": true,
+              "score": 0.2,
+              "failing_checks": [
+                {
+                  "check": "no_stall_on_signed_in",
+                  "reason": "PM asked for subscription ID (matched: 'what is your.*?subscription'). Should use 'az account show' instead.",
+                  "score": 0.0
+                },
+                {
+                  "check": "uses_az_account_show",
+                  "reason": "'az account show' not found in response.",
+                  "score": 0.0
+                },
+                {
+                  "check": "defaults_region_australiaeast",
+                  "reason": "'australiaeast' not referenced in response.",
+                  "score": 0.0
+                },
+                {
+                  "check": "proceeds_without_all_inputs",
+                  "reason": "5 question mark(s) found. Expected \u2264 1.",
+                  "score": 0.0
+                }
+              ]
+            },
+            {
+              "fixture": "BAD_PM_INVOKES_AWS_DISCOVERY",
+              "expect_pass": false,
+              "item_passed": false,
+              "actual_pass": true,
+              "score": 0.4,
+              "failing_checks": [
+                {
+                  "check": "uses_az_account_show",
+                  "reason": "'az account show' not found in response.",
+                  "score": 0.0
+                },
+                {
+                  "check": "defaults_region_australiaeast",
+                  "reason": "'australiaeast' not referenced in response.",
+                  "score": 0.0
+                },
+                {
+                  "check": "skips_aws_discovery_for_direct_azure",
+                  "reason": "PM invoked 'aws discovery' without indicating it should be skipped for a direct Azure task.",
+                  "score": 0.0
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "name": "deploy-commands",
+          "passed": 3,
+          "total": 3,
+          "pass_rate": 1.0,
+          "ci_lower": 0.43849391955098227,
+          "ci_upper": 1.0,
+          "items": [
+            {
+              "fixture": "GOOD_DEPLOY_RESPONSE",
+              "expect_pass": true,
+              "item_passed": true,
+              "actual_pass": true,
+              "score": 1.0,
+              "failing_checks": []
+            },
+            {
+              "fixture": "BAD_DEPLOY_GROUP_CREATE",
+              "expect_pass": false,
+              "item_passed": false,
+              "actual_pass": true,
+              "score": 0.1,
+              "failing_checks": [
+                {
+                  "check": "uses_deployment_sub_create",
+                  "reason": "'az deployment sub create' not found.",
+                  "score": 0.0
+                },
+                {
+                  "check": "no_deployment_group_create",
+                  "reason": "'az deployment group create' found \u2014 forbidden for subscription-scoped templates.",
+                  "score": 0.0
+                },
+                {
+                  "check": "deploy_cmd_has_location_flag",
+                  "reason": "'az deployment sub create' not found; cannot check --location flag.",
+                  "score": 0.0
+                },
+                {
+                  "check": "deploy_cmd_has_parameters_flag",
+                  "reason": "'az deployment sub create' not found; cannot check --parameters flag.",
+                  "score": 0.0
+                }
+              ]
+            },
+            {
+              "fixture": "BAD_DEPLOY_NO_LOCATION",
+              "expect_pass": false,
+              "item_passed": false,
+              "actual_pass": true,
+              "score": 0.7,
+              "failing_checks": [
+                {
+                  "check": "deploy_cmd_has_location_flag",
+                  "reason": "'--location' flag missing from 'az deployment sub create'.",
+                  "score": 0.0
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "name": "bicep-correctness",
+          "passed": 6,
+          "total": 6,
+          "pass_rate": 1.0,
+          "ci_lower": 0.6096569663469354,
+          "ci_upper": 0.9999999999999999,
+          "items": [
+            {
+              "fixture": "GOOD_MAIN_BICEP",
+              "expect_pass": true,
+              "item_passed": true,
+              "actual_pass": true,
+              "score": 1.0,
+              "failing_checks": []
+            },
+            {
+              "fixture": "GOOD_STORAGE_BICEP",
+              "expect_pass": true,
+              "item_passed": true,
+              "actual_pass": true,
+              "score": 1.0,
+              "failing_checks": []
+            },
+            {
+              "fixture": "GOOD_PRIVATE_ENDPOINT_BICEP",
+              "expect_pass": true,
+              "item_passed": true,
+              "actual_pass": true,
+              "score": 1.0,
+              "failing_checks": []
+            },
+            {
+              "fixture": "BAD_MAIN_BICEP_RG_SCOPE",
+              "expect_pass": false,
+              "item_passed": false,
+              "actual_pass": true,
+              "score": 0.5555555555555556,
+              "failing_checks": [
+                {
+                  "check": "subscription_scope_declared",
+                  "reason": "targetScope = 'subscription' not found.",
+                  "score": 0.0
+                },
+                {
+                  "check": "resource_group_resource_declared",
+                  "reason": "No 'Microsoft.Resources/resourceGroups@...' resource found.",
+                  "score": 0.0
+                },
+                {
+                  "check": "modules_have_scope_rg",
+                  "reason": "Module(s) missing 'scope:': indices [1]",
+                  "score": 0.0
+                },
+                {
+                  "check": "deploy_command_is_sub_create",
+                  "reason": "'az deployment group create' found \u2014 must use 'az deployment sub create'.",
+                  "score": 0.0
+                }
+              ]
+            },
+            {
+              "fixture": "BAD_MAIN_BICEP_MISSING_MODULE_SCOPE",
+              "expect_pass": false,
+              "item_passed": false,
+              "actual_pass": true,
+              "score": 0.8888888888888888,
+              "failing_checks": [
+                {
+                  "check": "modules_have_scope_rg",
+                  "reason": "Module(s) missing 'scope:': indices [1, 2]",
+                  "score": 0.0
+                }
+              ]
+            },
+            {
+              "fixture": "BAD_STORAGE_BICEP_PUBLIC_ACCESS",
+              "expect_pass": false,
+              "item_passed": false,
+              "actual_pass": true,
+              "score": 0.7777777777777778,
+              "failing_checks": [
+                {
+                  "check": "storage_public_access_disabled",
+                  "reason": "publicNetworkAccess: 'Disabled' not found.",
+                  "score": 0.0
+                },
+                {
+                  "check": "shared_key_access_disabled",
+                  "reason": "allowSharedKeyAccess: false not found.",
+                  "score": 0.0
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}

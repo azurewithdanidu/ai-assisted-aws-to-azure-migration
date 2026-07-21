@@ -143,8 +143,120 @@ Do not accept any of the following:
 - Public network access enabled on sensitive data services without an explicit design exception
 - Output omission for `resourceId`, `name`, or `principalId`
 - Environment-specific literals embedded in module code when they belong in parameter files
+- **`targetScope = 'resourceGroup'` in main.bicep when the template creates its own resource group** — this makes `az deployment group create` fail because the resource group does not yet exist
+- **`az deployment group create` against a subscription-scoped template** — always use `az deployment sub create`
+- **Module calls in main.bicep without `scope: rg`** — every module call must be scoped to the resource group resource
+- **`resourceGroup().location` inside a subscription-scoped template** — the `resourceGroup()` function is unavailable at subscription scope; use the `location` parameter instead
 
-### 7. Example Bicep module skeleton
+### 7. Subscription-scope main.bicep pattern (Mandatory)
+
+When main.bicep creates a resource group (which is the standard pattern for this migration factory), the template **MUST** be subscription-scoped. This is a hard rule — not optional.
+
+#### Why this matters
+
+A `targetScope = 'resourceGroup'` template cannot create its own resource group because the resource group must already exist before `az deployment group create` runs. Attempting to do so produces a 404 or "resource group not found" error mid-deployment.
+
+#### Required structure for main.bicep
+
+```bicep
+/*
+  Module: main.bicep
+  Purpose: Subscription-scope orchestration — creates resource group and delegates to modules.
+  Source: outputs/azure-architecture-output/design-document.md Section 5
+  Inputs: environment, location, resourceGroupName, workload, tags
+  Outputs: (none — consumed by caller/CI)
+  Notes: targetScope MUST be 'subscription'. Every module call MUST carry scope: rg.
+*/
+
+targetScope = 'subscription'
+
+@description('Deployment environment.')
+@allowed(['dev', 'staging', 'prod'])
+param environment string
+
+@description('Azure region for all resources.')
+param location string = 'australiaeast'
+
+@description('Resource group name.')
+param resourceGroupName string = 'rg-${workload}-${environment}'
+
+@description('Short workload identifier.')
+param workload string
+
+@description('Tags applied to every resource.')
+param tags object = {
+  Environment: environment
+  Application: workload
+}
+
+resource rg 'Microsoft.Resources/resourceGroups@2023-07-01' = {
+  name: resourceGroupName
+  location: location
+  tags: tags
+}
+
+module storageModule 'modules/storage.bicep' = {
+  name: 'deploy-storage'
+  scope: rg          // ← mandatory on EVERY module call
+  params: {
+    workload: workload
+    environment: environment
+    location: location
+    tags: tags
+  }
+}
+
+module functionModule 'modules/function-app.bicep' = {
+  name: 'deploy-function'
+  scope: rg          // ← mandatory on EVERY module call
+  params: {
+    workload: workload
+    environment: environment
+    tags: tags
+  }
+}
+```
+
+#### Required parameter file entries
+
+Every `.bicepparam` file must include `location` and `resourceGroupName`:
+
+```bicep
+using '../main.bicep'
+
+param environment = 'dev'
+param location = 'australiaeast'
+param resourceGroupName = 'rg-migration-dev'
+param workload = 'migration'
+```
+
+#### Correct deployment commands
+
+```bash
+# Deploy (subscription scope)
+az deployment sub create \
+  --location australiaeast \
+  --template-file outputs/bicep-templates/main.bicep \
+  --parameters @outputs/bicep-templates/parameters/dev.bicepparam
+
+# What-if preview (subscription scope)
+az deployment sub what-if \
+  --location australiaeast \
+  --template-file outputs/bicep-templates/main.bicep \
+  --parameters @outputs/bicep-templates/parameters/dev.bicepparam
+```
+
+#### FORBIDDEN commands for subscription-scoped templates
+
+```bash
+# ❌ WRONG — cannot create resource groups at group scope
+az deployment group create --resource-group rg-migration-dev --template-file main.bicep ...
+
+# ❌ WRONG — same problem
+az deployment group what-if --resource-group rg-migration-dev --template-file main.bicep ...
+```
+
+### 8. Example Bicep module skeleton (module files — not main.bicep)
 
 ```bicep
 /*
@@ -213,13 +325,25 @@ output name string = functionApp.name
 output principalId string = functionApp.identity.principalId ?? ''
 ```
 
-### 8. Validation workflow
+### 9. Validation workflow
 
 1. Ensure every module file has the required header block.
 2. Ensure every parameter has `@description`.
 3. Ensure any bounded string or enum-like parameter also has `@minLength` or `@allowed` as applicable.
 4. Ensure every module emits `resourceId`, `name`, and `principalId`.
-5. Build and sanity-check the templates using the existing repo or ecosystem validation commands where available.
+5. Ensure main.bicep declares `targetScope = 'subscription'` and that every module call has `scope: rg`.
+6. Build and sanity-check the templates using the existing repo or ecosystem validation commands where available.
+
+```bash
+# Syntax check
+az bicep build --file outputs/bicep-templates/main.bicep
+
+# Subscription-scope what-if (must use sub — not group)
+az deployment sub what-if \
+  --location australiaeast \
+  --template-file outputs/bicep-templates/main.bicep \
+  --parameters @outputs/bicep-templates/parameters/dev.bicepparam
+```
 
 ### 9. Edge Cases / Failure Modes
 
@@ -237,6 +361,10 @@ output principalId string = functionApp.identity.principalId ?? ''
 - **No inline interpolation in resource names; compute names in variables first.**
 - **No API versions older than 2023.**
 - **Every module must output `resourceId`, `name`, and `principalId`.**
+- **main.bicep MUST declare `targetScope = 'subscription'` when it creates a resource group.** Using `targetScope = 'resourceGroup'` makes `az deployment group create` fail because the group doesn't exist yet.
+- **Every module call in main.bicep MUST include `scope: rg`.** Omitting it silently deploys to the wrong scope and causes cryptic errors.
+- **Deploy subscription-scoped templates with `az deployment sub create --location <region>`.** Never use `az deployment group create` for templates that create their own resource group.
+- **Never use `resourceGroup().location` inside a subscription-scoped template.** Use the `location` parameter instead.
 
 ## Best Practices
 
@@ -263,7 +391,8 @@ output principalId string = functionApp.identity.principalId ?? ''
 | Bicep decorators | https://learn.microsoft.com/en-us/azure/azure-resource-manager/bicep/parameters#parameter-decorators |
 | bicepconfig.json reference | https://learn.microsoft.com/en-us/azure/azure-resource-manager/bicep/bicep-config |
 | `az bicep build` CLI reference | https://learn.microsoft.com/en-us/cli/azure/bicep#az-bicep-build |
-| `az deployment group what-if` | https://learn.microsoft.com/en-us/azure/azure-resource-manager/bicep/deploy-what-if |
+| `az deployment sub create` CLI | https://learn.microsoft.com/en-us/cli/azure/deployment/sub#az-deployment-sub-create |
+| `az deployment sub what-if` CLI | https://learn.microsoft.com/en-us/azure/azure-resource-manager/bicep/deploy-what-if |
 | `uniqueString()` function | https://learn.microsoft.com/en-us/azure/azure-resource-manager/bicep/bicep-functions-string#uniquestring |
 | Azure Verified Modules (AVM) | https://azure.github.io/Azure-Verified-Modules/ |
 | AVM Bicep resource modules index | https://azure.github.io/Azure-Verified-Modules/indexes/bicep/bicep-resource-modules/ |

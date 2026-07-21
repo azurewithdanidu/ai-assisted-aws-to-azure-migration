@@ -5,10 +5,15 @@
     what-if dry-run, policy compliance, and quota checks.
 
 .DESCRIPTION
+    Automatically detects whether main.bicep is subscription-scoped or
+    resource-group-scoped and uses the appropriate deployment commands.
+
     Gate order (stops on first blocking failure):
       1. az bicep build              — syntax check
-      2. az deployment group validate — ARM schema validation
-      3. az deployment group what-if  — incremental dry-run
+      2. az deployment sub validate  — ARM schema validation (sub-scoped templates)
+         az deployment group validate (RG-scoped templates, legacy)
+      3. az deployment sub what-if   — dry-run (sub-scoped templates)
+         az deployment group what-if (RG-scoped templates, legacy)
          Blocks on: Delete of data resources, public network re-enabled,
                     NSG allow-all additions, subscription-scope role changes
       4. az policy state summarize   — policy compliance (Non-compliant Deny policies)
@@ -17,8 +22,16 @@
     Results are written to  outputs/deployment-validation/what-if-<env>.json
     and a summary to        outputs/deployment-validation/what-if-report.md
 
+    IMPORTANT: If main.bicep declares targetScope = 'subscription', this script
+    automatically uses 'az deployment sub' commands. Using group commands against
+    a subscription-scoped template will fail — this script enforces the correct scope.
+
+.PARAMETER Location
+    Azure region for the subscription-scope deployment (e.g. australiaeast).
+    Required for subscription-scoped templates.
+
 .PARAMETER ResourceGroup
-    Azure resource group to validate against.
+    Azure resource group name used for post-deployment policy and quota checks.
 
 .PARAMETER Environment
     Target environment: dev | staging | prod
@@ -30,14 +43,17 @@
     Azure subscription ID. Defaults to current az account.
 
 .EXAMPLE
-    .\run-what-if.ps1 -ResourceGroup "rg-dev-migration" -Environment dev
+    .\run-what-if.ps1 -Location australiaeast -ResourceGroup "rg-migration-dev" -Environment dev
 
 .EXAMPLE
-    .\run-what-if.ps1 -ResourceGroup "rg-prod-migration" -Environment prod -Subscription "00000000-..."
+    .\run-what-if.ps1 -Location australiaeast -ResourceGroup "rg-prod-migration" -Environment prod -Subscription "00000000-..."
 #>
 
 [CmdletBinding()]
 param (
+    [Parameter(Mandatory)]
+    [string]$Location,
+
     [Parameter(Mandatory)]
     [string]$ResourceGroup,
 
@@ -69,6 +85,18 @@ New-Item -ItemType Directory -Force -Path $outDir | Out-Null
 
 $subArgs = if ($Subscription) { @('--subscription', $Subscription) } else { @() }
 
+# Detect template scope
+$bicepContent = Get-Content $mainBicep -Raw -ErrorAction SilentlyContinue
+$isSubScope = $bicepContent -match "targetScope\s*=\s*'subscription'"
+
+# ── 0. Scope gate ────────────────────────────────────────────────────────────
+Write-Step "Step 0 — Subscription-scope gate"
+if ($isSubScope) {
+    Write-Pass "main.bicep is subscription-scoped — using 'az deployment sub' commands"
+} else {
+    Write-Warn "main.bicep is resource-group-scoped — using 'az deployment group' commands (legacy)"
+}
+
 # ── 1. Bicep syntax ─────────────────────────────────────────────────────────
 Write-Step "Step 1 — Bicep syntax (az bicep build)"
 az bicep restore --file $mainBicep --force *>$null
@@ -78,28 +106,50 @@ Write-Pass "az bicep build"
 
 # ── 2. ARM validation ────────────────────────────────────────────────────────
 Write-Step "Step 2 — ARM template validation"
-$validateOutput = az deployment group validate `
-    --resource-group $ResourceGroup `
-    --template-file $mainBicep `
-    --parameters $paramFile `
-    @subArgs `
-    --output json 2>&1
-
-if ($LASTEXITCODE -ne 0) {
-    Write-Block "ARM validation failed: $validateOutput"
-    exit 1
+if ($isSubScope) {
+    $validateOutput = az deployment sub validate `
+        --location $Location `
+        --template-file $mainBicep `
+        --parameters $paramFile `
+        @subArgs `
+        --output json 2>&1
+    if ($LASTEXITCODE -ne 0) {
+        Write-Block "ARM validation failed: $validateOutput"
+        exit 1
+    }
+    Write-Pass "az deployment sub validate"
+} else {
+    $validateOutput = az deployment group validate `
+        --resource-group $ResourceGroup `
+        --template-file $mainBicep `
+        --parameters $paramFile `
+        @subArgs `
+        --output json 2>&1
+    if ($LASTEXITCODE -ne 0) {
+        Write-Block "ARM validation failed: $validateOutput"
+        exit 1
+    }
+    Write-Pass "az deployment group validate"
 }
-Write-Pass "az deployment group validate"
 
 # ── 3. What-if dry run ───────────────────────────────────────────────────────
-Write-Step "Step 3 — What-if dry run (Incremental mode)"
-$whatifOutput = az deployment group what-if `
-    --resource-group $ResourceGroup `
-    --template-file $mainBicep `
-    --parameters $paramFile `
-    --mode Incremental `
-    --output json `
-    @subArgs 2>&1
+Write-Step "Step 3 — What-if dry run"
+if ($isSubScope) {
+    $whatifOutput = az deployment sub what-if `
+        --location $Location `
+        --template-file $mainBicep `
+        --parameters $paramFile `
+        --output json `
+        @subArgs 2>&1
+} else {
+    $whatifOutput = az deployment group what-if `
+        --resource-group $ResourceGroup `
+        --template-file $mainBicep `
+        --parameters $paramFile `
+        --mode Incremental `
+        --output json `
+        @subArgs 2>&1
+}
 
 $whatifOutput | Out-File $whatifFile -Encoding utf8
 Write-Host "  Saved to $whatifFile"
@@ -158,12 +208,15 @@ if ($storageUsage.Count -ge 240) {
 }
 
 # ── Write report ─────────────────────────────────────────────────────────────
+$scopeLabel = if ($isSubScope) { 'subscription' } else { 'resourceGroup' }
 $reportContent = @"
 # What-If Validation Report — $Environment
 
 **Date:** $(Get-Date -Format 'yyyy-MM-dd')
 **Environment:** $Environment
+**Location:** $Location
 **Resource Group:** $ResourceGroup
+**Template Scope:** $scopeLabel
 **Status:** $(if ($blocking -gt 0) { 'BLOCKED' } elseif ($warnings -gt 0) { 'PASS (with warnings)' } else { 'PASS' })
 
 ## Checks

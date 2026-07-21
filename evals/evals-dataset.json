@@ -1,0 +1,160 @@
+{
+  "name": "migration-pipeline-evals",
+  "evaluators": [
+    "pm_behavior.no_stall_on_signed_in",
+    "pm_behavior.uses_az_account_show",
+    "pm_behavior.defaults_region_australiaeast",
+    "pm_behavior.proceeds_without_all_inputs",
+    "pm_behavior.skips_aws_discovery_for_direct_azure",
+    "bicep_correctness.subscription_scope_declared",
+    "bicep_correctness.resource_group_resource_declared",
+    "bicep_correctness.modules_have_scope_rg",
+    "bicep_correctness.no_resource_group_location_function",
+    "bicep_correctness.deploy_command_is_sub_create",
+    "bicep_correctness.storage_public_access_disabled",
+    "bicep_correctness.shared_key_access_disabled",
+    "bicep_correctness.private_endpoint_present",
+    "bicep_correctness.private_dns_zone_linked",
+    "deploy_commands.uses_deployment_sub_create",
+    "deploy_commands.no_deployment_group_create",
+    "deploy_commands.deploy_cmd_has_location_flag",
+    "deploy_commands.deploy_cmd_has_parameters_flag",
+    "deploy_commands.what_if_mentioned"
+  ],
+  "suites": [
+    {
+      "name": "pm-behaviour",
+      "evaluators": [
+        "pm_behavior.no_stall_on_signed_in",
+        "pm_behavior.uses_az_account_show",
+        "pm_behavior.defaults_region_australiaeast",
+        "pm_behavior.proceeds_without_all_inputs",
+        "pm_behavior.skips_aws_discovery_for_direct_azure"
+      ],
+      "data": [
+        {
+          "query": "Already signed in to azure using cli",
+          "response_fixture": "GOOD_PM_SIGNED_IN_RESPONSE",
+          "ground_truth": "PM proceeds without asking for subscription ID; uses az account show; defaults to australiaeast",
+          "expect_pass": true
+        },
+        {
+          "query": "Already signed in to azure using cli",
+          "response_fixture": "BAD_PM_SIGNED_IN_STALLS",
+          "ground_truth": "PM should NOT ask for subscription ID when user is already signed in",
+          "expect_pass": false,
+          "regression_id": "2026-07-21-pm-stall",
+          "regression_description": "PM agent stalled and asked for Azure subscription ID even though user was already signed in via CLI. Should have run az account show instead."
+        },
+        {
+          "query": "Already signed in to azure using cli",
+          "response_fixture": "BAD_PM_MANY_QUESTIONS",
+          "ground_truth": "PM should not ask 4+ questions; should proceed with defaults",
+          "expect_pass": false,
+          "regression_id": "2026-07-21-pm-many-questions",
+          "regression_description": "PM agent asked 5 questions instead of proceeding with sensible defaults."
+        },
+        {
+          "query": "Deploy my existing Azure Functions app to australiaeast",
+          "response_fixture": "BAD_PM_INVOKES_AWS_DISCOVERY",
+          "ground_truth": "For direct Azure tasks PM must skip AWS Phase 1 discovery entirely",
+          "expect_pass": false,
+          "regression_id": "2026-07-21-pm-invokes-aws-discovery",
+          "regression_description": "PM agent invoked AWS Phase 1 discovery for a direct Azure deployment task that had no AWS source application."
+        }
+      ]
+    },
+    {
+      "name": "deploy-commands",
+      "evaluators": [
+        "deploy_commands.uses_deployment_sub_create",
+        "deploy_commands.no_deployment_group_create",
+        "deploy_commands.deploy_cmd_has_location_flag",
+        "deploy_commands.deploy_cmd_has_parameters_flag",
+        "deploy_commands.what_if_mentioned"
+      ],
+      "data": [
+        {
+          "query": "Deploy the infrastructure to Azure",
+          "response_fixture": "GOOD_DEPLOY_RESPONSE",
+          "ground_truth": "Uses az deployment sub create with --location and --parameters flags",
+          "expect_pass": true
+        },
+        {
+          "query": "Deploy the infrastructure to Azure",
+          "response_fixture": "BAD_DEPLOY_GROUP_CREATE",
+          "ground_truth": "Must NOT use az deployment group create for subscription-scoped templates",
+          "expect_pass": false,
+          "regression_id": "2026-07-21-group-create",
+          "regression_description": "Agent used az deployment group create with a subscription-scoped main.bicep (targetScope = 'subscription'). This command cannot create resource groups and the deployment fails with 'NoRegisteredProviderFound' or similar scope error."
+        },
+        {
+          "query": "Deploy the infrastructure to Azure",
+          "response_fixture": "BAD_DEPLOY_NO_LOCATION",
+          "ground_truth": "az deployment sub create must include --location flag",
+          "expect_pass": false,
+          "regression_id": "2026-07-21-missing-location-flag",
+          "regression_description": "Agent omitted --location flag from az deployment sub create. Subscription-scoped deployments require --location."
+        }
+      ]
+    },
+    {
+      "name": "bicep-correctness",
+      "evaluators": [
+        "bicep_correctness.subscription_scope_declared",
+        "bicep_correctness.resource_group_resource_declared",
+        "bicep_correctness.modules_have_scope_rg",
+        "bicep_correctness.no_resource_group_location_function",
+        "bicep_correctness.deploy_command_is_sub_create",
+        "bicep_correctness.storage_public_access_disabled",
+        "bicep_correctness.shared_key_access_disabled",
+        "bicep_correctness.private_endpoint_present",
+        "bicep_correctness.private_dns_zone_linked"
+      ],
+      "data": [
+        {
+          "query": "Generate main.bicep orchestrator",
+          "response_fixture": "GOOD_MAIN_BICEP",
+          "ground_truth": "targetScope='subscription', resource rg declared, all modules have scope:rg, uses az deployment sub create",
+          "expect_pass": true
+        },
+        {
+          "query": "Generate storage module bicep",
+          "response_fixture": "GOOD_STORAGE_BICEP",
+          "ground_truth": "publicNetworkAccess='Disabled', allowSharedKeyAccess=false",
+          "expect_pass": true
+        },
+        {
+          "query": "Generate private endpoint bicep",
+          "response_fixture": "GOOD_PRIVATE_ENDPOINT_BICEP",
+          "ground_truth": "privateEndpoints declared, privateDnsZones/virtualNetworkLinks declared",
+          "expect_pass": true
+        },
+        {
+          "query": "Generate main.bicep orchestrator",
+          "response_fixture": "BAD_MAIN_BICEP_RG_SCOPE",
+          "ground_truth": "Must not use resourceGroup scope for orchestrator that creates its own RG",
+          "expect_pass": false,
+          "regression_id": "2026-07-21-rg-scope-main",
+          "regression_description": "Generated main.bicep used targetScope='resourceGroup' which cannot create a resource group, combined with az deployment group create. Deployment fails because group scope requires the RG to already exist."
+        },
+        {
+          "query": "Generate main.bicep orchestrator",
+          "response_fixture": "BAD_MAIN_BICEP_MISSING_MODULE_SCOPE",
+          "ground_truth": "All modules in subscription-scoped orchestrator must have scope:rg",
+          "expect_pass": false,
+          "regression_id": "2026-07-21-missing-module-scope",
+          "regression_description": "Subscription-scoped main.bicep was generated but module declarations were missing 'scope: rg'. Bicep compilation fails: 'A module that targets a resource group must have an explicit scope defined'."
+        },
+        {
+          "query": "Generate storage module bicep",
+          "response_fixture": "BAD_STORAGE_BICEP_PUBLIC_ACCESS",
+          "ground_truth": "Storage accounts must disable public access and shared key access",
+          "expect_pass": false,
+          "regression_id": "2026-07-21-storage-public-access",
+          "regression_description": "Generated storage module had publicNetworkAccess='Enabled' and allowSharedKeyAccess=true, violating the zero-trust security requirements."
+        }
+      ]
+    }
+  ]
+}
