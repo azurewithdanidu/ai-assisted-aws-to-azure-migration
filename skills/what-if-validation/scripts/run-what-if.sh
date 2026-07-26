@@ -30,10 +30,10 @@ while [[ $# -gt 0 ]]; do
   esac
 done
 
-[[ -z "$LOCATION" ]]       && { echo "ERROR: --location is required (e.g. australiaeast)"; exit 1; }
 [[ -z "$RESOURCE_GROUP" ]] && { echo "ERROR: --resource-group is required (for post-deploy checks)"; exit 1; }
 [[ -z "$ENVIRONMENT" ]]    && { echo "ERROR: --environment is required (dev|staging|prod)"; exit 1; }
 [[ "$ENVIRONMENT" =~ ^(dev|staging|prod)$ ]] || { echo "ERROR: --environment must be dev, staging, or prod"; exit 1; }
+[[ -z "$LOCATION" ]]       && { echo "ERROR: --location is required (e.g. australiaeast)"; exit 1; }
 
 MAIN_BICEP="$BICEP_ROOT/main.bicep"
 PARAM_FILE="$BICEP_ROOT/parameters/$ENVIRONMENT.bicepparam"
