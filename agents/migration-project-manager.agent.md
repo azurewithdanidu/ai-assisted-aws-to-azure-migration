@@ -195,14 +195,10 @@ Update the Phase Summary table status column and "Completed At" column simultane
 **Agent to invoke:** `@aws-discovery`
 
 **Exact prompt to send:**
-```
-Perform a complete discovery of the AWS account. Generate all four output files:
-- outputs/aws-migration-artifacts/aws-inventory.json
-- outputs/aws-migration-artifacts/architecture-diagram.mmd
-- outputs/aws-migration-artifacts/dependency-matrix.csv
-- outputs/aws-migration-artifacts/migration-assessment.md
-Do not use AWS CLI commands; use the AWS MCP server for discovery.
-```
+
+> Use the **Phase 1 copy-paste prompt** from `skills/phase-delegation/SKILL.md`.  
+> Substitute `<AWS_ACCOUNT_ID>` and `<AWS_REGION>` with the values collected during pre-flight.  
+> Do not paraphrase or shorten the prompt.
 
 **Session todo items to add before invoking:**
 - `Invoke aws-discovery agent` → in-progress
@@ -227,17 +223,10 @@ Do not use AWS CLI commands; use the AWS MCP server for discovery.
 **Depends on:** Phase 1 artifacts
 
 **Exact prompt to send:**
-```
-Read all AWS discovery artifacts in outputs/aws-migration-artifacts/ (aws-inventory.json,
-architecture-diagram.mmd, dependency-matrix.csv, migration-assessment.md) and produce the
-complete design document and all supporting outputs:
-- outputs/azure-architecture-output/design-document.md  ← must contain all 11 sections
-- outputs/azure-architecture-output/architecture-diagram-azure.mmd
-- outputs/azure-architecture-output/cost-comparison.md
-- outputs/azure-architecture-output/service-mapping.md
-Section 5 must specify every Bicep module. Section 6 must specify every Lambda-to-Function
-rewrite. Section 11 must specify every GitHub Actions workflow, OIDC config, and secrets.
-```
+
+> Use the **Phase 2 copy-paste prompt** from `skills/phase-delegation/SKILL.md`.  
+> Substitute `<AWS_ACCOUNT_ID>` and `<AWS_REGION>` with the values collected during pre-flight.  
+> Do not paraphrase or shorten the prompt.
 
 **Session todo items to add before invoking:**
 - `Invoke azure-architect agent` → in-progress
@@ -289,13 +278,9 @@ other — all three consume the Phase 2 design document and write to different o
 **Agent to invoke:** `@iac-transformation`
 
 **Exact prompt to send:**
-```
-Read Section 5 (Infrastructure as Code Specification) of
-outputs/azure-architecture-output/design-document.md. For each Bicep module described in that
-section, generate the corresponding .bicep file with the exact parameters, resources, and outputs
-specified. Write all output to outputs/bicep-templates/ maintaining the module/parameters folder
-structure. Do not use PowerShell or CLI commands; use MCP servers only.
-```
+
+> Use the **Phase 3a copy-paste prompt** from `skills/phase-delegation/SKILL.md`.  
+> Do not paraphrase or shorten the prompt.
 
 **Artifact completion check:**
 - `outputs/bicep-templates/main.bicep` exists
@@ -307,13 +292,9 @@ structure. Do not use PowerShell or CLI commands; use MCP servers only.
 **Agent to invoke:** `@code-refactor`
 
 **Exact prompt to send:**
-```
-Read Section 6 (Application Code Changes) of
-outputs/azure-architecture-output/design-document.md. For each function specified in that
-section, rewrite the corresponding Lambda handler as an Azure Function using the trigger type,
-SDK package, environment variable names, and auth pattern documented there. Write all output to
-outputs/azure-functions/. Do not use CLI or PowerShell; use available MCP servers only.
-```
+
+> Use the **Phase 3b copy-paste prompt** from `skills/phase-delegation/SKILL.md`.  
+> Do not paraphrase or shorten the prompt.
 
 **Artifact completion check:**
 - `outputs/azure-functions/function_app.py` exists and non-empty
@@ -325,13 +306,9 @@ outputs/azure-functions/. Do not use CLI or PowerShell; use available MCP server
 **Agent to invoke:** `@pipeline-builder-agent`
 
 **Exact prompt to send:**
-```
-Read Section 11 (CI/CD Pipeline Architecture) of
-outputs/azure-architecture-output/design-document.md. Implement every GitHub Actions workflow
-listed in Section 11.1. Use the OIDC authentication strategy from Section 11.2, the exact
-job/step specifications from Section 11.3, the multi-environment strategy from Section 11.4, and
-the dependency order from Section 11.5. Create all workflow files under .github/workflows/.
-```
+
+> Use the **Phase 3c copy-paste prompt** from `skills/phase-delegation/SKILL.md`.  
+> Do not paraphrase or shorten the prompt.
 
 **Artifact completion check:**
 - At least one `.yml` file under `.github/workflows/`
@@ -349,13 +326,9 @@ proceed to Phase 4.
 **Depends on:** Phases 3a, 3b, and 3c all passing.
 
 **Exact prompt to send:**
-```
-Validate the full Azure migration using the checklist in Section 10 (Validation Checklist) of
-outputs/azure-architecture-output/design-document.md. Run all pre-deployment checks, post-
-deployment smoke tests, and security compliance checks listed there. Write the final validation
-report to outputs/validation-report.md. Include a clear PASSED / FAILED status at the top of
-the report.
-```
+
+> Use the **Phase 4 copy-paste prompt** from `skills/phase-delegation/SKILL.md`.  
+> Do not paraphrase or shorten the prompt.
 
 **Artifact completion check:**
 - `outputs/validation-report.md` exists

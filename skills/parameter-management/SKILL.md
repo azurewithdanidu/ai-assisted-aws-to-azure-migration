@@ -14,7 +14,14 @@ Produce environment-specific parameter files that allow the same Bicep templates
 
 After Bicep modules are written, before any deployment validation.
 
-## Universal Parameter Discovery Process
+## Inputs
+
+| Path | Why it matters |
+|---|---|
+| `outputs/azure-architecture-output/design-document.md` | Section 5 lists deployed modules (drives which parameters are needed); Section 7 provides per-environment location and workload name |
+| `outputs/bicep-templates/main.bicep` | Declares the parameter names that .bicepparam files must satisfy |
+| `outputs/bicep-templates/modules/` | Per-module Bicep files confirm parameter types and decorators |
+## Process
 
 1. **Enumerate deployed modules** — Read `design-document.md` Section 5 (Bicep module list). For each module, look up which parameters it contributes using the **Service Parameter Catalog** below.
 2. **Read per-environment values** — Read `design-document.md` Section 7 (Environment Configuration table). Record the target `location` and `workload` name.
@@ -135,7 +142,7 @@ param logRetentionDays = 90
 - **Always use Burstable SKU for dev databases, General Purpose for prod** — never swap these.
 - **Never commit `.bicepparam` files with actual secret values** — `@secure()` params must be passed at deploy time or via Key Vault.
 
-## Output
+## Outputs
 
 - `outputs/bicep-templates/parameters/dev.bicepparam`
 - `outputs/bicep-templates/parameters/staging.bicepparam`
@@ -144,7 +151,7 @@ param logRetentionDays = 90
 
 ---
 
-## Companion Scripts
+## Scripts
 
 | Script | Purpose |
 |---|---|

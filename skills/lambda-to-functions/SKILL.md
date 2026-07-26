@@ -14,6 +14,13 @@ Rewrite each AWS Lambda function as an Azure Function with the correct trigger, 
 
 For every Lambda function listed in `design-document.md` Section 6.
 
+## Inputs
+
+| Path | Why it matters |
+|---|---|
+| `source-app/app-code/lambda/` | Source Lambda handlers containing the business logic to preserve |
+| `outputs/azure-architecture-output/design-document.md` | Section 6 specifies the target trigger type, auth pattern, and environment variable names per function |
+| `outputs/aws-migration-artifacts/aws-inventory.json` | Event source mappings and trigger configuration for each Lambda |
 ## Process
 
 1. Read the original Lambda handler from `source-app/app-code/lambda/<function>/app.py`.
@@ -224,7 +231,7 @@ azure-keyvault-secrets
 - **Never modify files in `source-app/`** — read only.
 - **Preserve 100% of business logic** — only the trigger/response/SDK patterns change.
 
-## Output
+## Outputs
 
 - `outputs/azure-functions/<function_name>/function_app.py` — syntactically valid Python, no boto3 imports
 - `outputs/azure-functions/requirements.txt` — includes `azure-functions` and all Azure SDK packages

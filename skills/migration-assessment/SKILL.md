@@ -14,6 +14,12 @@ Produce a risk-annotated migration assessment report so the azure-architect agen
 
 After `aws-inventory-scan` is complete and `aws-inventory.json` exists.
 
+## Inputs
+
+| Path | Why it matters |
+|---|---|
+| `outputs/aws-migration-artifacts/aws-inventory.json` | Full resource inventory to score complexity against |
+| `outputs/aws-migration-artifacts/dependency-matrix.csv` | Dependency chains used to sequence migration phases |
 ## Process
 
 1. Read `outputs/aws-migration-artifacts/aws-inventory.json`.
@@ -275,6 +281,6 @@ Ordered by dependency (dependencies before dependents):
 | `./scripts/score-complexity.sh` | Run on Bash/macOS/Linux/WSL after `aws-inventory.json` exists to print a quick complexity summary; it prefers the `Service Complexity Matrix` in `migration-assessment.md` when present. |
 | `./scripts/score-complexity.ps1` | Run the same reporting flow on PowerShell 7+ environments, including Windows developer workstations and CI runners. |
 
-## Output
+## Outputs
 
 - `outputs/aws-migration-artifacts/migration-assessment.md` — non-empty, contains all required sections

@@ -14,6 +14,13 @@ Produce a complete, structured inventory of all AWS services used by the source 
 
 As the first action in Phase 1, before any other discovery work.
 
+## Inputs
+
+| Path | Why it matters |
+|---|---|
+| `source-app/app-code/template.yaml` | CloudFormation/SAM template to cross-check deployed resources |
+| `source-app/app-code/lambda/` | Lambda source files to discover implicit boto3 SDK dependencies |
+| `source-app/doc/` | Architectural context and any existing runbooks |
 ## Process
 
 **Primary source: live AWS environment via AWS MCP Server.** Local files in `source-app/` are supplementary — use them to enrich Lambda source paths and confirm implicit SDK dependencies, not as a substitute for live data.
@@ -374,7 +381,7 @@ Before marking Phase 1 complete, every item below must pass:
 | `./scripts/validate-inventory.sh` | Run on Bash/macOS/Linux/WSL immediately after generating `outputs/aws-migration-artifacts/aws-inventory.json` to validate the schema before downstream agents consume it. |
 | `./scripts/validate-inventory.ps1` | Run the same validation on PowerShell 7+ environments, including Windows runners and GitHub Actions jobs using `pwsh`. |
 
-## Output
+## Outputs
 
 - `outputs/aws-migration-artifacts/aws-inventory.json` — valid JSON, non-empty
 - `outputs/aws-migration-artifacts/architecture-diagram.mmd` — valid Mermaid syntax

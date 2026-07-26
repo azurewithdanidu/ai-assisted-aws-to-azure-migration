@@ -16,6 +16,24 @@ Before writing any GitHub Actions workflow that deploys to Azure.
 
 ---
 
+## Inputs
+
+| Path | Why it matters |
+|---|---|
+| `outputs/azure-architecture-output/design-document.md` | Section 11 defines the CI/CD spec: workflow files, OIDC environment names, and deployment targets |
+| `outputs/bicep-templates/` | IaC artifacts the workflows must deploy |
+| `outputs/azure-functions/` | Application code the workflows must build and publish |
+
+## Process
+
+1. Read `design-document.md` Section 11.1 for the list of workflows to create.
+2. Set up OIDC for each GitHub Environment using the **OIDC Authentication Setup** steps below.
+3. Apply the **Workflow Structure Patterns** for each workflow type.
+4. Pin all action versions explicitly.
+5. Validate that every workflow references a named GitHub Environment, not a raw secret.
+6. Write all files under `.github/workflows/`.
+
+---
 ## OIDC Authentication Setup (One-Time Per Environment)
 
 Document these steps in `outputs/pipeline/setup-oidc.md` for a human with Azure AD permissions to execute:
@@ -311,7 +329,7 @@ uses: azure/login@6c251865b4e6290e7b78be643ea2d005bc51f69a       # v2.1.1
 - **Never hardcode resource group names or resource names in workflow YAML** — always use `${{ vars.RESOURCE_GROUP_NAME }}` or equivalent.
 - **Always pin action versions** — never use `@latest` or a moving tag.
 
-## Output
+## Outputs
 
 - `outputs/pipeline/setup-oidc.md` — exact `az` commands for human to run
 - `outputs/pipeline/setup-environments.md` — GitHub Environment protection rules to configure
@@ -320,7 +338,7 @@ uses: azure/login@6c251865b4e6290e7b78be643ea2d005bc51f69a       # v2.1.1
 
 ---
 
-## Companion Scripts
+## Scripts
 
 | Script | Purpose |
 |---|---|

@@ -10,8 +10,31 @@ description: Fetch real Azure Retail Prices API data (no auth) for any Azure ser
 
 Replace hand-estimated costs in `outputs/azure-architecture-output/cost-comparison.md` with real SKU prices sourced directly from the Azure Retail Prices API for **any Azure service** in the target architecture. Every number in the output must trace back to an API-returned `retailPrice` field.
 
----
 
+## When to Use
+
+- After Phase 2 architecture design defines target Azure services and SKUs
+- Before writing `outputs/azure-architecture-output/cost-comparison.md`
+- When the cost-analysis skill needs live API prices to replace hand estimates
+- When a stakeholder asks for pay-as-you-go versus reservation cost scenarios
+
+## Inputs
+
+| Path | Why it matters |
+|---|---|
+| `outputs/azure-architecture-output/design-document.md` | Section 10 defines target services, SKUs, regions, and expected usage metrics |
+| `outputs/aws-migration-artifacts/migration-assessment.md` | Traffic and scale assumptions used to derive request/hour counts |
+| `outputs/azure-architecture-output/cost-comparison.md` | Target file — prices are inserted here after API lookups |
+
+## Process
+
+1. Read `design-document.md` Section 10 for the full list of Azure services and their target SKUs.
+2. For each service, run the **Universal Discovery Workflow** below to fetch live prices from the Azure Retail Prices API.
+3. Apply the **Handling Free Tiers and Tiered Pricing** rules where applicable.
+4. Calculate pay-as-you-go and reservation scenarios using the **Reserved Instance / Savings Plan Pricing** section.
+5. Write all prices with source evidence into `outputs/azure-architecture-output/cost-comparison.md` using the **Outputs** section as the template.
+
+---
 ## Azure Retail Prices API
 
 **Base URL:** `https://prices.azure.com/api/retail/prices`  
@@ -260,7 +283,7 @@ The following services have **no billable meter** in the API. Record them as `$0
 
 ---
 
-## Output Format
+## Outputs
 
 Write `outputs/azure-architecture-output/cost-comparison.md` using this structure. Adapt the rows to whatever services are in the target architecture — do not hard-code a fixed set of services.
 

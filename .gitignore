@@ -122,3 +122,9 @@ dist
 ./deploy
 ./source-app
 ./ignore
+# Python bytecode
+__pycache__/
+*.py[cod]
+
+# Generated eval dashboard (recreated by evals/dashboard.py)
+evals/dashboard.html

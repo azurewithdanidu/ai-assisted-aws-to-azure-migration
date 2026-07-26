@@ -58,9 +58,10 @@ Standardize phase handoffs so every worker receives the same instructions, write
 ```text
 You are executing Phase 1 — AWS Discovery for the AWS-to-Azure migration factory.
 
+AWS Account ID: <AWS_ACCOUNT_ID>
+AWS Region: <AWS_REGION>
+
 Inputs:
-- AWS Account ID: <AWS_ACCOUNT_ID>
-- AWS Region: <AWS_REGION>
 - Read-only source application: source-app/
 - Shared task plan: outputs/migration-task-plan.md
 
@@ -71,11 +72,22 @@ Required outputs:
 - outputs/aws-migration-artifacts/migration-assessment.md
 
 Requirements:
-1. Use AWS discovery MCP capabilities only. Do not use AWS CLI commands.
-2. Read source-app/ and any available documentation before writing outputs.
-3. Update only your Phase 1 row and Phase 1 task list in outputs/migration-task-plan.md.
-4. Generate all four outputs even if one output reveals blockers.
-5. If a blocker prevents a complete discovery, mark Phase 1 as failed and record the blocker in the task plan.
+1. Read skills/aws-inventory-scan/SKILL.md before writing aws-inventory.json,
+   architecture-diagram.mmd, and dependency-matrix.csv — it defines the exact schemas,
+   output structure, dependency relationship verbs, and validation checklist.
+2. Read skills/migration-assessment/SKILL.md before writing migration-assessment.md
+   — it defines the required sections, complexity scoring tables, and risk flag catalogue.
+3. Use AWS MCP server capabilities only — do not use AWS CLI commands.
+4. Read source-app/ (template.yaml, Lambda source files, docs) before writing any outputs
+   to cross-check deployed resources and discover implicit boto3 SDK dependencies not
+   declared in the CloudFormation/SAM template.
+5. Discover resources across all active regions, not just <AWS_REGION>.
+6. Generate all four output files even if a partial blocker is encountered —
+   record any blocker in migration-assessment.md and continue with remaining outputs.
+7. Update only your Phase 1 row and Phase 1 task list in outputs/migration-task-plan.md
+   incrementally as you work — do not wait until the end.
+8. If MCP authentication fails, stop immediately and report the exact error —
+   do not attempt discovery without confirmed credentials.
 ```
 
 **Artifact acceptance checks**
@@ -111,9 +123,17 @@ Required outputs:
 - outputs/azure-architecture-output/service-mapping.md
 
 Requirements:
-1. Read every discovery artifact before writing anything.
-2. Write outputs/azure-architecture-output/design-document.md first.
-3. The design document must include all 11 required sections:
+1. Read skills/architecture-design/SKILL.md for WAF-aligned service selection and design decisions.
+2. Read skills/aws-to-azure-mapping/SKILL.md for AWS→Azure service equivalents when writing
+   service-mapping.md and Section 3.
+3. Read skills/architecture-diagramming/SKILL.md before writing architecture-diagram-azure.mmd.
+4. Read skills/cost-estimator/SKILL.md and skills/cost-analysis/SKILL.md before writing
+   cost-comparison.md.
+5. Read skills/azure-security-patterns/SKILL.md and skills/azure-auth-patterns/SKILL.md before
+   writing Section 7 (Security Design).
+6. Read every discovery artifact before writing anything.
+7. Write outputs/azure-architecture-output/design-document.md first.
+8. The design document must include all 11 required sections:
    1. Executive Summary
    2. Current State
    3. Service Mapping
@@ -125,8 +145,12 @@ Requirements:
    9. Monitoring Design
    10. Cost Estimate
    11. CI/CD Spec
-4. Update only your Phase 2 row and Phase 2 task list in outputs/migration-task-plan.md.
-5. Make the design document explicit enough that Phase 3 and Phase 4 can proceed without rediscovery.
+9. Section 5 must specify every Bicep module. Section 6 must specify every Lambda-to-Function
+   rewrite. Section 11 must specify every GitHub Actions workflow, OIDC config, and secrets.
+10. Update only your Phase 2 row and Phase 2 task list in outputs/migration-task-plan.md
+    incrementally as you work.
+11. Make the design document explicit enough that Phase 3 and Phase 4 can proceed without
+    rediscovery.
 ```
 
 **Artifact acceptance checks**
@@ -158,11 +182,20 @@ Required outputs:
 - outputs/bicep-templates/parameters/prod.bicepparam
 
 Requirements:
-1. Implement every module described in Section 5.
-2. Keep main.bicep as the orchestration template and put implementation details in modules/.
-3. Use secure defaults, managed identity, and current API versions.
-4. Update only your Phase 3a row and Phase 3a task list in outputs/migration-task-plan.md.
-5. If Section 5 is incomplete or ambiguous, stop and mark a blocker instead of guessing.
+1. Read skills/bicep-generation/SKILL.md for naming conventions, parameter decorators, and
+   required outputs.
+2. Read skills/module-organization/SKILL.md for how to organise modules into
+   networking/storage/security/compute/messaging/monitoring.
+3. Read skills/parameter-management/SKILL.md before writing dev/staging/prod .bicepparam files.
+4. Read skills/azure-security-patterns/SKILL.md for private endpoint and NSG patterns.
+5. Read skills/azure-auth-patterns/SKILL.md for system-assigned Managed Identity and RBAC role
+   assignments in Bicep.
+6. Implement every module described in Section 5.
+7. Keep main.bicep as the orchestration template and put implementation details in modules/.
+8. Use secure defaults, managed identity, and current API versions.
+9. Update only your Phase 3a row and Phase 3a task list in outputs/migration-task-plan.md
+   incrementally as you work.
+10. If Section 5 is incomplete or ambiguous, stop and mark a blocker instead of guessing.
 ```
 
 **Artifact acceptance checks**
@@ -195,11 +228,21 @@ Required outputs:
 - any supporting files needed by the rewritten Azure Functions app
 
 Requirements:
-1. Rewrite each Lambda handler described in Section 6 as an Azure Function.
-2. Use the trigger type, authentication pattern, SDK mapping, and environment variable names defined in the design document.
-3. Do not modify source-app/.
-4. Update only your Phase 3b row and Phase 3b task list in outputs/migration-task-plan.md.
-5. If the rewrite specification is incomplete, stop and record a blocker instead of inventing interfaces.
+1. Read skills/lambda-to-functions/SKILL.md for trigger mapping, host.json format, and
+   requirements.txt structure.
+2. Read skills/sdk-migration/SKILL.md for boto3→Azure SDK replacement patterns
+   (S3→Blob, DynamoDB→CosmosDB, SQS→Service Bus, Secrets→Key Vault).
+3. Read skills/azure-auth-patterns/SKILL.md for DefaultAzureCredential and Managed Identity
+   patterns.
+4. Rewrite each Lambda handler described in Section 6 as an Azure Function.
+5. Use the trigger type, authentication pattern, SDK mapping, and environment variable names
+   defined in the design document.
+6. Read source-app/ (Lambda handlers, SAM template) to understand existing business logic
+   before rewriting — do not modify source-app/.
+7. Update only your Phase 3b row and Phase 3b task list in outputs/migration-task-plan.md
+   incrementally as you work.
+8. If the rewrite specification is incomplete, stop and record a blocker instead of inventing
+   interfaces.
 ```
 
 **Artifact acceptance checks**
@@ -228,11 +271,19 @@ Required outputs:
 - environment and OIDC references aligned with the CI/CD specification
 
 Requirements:
-1. Implement every workflow listed in Section 11.1.
-2. Use OIDC / workload identity, not long-lived Azure secrets.
-3. Encode dev, staging, and prod promotion logic in the workflow design.
-4. Update only your Phase 3c row and Phase 3c task list in outputs/migration-task-plan.md.
-5. If Section 11 lacks exact deployment details, stop and record a blocker instead of inventing workflow behavior.
+1. Read skills/github-actions-oidc/SKILL.md for app registration, federated credential
+   creation, and azure/login@v2 YAML snippet.
+2. Read skills/multi-env-strategy/SKILL.md for branch-to-environment mapping and GitHub
+   Environment protection rules.
+3. Read skills/workflow-generation/SKILL.md for IaC deployment YAML patterns
+   (what-if + deploy + rollback) and Functions deployment YAML.
+4. Implement every workflow listed in Section 11.1.
+5. Use OIDC / workload identity, not long-lived Azure secrets.
+6. Encode dev, staging, and prod promotion logic in the workflow design.
+7. Update only your Phase 3c row and Phase 3c task list in outputs/migration-task-plan.md
+   incrementally as you work.
+8. If Section 11 lacks exact deployment details, stop and record a blocker instead of
+   inventing workflow behavior.
 ```
 
 **Artifact acceptance checks**
@@ -263,11 +314,17 @@ Required output:
 - outputs/validation-report.md
 
 Requirements:
-1. Validate the generated solution against the architecture, security, networking, monitoring, and CI/CD specifications in the design document.
-2. Confirm that the report begins with either `## Status: PASSED` or `## Status: FAILED`.
-3. Summarize what was checked, what passed, what failed, and what must be remediated next.
-4. Update only your Phase 4 row and Phase 4 task list in outputs/migration-task-plan.md.
-5. If prerequisite artifacts are missing, mark the phase as failed and name the missing prerequisite explicitly.
+1. Read skills/what-if-validation/SKILL.md before running any what-if checks.
+2. Read skills/smoke-testing/SKILL.md for HTTP endpoint checks, Managed Identity verification,
+   Key Vault resolution, and end-to-end tests.
+3. Read skills/azure-security-patterns/SKILL.md for security pattern verification checks.
+4. Validate the generated solution against the architecture, security, networking, monitoring,
+   and CI/CD specifications in the design document.
+5. Confirm that the report begins with either `## Status: PASSED` or `## Status: FAILED`.
+6. Summarize what was checked, what passed, what failed, and what must be remediated next.
+7. Update only your Phase 4 row and Phase 4 task list in outputs/migration-task-plan.md.
+8. If prerequisite artifacts are missing, mark the phase as failed and name the missing
+   prerequisite explicitly.
 ```
 
 **Artifact acceptance checks**

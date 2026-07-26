@@ -1,6 +1,10 @@
 #!/usr/bin/env bash
-# Pre-deployment validation: Bicep syntax, ARM validation, what-if dry-run, policy check, quota check.
-# Usage: run-what-if.sh --resource-group <rg> --environment <dev|staging|prod> [--bicep-root <path>] [--subscription <id>]
+# Pre-deployment validation: Bicep syntax, ARM validation (sub-scope), what-if dry-run, policy check, quota check.
+# Usage: run-what-if.sh --resource-group <rg> --environment <dev|staging|prod> --location <region> [--bicep-root <path>] [--subscription <id>]
+#
+# NOTE: Deployment commands use subscription scope (az deployment sub ...) because main.bicep
+#       declares targetScope = 'subscription' and creates the resource group itself.
+#       The --resource-group flag is still required for post-deployment policy and quota checks.
 #
 # Outputs:
 #   outputs/deployment-validation/what-if-<env>.json
@@ -9,6 +13,7 @@
 
 set -euo pipefail
 
+LOCATION=""
 RESOURCE_GROUP=""
 ENVIRONMENT=""
 BICEP_ROOT="outputs/bicep-templates"
@@ -16,6 +21,7 @@ SUBSCRIPTION=""
 
 while [[ $# -gt 0 ]]; do
   case "$1" in
+    --location)        LOCATION="$2";       shift 2 ;;
     --resource-group)  RESOURCE_GROUP="$2"; shift 2 ;;
     --environment)     ENVIRONMENT="$2";    shift 2 ;;
     --bicep-root)      BICEP_ROOT="$2";     shift 2 ;;
@@ -24,15 +30,23 @@ while [[ $# -gt 0 ]]; do
   esac
 done
 
-[[ -z "$RESOURCE_GROUP" ]] && { echo "ERROR: --resource-group is required"; exit 1; }
+[[ -z "$RESOURCE_GROUP" ]] && { echo "ERROR: --resource-group is required (for post-deploy checks)"; exit 1; }
 [[ -z "$ENVIRONMENT" ]]    && { echo "ERROR: --environment is required (dev|staging|prod)"; exit 1; }
 [[ "$ENVIRONMENT" =~ ^(dev|staging|prod)$ ]] || { echo "ERROR: --environment must be dev, staging, or prod"; exit 1; }
+[[ -z "$LOCATION" ]]       && { echo "ERROR: --location is required (e.g. australiaeast)"; exit 1; }
 
 MAIN_BICEP="$BICEP_ROOT/main.bicep"
 PARAM_FILE="$BICEP_ROOT/parameters/$ENVIRONMENT.bicepparam"
 OUT_DIR="outputs/deployment-validation"
 WHATIF_FILE="$OUT_DIR/what-if-$ENVIRONMENT.json"
 REPORT_FILE="$OUT_DIR/what-if-report.md"
+
+# Detect subscription scope
+if grep -q "targetScope *= *'subscription'" "$MAIN_BICEP" 2>/dev/null; then
+  TEMPLATE_SCOPE="subscription"
+else
+  TEMPLATE_SCOPE="resourceGroup"
+fi
 
 SUB_ARGS=()
 [[ -n "$SUBSCRIPTION" ]] && SUB_ARGS=(--subscription "$SUBSCRIPTION")
@@ -48,6 +62,14 @@ block()   { echo "  [BLOCKED] $1"; REPORT_LINES+=("- [ ] BLOCKED: $1"); ((BLOCKI
 
 mkdir -p "$OUT_DIR"
 
+# ── Step 0: Scope gate ────────────────────────────────────────────────────────
+step "Step 0 — Subscription-scope gate"
+if [[ "$TEMPLATE_SCOPE" == "subscription" ]]; then
+  pass "main.bicep is subscription-scoped — using 'az deployment sub' commands"
+else
+  warn "main.bicep is resource-group-scoped — using 'az deployment group' commands (legacy)"
+fi
+
 # ── Step 1: Bicep syntax ──────────────────────────────────────────────────────
 step "Step 1 — Bicep syntax (az bicep build)"
 az bicep restore --file "$MAIN_BICEP" --force &>/dev/null
@@ -59,26 +81,48 @@ pass "az bicep build"
 
 # ── Step 2: ARM validation ────────────────────────────────────────────────────
 step "Step 2 — ARM template validation"
-if ! az deployment group validate \
-    --resource-group "$RESOURCE_GROUP" \
-    --template-file "$MAIN_BICEP" \
-    --parameters "$PARAM_FILE" \
-    "${SUB_ARGS[@]}" \
-    --output json &>/dev/null; then
-  block "ARM validation failed — run manually for details"
-  exit 1
+if [[ "$TEMPLATE_SCOPE" == "subscription" ]]; then
+  if ! az deployment sub validate \
+      --location "$LOCATION" \
+      --template-file "$MAIN_BICEP" \
+      --parameters "$PARAM_FILE" \
+      "${SUB_ARGS[@]}" \
+      --output json &>/dev/null; then
+    block "ARM validation failed — run manually for details"
+    exit 1
+  fi
+  pass "az deployment sub validate"
+else
+  if ! az deployment group validate \
+      --resource-group "$RESOURCE_GROUP" \
+      --template-file "$MAIN_BICEP" \
+      --parameters "$PARAM_FILE" \
+      "${SUB_ARGS[@]}" \
+      --output json &>/dev/null; then
+    block "ARM validation failed — run manually for details"
+    exit 1
+  fi
+  pass "az deployment group validate"
 fi
-pass "az deployment group validate"
 
 # ── Step 3: What-if dry run ───────────────────────────────────────────────────
-step "Step 3 — What-if dry run (Incremental mode)"
-az deployment group what-if \
-    --resource-group "$RESOURCE_GROUP" \
-    --template-file "$MAIN_BICEP" \
-    --parameters "$PARAM_FILE" \
-    --mode Incremental \
-    --output json \
-    "${SUB_ARGS[@]}" 2>&1 > "$WHATIF_FILE" || true
+step "Step 3 — What-if dry run"
+if [[ "$TEMPLATE_SCOPE" == "subscription" ]]; then
+  az deployment sub what-if \
+      --location "$LOCATION" \
+      --template-file "$MAIN_BICEP" \
+      --parameters "$PARAM_FILE" \
+      --output json \
+      "${SUB_ARGS[@]}" 2>&1 > "$WHATIF_FILE" || true
+else
+  az deployment group what-if \
+      --resource-group "$RESOURCE_GROUP" \
+      --template-file "$MAIN_BICEP" \
+      --parameters "$PARAM_FILE" \
+      --mode Incremental \
+      --output json \
+      "${SUB_ARGS[@]}" 2>&1 > "$WHATIF_FILE" || true
+fi
 
 echo "  Saved to $WHATIF_FILE"
 
@@ -133,7 +177,9 @@ STATUS="PASS"
   echo ""
   echo "**Date:** $(date -u '+%Y-%m-%d')"
   echo "**Environment:** $ENVIRONMENT"
+  echo "**Location:** $LOCATION"
   echo "**Resource Group:** $RESOURCE_GROUP"
+  echo "**Template Scope:** $TEMPLATE_SCOPE"
   echo "**Status:** $STATUS"
   echo ""
   echo "## Checks"
