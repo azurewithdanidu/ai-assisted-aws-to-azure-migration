@@ -14,6 +14,12 @@ Structure Bicep templates into focused, reusable modules with clear boundaries s
 
 Before writing any Bicep file — this skill defines the file structure and AVM module choices that all other IaC work follows.
 
+## Inputs
+
+| Path | Why it matters |
+|---|---|
+| `outputs/azure-architecture-output/design-document.md` | Section 5 is the authoritative module list — every module here must map to a .bicep file |
+| `outputs/bicep-templates/` | Target output directory for all generated Bicep files |
 ## Process
 
 1. **Configure `bicepconfig.json`** — mandatory first step (Step 1 below).
@@ -379,7 +385,7 @@ Every module `name:` is an ARM nested deployment ID. If the name in `main.bicep`
 - **Never vendor or copy AVM source into the repo** — reference modules via `br/public:avm/...`.
 - **Cite the AVM module** in `outputs/bicep-templates/README.md` for each resource: "Selected per module-organization skill — `avm/res/storage/storage-account:0.32.0`".
 
-## Output
+## Outputs
 
 - `outputs/bicep-templates/bicepconfig.json` — present with `modulePath: "bicep"`
 - `outputs/bicep-templates/main.bicep` — contains only parameters, module declarations, and outputs
@@ -389,7 +395,7 @@ Every module `name:` is an ARM nested deployment ID. If the name in `main.bicep`
 
 ---
 
-## Companion Scripts
+## Scripts
 
 | Script | Purpose |
 |---|---|

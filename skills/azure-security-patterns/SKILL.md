@@ -16,6 +16,13 @@ Apply consistent zero-trust security defaults to every Azure resource deployed i
 - During pre-deployment validation checks
 - When verifying security compliance post-deployment
 
+## Inputs
+
+| Path | Why it matters |
+|---|---|
+| `outputs/azure-architecture-output/design-document.md` | Section 4 and 7 define network topology and security requirements |
+| `outputs/bicep-templates/` | Target Bicep modules to apply private endpoint, NSG, and Key Vault hardening to |
+| `outputs/aws-migration-artifacts/aws-inventory.json` | Source security config (KMS, Secrets Manager, VPC) to map to Azure equivalents |
 ## Process
 
 1. **Disable public network access** on all data services and set up private endpoints:
@@ -146,7 +153,7 @@ Apply consistent zero-trust security defaults to every Azure resource deployed i
 - **Always set `httpsOnly: true`** on every Function App and App Service.
 - **Always set `minimumTlsVersion: 'TLS1_2'`** on Storage Accounts.
 
-## Output
+## Outputs
 
 - Every Bicep module with a data service includes a private endpoint and DNS zone registration
 - Every subnet has an NSG with deny-all-inbound as the lowest-priority rule
@@ -155,7 +162,7 @@ Apply consistent zero-trust security defaults to every Azure resource deployed i
 
 ---
 
-## Companion Scripts
+## Scripts
 
 | Script | Purpose |
 |---|---|

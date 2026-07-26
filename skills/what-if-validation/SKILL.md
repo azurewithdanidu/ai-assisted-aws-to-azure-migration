@@ -16,6 +16,24 @@ Before any Bicep deployment and after deployment to validate the deployed state.
 
 ---
 
+## Inputs
+
+| Path | Why it matters |
+|---|---|
+| `outputs/bicep-templates/main.bicep` | Primary template for syntax validation and what-if execution |
+| `outputs/bicep-templates/modules/` | Module files included during `az bicep build` |
+| `outputs/bicep-templates/parameters/` | Per-environment parameter files passed to what-if |
+| `outputs/azure-architecture-output/design-document.md` | Sections 4, 7, 8, and 9 define expected security, networking, performance, and cost baselines to validate against |
+
+## Process
+
+1. Read the first 10 lines of `outputs/bicep-templates/main.bicep` — check for `targetScope = 'subscription'` and enforce the correct deployment scope (see **⚠️ Subscription-scope Mandatory Gate** below).
+2. Run the **Pre-Deployment Checklist** (Bicep syntax, what-if, policy, quota, security).
+3. If any blocking finding is found, halt and report — do not proceed to deployment.
+4. After deployment, run the **Post-Deployment Checklist** (endpoint checks, identity, cost).
+5. Write `outputs/validation-report.md` using the **Validation Report Template**.
+
+---
 ## ⚠️ Subscription-scope Mandatory Gate
 
 **If `main.bicep` declares `targetScope = 'subscription'`, ALL az deployment commands MUST use `sub create` / `sub what-if`. Using `group create` or `group what-if` on a subscription-scoped template will fail because the resource group does not yet exist at deployment time. This is a hard gate — block deployment if the wrong command is used.**
@@ -398,14 +416,14 @@ Write `outputs/validation-report.md` using this structure:
 - **Always save what-if JSON output** to `/tmp/whatif-<env>.json` for inspection.
 - **The detailed report goes to `outputs/validation-report.md`** — the task plan summary is separate.
 
-## Output
+## Outputs
 
 - `outputs/deployment-validation/what-if-report.md` — what-if results per environment (PASS/BLOCKED)
 - `outputs/validation-report.md` — full validation report using the template above
 
 ---
 
-## Companion Scripts
+## Scripts
 
 | Script | Purpose |
 |---|---|

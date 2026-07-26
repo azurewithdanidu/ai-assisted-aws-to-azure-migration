@@ -16,6 +16,12 @@ Provide the authoritative mapping from every AWS service encountered in this mig
 - When populating `service-mapping.md` or `design-document.md` Section 3
 - When specifying code or IaC changes that reference service-specific APIs or SDKs
 
+## Inputs
+
+| Path | Why it matters |
+|---|---|
+| `outputs/aws-migration-artifacts/aws-inventory.json` | Authoritative list of AWS services that need an Azure equivalent |
+| `outputs/azure-architecture-output/design-document.md` | Section 3 service mapping to populate or verify |
 ## Process
 
 1. Identify each AWS service from `outputs/aws-migration-artifacts/aws-inventory.json`.
@@ -162,7 +168,7 @@ Provide the authoritative mapping from every AWS service encountered in this mig
 | AWS Secrets Manager | https://docs.aws.amazon.com/secretsmanager/latest/userguide/intro.html |
 - **For any service not in these tables**, document it as a gap in `design-document.md` under "Open Questions / Gaps" and look it up via `azure-mcp/documentation`.
 
-## Output
+## Outputs
 
 - Populated rows in `outputs/azure-architecture-output/design-document.md` Section 3 (Azure Service Mapping table)
 - Populated `outputs/azure-architecture-output/service-mapping.md`

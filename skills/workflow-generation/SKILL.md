@@ -14,6 +14,13 @@ Produce working, secure, idempotent GitHub Actions workflow files that deploy Az
 
 When implementing the workflows specified in `design-document.md` Section 11.
 
+## Inputs
+
+| Path | Why it matters |
+|---|---|
+| `outputs/azure-architecture-output/design-document.md` | Section 11.1 lists workflows to create; 11.2 defines OIDC config; 11.3 defines per-workflow job/step specs |
+| `outputs/bicep-templates/` | IaC artifacts the deploy workflow must reference |
+| `outputs/azure-functions/` | Application code the functions deploy workflow must publish |
 ## Process
 
 1. Read Section 11.1 for the list of workflow files to create.
@@ -150,7 +157,7 @@ jobs:
 - **Always include a rollback step** using `if: failure()` — the step should attempt to cancel the in-flight deployment.
 - **Never use `continue-on-error: true`** on deployment steps — fail fast.
 
-## Output
+## Outputs
 
 - `.github/workflows/deploy-infra.yml` — IaC deployment workflow
 - `.github/workflows/deploy-functions.yml` — Function App deployment workflow

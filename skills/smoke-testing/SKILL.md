@@ -14,6 +14,13 @@ Confirm a deployed environment works end-to-end by running targeted checks again
 
 After a successful Bicep deployment, before marking Phase 4 complete.
 
+## Inputs
+
+| Path | Why it matters |
+|---|---|
+| `outputs/azure-architecture-output/design-document.md` | Section 4 and 8 define expected endpoints, networking topology, and service names |
+| `outputs/bicep-templates/` | Bicep outputs provide deployed resource names, URLs, and Key Vault references |
+| `outputs/azure-functions/` | Deployed function code to test endpoint availability against |
 ## Process
 
 1. **Get deployed resource names** from Bicep outputs:
@@ -246,13 +253,13 @@ az monitor log-analytics query \
 - **If any check fails**, write `## Status: FAILED` at the top of the report and include the error message.
 - **Run the check that matches your deployed service** — do not run Blob Storage checks if the workload uses Cosmos DB as its primary store.
 
-## Output
+## Outputs
 
 - `outputs/deployment-validation/smoke-test-report.md` — contains `## Status: PASSED` or `## Status: FAILED`, plus a results table for each check
 
 ---
 
-## Companion Scripts
+## Scripts
 
 | Script | Purpose |
 |---|---|
