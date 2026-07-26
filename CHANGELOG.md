@@ -7,6 +7,29 @@ Versioning: [Semantic Versioning](https://semver.org/)
 
 ---
 
+## [1.3.0] - 2026-07-22
+
+### Changed
+
+- **Skill schema standardised across all 22 SKILL.md files** — every skill now conforms to the canonical 8-section schema: Purpose → When to Use → Inputs → Outputs → Process → Rules → Scripts → References
+  - `## Output` → `## Outputs` renamed in 13 skills
+  - `## Companion Scripts` → `## Scripts` renamed in 8 skills
+  - `## Inputs` table added to 14 skills that were missing it
+  - `## Process` heading added where missing (`azure-auth-patterns`, `github-actions-oidc`, `what-if-validation`)
+  - `## When to Use` added to `cost-estimator`
+  - `## Universal Parameter Discovery Process` → `## Process` in `parameter-management`
+  - `## Output Format` → `## Outputs` in `cost-estimator`
+- **Phase prompts in `skills/phase-delegation/SKILL.md` are now the single source of truth** — all 5 phase prompts (Phases 1, 2, 3a, 3b, 3c, 4) updated with:
+  - Explicit skill references so sub-agents read the correct SKILL.md before acting
+  - Multi-region scan instruction (Phase 1)
+  - Incremental task plan update rule in every phase
+  - MCP-only discovery rule (Phase 1 — no AWS CLI)
+  - Blocker-continue and auth-fail-stop rules (Phase 1)
+  - Referenced skills per phase: `aws-inventory-scan`, `migration-assessment` (P1); `architecture-design`, `aws-to-azure-mapping`, `architecture-diagramming`, `cost-estimator`, `cost-analysis`, `azure-security-patterns`, `azure-auth-patterns` (P2); `bicep-generation`, `module-organization`, `parameter-management` (P3a); `lambda-to-functions`, `sdk-migration` (P3b); `github-actions-oidc`, `multi-env-strategy`, `workflow-generation` (P3c); `what-if-validation`, `smoke-testing` (P4)
+- **`agents/migration-project-manager.agent.md` phase sections** — all inline prompts replaced with pointers to `skills/phase-delegation/SKILL.md`, eliminating prompt drift between the two files
+
+---
+
 ## [1.2.0] - 2026-07-14
 
 ### Changed
