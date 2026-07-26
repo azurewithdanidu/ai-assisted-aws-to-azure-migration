@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # Pre-deployment validation: Bicep syntax, ARM validation (sub-scope), what-if dry-run, policy check, quota check.
-# Usage: run-what-if.sh --location <region> --resource-group <rg> --environment <dev|staging|prod> [--bicep-root <path>] [--subscription <id>]
+# Usage: run-what-if.sh --resource-group <rg> --environment <dev|staging|prod> --location <region> [--bicep-root <path>] [--subscription <id>]
 #
 # NOTE: Deployment commands use subscription scope (az deployment sub ...) because main.bicep
 #       declares targetScope = 'subscription' and creates the resource group itself.
